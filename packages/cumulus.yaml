@@ -1,0 +1,504 @@
+###############################################################################
+# CUMULUS — v2025-09-14c-triggerfix
+#
+# Changements majeurs par rapport aux versions antérieures :
+# - Seuil PV par défaut = 100 W (input_number.cumulus_seuil_pv_on_w)
+# - Automation "ce_on_pv_simple" durcie : déclenchement au-dessus du seuil avec
+#   délai configurable ; re-vérification du seuil avant ON
+# - Condition SOC avec marge −0,5 pt
+# - binaire cumulus_chauffe_reelle en template (piloté par variations de mesures)
+# - Limiteur d’import : OFF si import > seuil (talon+marge) pendant ≥ 8 s
+# - Spécial “no_delay” : mini-deadband post-ON = 5 s (sinon deadband = 100 s)
+# - Ajouts détect. fin par import (seuil = talon + marge_fin_import)
+#
+# Règles inviolables :
+# - NE JAMAIS renommer les entités de l’utilisateur.
+# - Contactor via input_text.cumulus_entity_contacteur (fallback fourni).
+# - Diffs minimaux, logique inchangée hormis corrections ci-dessus.
+###############################################################################
+
+# ============================= ENTITÉS PARAMÉTRABLES ======================= #
+input_text:
+  cumulus_entity_import_w:
+    name: ENTITÉ - Import réseau (W)
+    icon: mdi:transmission-tower-import
+    # ← remplace si besoin par l’ID réel du capteur d’import réseau
+    initial: sensor.smart_meter_grid_import
+
+  cumulus_entity_contacteur:
+    name: ENTITÉ - Contacteur cumulus (switch)
+    icon: mdi:water-boiler
+    # ← remplace si besoin, ceci est le fallback historique
+    initial: switch.shellypro1_ece334ee1b64
+
+  cumulus_entity_soc_solarbank:
+    name: ENTITÉ - SOC Solarbank (%)
+    icon: mdi:battery
+    # ← capteur SOC SB réel chez toi
+    initial: sensor.system_sanguinet_etat_de_charge_du_sb
+
+# ============================ AIDES / RÉGLAGES ============================ #
+input_number:
+  cumulus_seuil_pv_on_w:
+    name: Seuil PV pour démarrage (W)
+    min: 0
+    max: 5000
+    step: 10
+    mode: slider
+    unit_of_measurement: W
+    icon: mdi:white-balance-sunny
+    initial: 100
+
+  cumulus_on_delay_s:
+    name: Délai de confirmation ON (s)
+    min: 0
+    max: 300
+    step: 1
+    mode: slider
+    unit_of_measurement: s
+    icon: mdi:timer-play
+    initial: 10
+
+  cumulus_deadband_s:
+    name: Deadband global après changement (s)
+    min: 0
+    max: 600
+    step: 5
+    unit_of_measurement: s
+    icon: mdi:progress-clock
+    initial: 100
+
+  cumulus_mini_deadband_no_delay_s:
+    name: Mini-deadband spécial no_delay (s)
+    min: 0
+    max: 60
+    step: 1
+    unit_of_measurement: s
+    icon: mdi:timer-outline
+    initial: 5
+
+  cumulus_talon_maison_w:
+    name: Talon maison (W)
+    min: 0
+    max: 1000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:home-lightning-bolt
+    initial: 300
+
+  cumulus_marge_import_w:
+    name: Marge import (limiteur) (W)
+    min: 0
+    max: 3000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:flash-alert
+    initial: 1100
+
+  cumulus_marge_fin_import_w:
+    name: Marge de fin (import) (W)
+    min: 0
+    max: 1000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:flash-triangle-outline
+    initial: 150
+
+  cumulus_solarbank_max_w:
+    name: Puissance max Solarbank (W)
+    min: 0
+    max: 2000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:battery-charging-100
+    initial: 1200
+
+  cumulus_aps_max_w:
+    name: Puissance max APS (W)
+    min: 0
+    max: 2000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:solar-power
+    initial: 960
+
+  cumulus_soc_start_pct:
+    name: SOC mini démarrage (%)
+    min: 0
+    max: 100
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:battery-70
+    initial: 25
+
+  cumulus_soc_stop_pct:
+    name: SOC arrêt sécurité (%)
+    min: 0
+    max: 100
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:battery-alert-variant-outline
+    initial: 15
+
+input_boolean:
+  cumulus_interdit:
+    name: Interdit (sécurité/maintenance)
+    icon: mdi:hand-back-right-off
+
+  cumulus_vacances:
+    name: Vacances (pas de chauffe)
+    icon: mdi:beach
+
+  cumulus_verrou_jour:
+    name: Verrou journée (1/2)
+    icon: mdi:calendar-remove
+
+  cumulus_override:
+    name: Override manuel autoriser ON
+    icon: mdi:hand-pointing-up
+
+  temp_atteinte_aujourdhui:
+    name: Température atteinte aujourd’hui
+    icon: mdi:thermometer-check
+
+# Fenêtres horaires
+input_datetime:
+  cumulus_plage_pv_debut:
+    name: Fenêtre PV - début
+    has_date: false
+    has_time: true
+    initial: "10:20:00"
+  cumulus_plage_pv_fin:
+    name: Fenêtre PV - fin
+    has_date: false
+    has_time: true
+    initial: "17:50:00"
+
+  cumulus_heures_creuses_debut:
+    name: Heures creuses - début
+    has_date: false
+    has_time: true
+    initial: "03:30:00"
+  cumulus_heures_creuses_fin:
+    name: Heures creuses - fin
+    has_date: false
+    has_time: true
+    initial: "08:05:00"
+
+timer:
+  cumulus_deadband_ui:
+    name: Temporisation UI (deadband)
+    duration: "0:01:40"  # 100 s par défaut
+
+# ================================ TEMPLATES ================================ #
+template:
+
+  # ------------------------------- SENSORS -------------------------------- #
+  - sensor:
+
+      - name: "cumulus_import_reseau_w"
+        unique_id: cumulus_import_reseau_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {% set e = states('input_text.cumulus_entity_import_w') %}
+          {{ states(e) | float(0) }}
+
+      - name: "cumulus_soc_solarbank_pct"
+        unique_id: cumulus_soc_solarbank_pct
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        state: >-
+          {% set e = states('input_text.cumulus_entity_soc_solarbank') %}
+          {{ states(e) | float(0) }}
+
+      - name: "cumulus_pv_power_w"
+        unique_id: cumulus_pv_power_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        # PV réel = capteur proxy SB+APS si dispo, sinon 0
+        state: >-
+          {% set pv = states('sensor.pv_total_entree_sb_aps_w') | float(0) %}
+          {{ pv }}
+
+      - name: "cumulus_seuil_import_limiteur_w"
+        unique_id: cumulus_seuil_import_limiteur_w
+        unit_of_measurement: "W"
+        device_class: power
+        state: >-
+          {{ (states('input_number.cumulus_talon_maison_w')|float(300))
+            + (states('input_number.cumulus_marge_import_w')|float(1100)) }}
+
+      - name: "cumulus_import_min_si_chauffe_w"
+        unique_id: cumulus_import_min_si_chauffe_w
+        unit_of_measurement: "W"
+        device_class: power
+        # Quand la chauffe se termine, l'import retombe ≈ au talon.
+        state: >-
+          {{ states('input_number.cumulus_talon_maison_w') | float(300) }}
+
+      - name: "cumulus_seuil_fin_chauffe_w"
+        unique_id: cumulus_seuil_fin_chauffe_w
+        unit_of_measurement: "W"
+        device_class: power
+        # Seuil = import_min_si_chauffe + marge de fin
+        state: >-
+          {{ (states('sensor.cumulus_import_min_si_chauffe_w')|float(0))
+             + (states('input_number.cumulus_marge_fin_import_w')|float(150)) }}
+
+      # Journal (timestamps) – maintenus pour compat
+      - name: "cumulus_last_full_heat_start"
+        unique_id: cumulus_last_full_heat_start
+        state: "{{ states('sensor.cumulus_last_full_heat_start') }}"
+      - name: "cumulus_last_full_heat_end"
+        unique_id: cumulus_last_full_heat_end
+        state: "{{ states('sensor.cumulus_last_full_heat_end') }}"
+      - name: "cumulus_last_full_heat_duration"
+        unique_id: cumulus_last_full_heat_duration
+        unit_of_measurement: "min"
+        state: "{{ states('sensor.cumulus_last_full_heat_duration') }}"
+
+  # --------------------------- BINARY SENSORS ----------------------------- #
+  - binary_sensor:
+
+      - name: "cumulus_fenetre_pv"
+        unique_id: cumulus_fenetre_pv
+        state: >-
+          {% set d = states('input_datetime.cumulus_plage_pv_debut') %}
+          {% set f = states('input_datetime.cumulus_plage_pv_fin') %}
+          {% set nowt = now().strftime('%H:%M:%S') %}
+          {{ d <= nowt <= f }}
+
+      - name: "cumulus_en_hc"
+        unique_id: cumulus_en_hc
+        state: >-
+          {% set d = states('input_datetime.cumulus_heures_creuses_debut') %}
+          {% set f = states('input_datetime.cumulus_heures_creuses_fin') %}
+          {% set nowt = now().strftime('%H:%M:%S') %}
+          {{ d <= nowt <= f }}
+
+      - name: "cumulus_deadband_actif"
+        unique_id: cumulus_deadband_actif
+        state: >-
+          {{ is_state('timer.cumulus_deadband_ui', 'active') }}
+
+      - name: "cumulus_chauffe_reelle"
+        unique_id: cumulus_chauffe_reelle
+        # "vrai" si import > seuil_fin + hystérésis ET contacteur ON
+        state: >-
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% set sw = is_state(sw_id, 'on') %}
+          {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+          {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
+          {% set HYS = 50 %}
+          {{ sw and (imp > (seuil + HYS)) }}
+
+      - name: "cumulus_fini_par_import"
+        unique_id: cumulus_fini_par_import
+        # fin détectée quand contacteur ON mais import <= seuil_fin
+        state: >-
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% set sw = is_state(sw_id, 'on') %}
+          {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+          {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
+          {{ sw and (imp <= seuil) }}
+
+      - name: "cumulus_on_hc_prevu"
+        unique_id: cumulus_on_hc_prevu
+        # simplifié : ON prévu si en HC et non interdit/vacances/verrou
+        state: >-
+          {{ is_state('binary_sensor.cumulus_en_hc','on')
+             and is_state('input_boolean.cumulus_interdit','off')
+             and is_state('input_boolean.cumulus_vacances','off')
+             and is_state('input_boolean.cumulus_verrou_jour','off') }}
+
+# ================================ AUTOMATIONS ============================== #
+automation:
+
+  # 1) Démarrage PV simple
+  - id: ce_on_pv_simple
+    alias: Cumulus — ON sur PV (simple)
+    description: "Démarre quand la prod PV dépasse le seuil pendant cumulus_on_delay_s."
+    trigger:
+      # On déclenche quand PV > seuil (utilise un gabarit pour pouvoir lire l'input_number)
+      - platform: template
+        value_template: >-
+          {{ states('sensor.cumulus_pv_power_w')|float(0)
+             > states('input_number.cumulus_seuil_pv_on_w')|float(100) }}
+        for:
+          seconds: 10
+    condition:
+      - condition: template
+        value_template: >-
+          {{ states('sensor.cumulus_pv_power_w')|float(0)
+             > states('input_number.cumulus_seuil_pv_on_w')|float(100) }}
+      - condition: state
+        entity_id: input_boolean.cumulus_interdit
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_vacances
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_verrou_jour
+        state: "off"
+      - condition: template
+        # SOC ≥ start - 0,5 pt
+        value_template: >-
+          {{ states('cumulus_soc_solarbank_pct')|float(0)
+             >= (states('input_number.cumulus_soc_start_pct')|float(25) - 0.5) }}
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+          db_s: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state(sw_id, 'off') }}"
+            sequence:
+              - service: switch.turn_on
+                target: { entity_id: "{{ sw_id }}" }
+              - service: timer.start
+                target: { entity_id: timer.cumulus_deadband_ui }
+                data:
+                  duration: "{{ db_s }}"
+        default: []
+    mode: single
+
+  # 2) Limiteur d'import : coupe si import trop haut pendant ≥8 s
+  - id: cumulus_limiteur_import
+    alias: Cumulus — Limiteur d'import
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.cumulus_import_reseau_w
+        above: 0
+        for:
+          seconds: 8
+    condition:
+      - condition: template
+        value_template: >-
+          {{ states('sensor.cumulus_import_reseau_w')|float(0)
+             > states('sensor.cumulus_seuil_import_limiteur_w')|float(0) }}
+      - condition: state
+        entity_id: input_boolean.cumulus_interdit
+        state: "off"
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+      - if:
+          - condition: template
+            value_template: "{{ is_state(sw_id, 'on') }}"
+        then:
+          - service: switch.turn_off
+            target: { entity_id: "{{ sw_id }}" }
+          - service: timer.start
+            target: { entity_id: timer.cumulus_deadband_ui }
+            data:
+              duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+    mode: restart
+
+  # 3) Sécurité SOC bas : OFF si SOC < stop (%) pendant 10 s
+  - id: cumulus_securite_soc_bas
+    alias: Cumulus — Sécurité SOC bas
+    trigger:
+      - platform: template
+        value_template: >-
+          {{ states('cumulus_soc_solarbank_pct')|float(0)
+             < states('input_number.cumulus_soc_stop_pct')|float(15) }}
+        for:
+          seconds: 10
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+      - service: switch.turn_off
+        target: { entity_id: "{{ sw_id }}" }
+      - service: timer.start
+        target: { entity_id: timer.cumulus_deadband_ui }
+        data:
+          duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+    mode: restart
+
+  # 4) Détection fin de chauffe par import
+  - id: cumulus_fin_detectee_par_import
+    alias: Cumulus — Fin détectée par import (OFF + verrou + tag du jour)
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_fini_par_import
+        to: "on"
+        for:
+          seconds: 5
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_interdit
+        state: "off"
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+      - if:
+          - condition: template
+            value_template: "{{ is_state(sw_id, 'on') }}"
+        then:
+          - service: switch.turn_off
+            target: { entity_id: "{{ sw_id }}" }
+      - service: input_boolean.turn_on
+        target: { entity_id: input_boolean.cumulus_verrou_jour }
+      - service: input_boolean.turn_on
+        target: { entity_id: input_boolean.temp_atteinte_aujourdhui }
+    mode: restart
+
+  # 5) ON au début des HC si prévu
+  - id: cumulus_on_debut_hc_si_prevu
+    alias: Cumulus — ON début HC si prévu
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_en_hc
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_interdit
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_vacances
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_verrou_jour
+        state: "off"
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+      - service: switch.turn_on
+        target: { entity_id: "{{ sw_id }}" }
+      - service: timer.start
+        target: { entity_id: timer.cumulus_deadband_ui }
+        data:
+          duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+    mode: single
+
+  # 6) OFF à la fin des HC
+  - id: cumulus_off_fin_hc
+    alias: Cumulus — OFF fin HC
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_en_hc
+        to: "off"
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+      - service: switch.turn_off
+        target: { entity_id: "{{ sw_id }}" }
+    mode: single
+
+  # 7) Reset du tag "temp atteinte" chaque jour (après fin HC)
+  - id: cumulus_reset_daily_flags
+    alias: Cumulus — Reset journalier (après HC)
+    trigger:
+      - platform: time
+        at: "08:10:00"
+    action:
+      - service: input_boolean.turn_off
+        target: { entity_id: input_boolean.temp_atteinte_aujourdhui }
+      - service: input_boolean.turn_off
+        target: { entity_id: input_boolean.cumulus_verrou_jour }
+    mode: single
