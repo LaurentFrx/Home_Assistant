@@ -1,0 +1,1008 @@
+title: Laurent                # nom du dashboard
+button_card_templates:        # (facultatif) tes templates, si tu en as
+  # … tes templates ici …
+
+views:
+  - title: Cumulus            # titre de la vue (onglet)
+    path: cumulus-7
+    icon: mdi:water-boiler
+    type: custom:masonry-layout
+    # view_layout: column: 2 -> ça se met carte par carte; garde-le là où tu l’utilises
+    cards:
+      # === colle ici toutes tes cartes ===
+  - type: custom:button-card
+    entity: |-
+      [[[ const e = states['input_text.cumulus_entity_contacteur']?.state;
+          return (e && states[e]) ? e : 'switch.shellypro1_ece334ee1b64'; ]]]
+    name: Cumulus
+    show_icon: false
+    show_state: false
+    label: |-
+      [[[
+        const swOn  = entity?.state === 'on';
+        const imp   = Number(states['sensor.cumulus_import_reseau_w']?.state) || 0;
+        const seuil = Number(states['sensor.cumulus_seuil_fin_chauffe_w']?.state) || 0;
+        const HYS_W = 50;
+
+        const bsFast = states['binary_sensor.cumulus_chauffe_reelle_instant'];
+        const bsStd  = states['binary_sensor.cumulus_chauffe_reelle'];
+        const heating = bsFast ? (bsFast.state === 'on')
+                       : bsStd ? (bsStd.state === 'on')
+                               : (swOn && (imp > (seuil + HYS_W)));
+
+        if (!swOn) return 'ARRÊTÉ';
+        return heating ? 'EN CHAUFFE' : 'PRÊT';
+      ]]]
+    custom_fields:
+      power:
+        card:
+          type: custom:button-card
+          entity: |-
+            [[[ const e = states['input_text.cumulus_entity_contacteur']?.state;
+                return (e && states[e]) ? e : 'switch.shellypro1_ece334ee1b64'; ]]]
+          icon: mdi:power
+          show_name: false
+          show_state: false
+          tap_action:
+            action: call-service
+            confirmation:
+              text: Confirmer
+            service: homeassistant.toggle
+            service_data:
+              entity_id: >-
+                [[[ const e =
+                states['input_text.cumulus_entity_contacteur']?.state;
+                    return (e && states[e]) ? e : 'switch.shellypro1_ece334ee1b64'; ]]]
+          hold_action:
+            action: call-service
+            service: input_boolean.toggle
+            target:
+              entity_id: input_boolean.cumulus_interdit
+          confirmation:
+            text: Confirmer
+          double_tap_action: none
+          styles:
+            card:
+              - box-shadow: none
+              - padding: 0
+              - border-radius: 999px
+              - background: none
+              - border: none
+              - width: 48px
+              - height: 48px
+            icon:
+              - width: 34px
+              - color: |-
+                  [[[
+                    const swOn  = entity?.state === 'on';
+                    const inter = states['input_boolean.cumulus_interdit']?.state === 'on';
+                    const db    = (states['binary_sensor.cumulus_deadband_actif']?.state === 'on')
+                               || (states['timer.cumulus_deadband_ui']?.state === 'active');
+                    if (inter) return '#ef4444';   // verrou
+                    if (db)    return '#f59e0b';   // temporisation (icône seulement)
+                    return swOn ? '#22c55e' : '#9ca3af';
+                  ]]]
+      led: |-
+        [[[
+          const swOn = entity?.state === 'on';
+          const bsFast = states['binary_sensor.cumulus_chauffe_reelle_instant'];
+          const bsStd  = states['binary_sensor.cumulus_chauffe_reelle'];
+          let heating = false;
+          if (bsFast) heating = bsFast.state === 'on';
+          else if (bsStd) heating = bsStd.state === 'on';
+          else {
+            const imp   = Number(states['sensor.cumulus_import_reseau_w']?.state) || 0;
+            const seuil = Number(states['sensor.cumulus_seuil_fin_chauffe_w']?.state) || 0;
+            const HYS_W = 50;
+            heating = swOn && (imp > (seuil + HYS_W));
+          }
+          // LED = éteint / rouge / vert
+          let style = 'width:40px;height:40px;border-radius:50%;';
+          if (!swOn) {
+            style += 'background:rgba(148,163,184,.14);border:1px solid rgba(148,163,184,.35);box-shadow:none;';
+          } else if (heating) {
+            style += 'background:#ef4444;box-shadow:0 0 0 6px rgba(239,68,68,.25), 0 0 18px rgba(239,68,68,.85);';
+          } else {
+            style += 'background:#22c55e;box-shadow:0 0 12px rgba(34,197,94,.60);';
+          }
+          return `<div style="${style}"></div>`;
+        ]]]
+      last: |-
+        [[[
+          const ok  = v => v && v !== 'unknown' && v !== 'unavailable' && String(v).trim() !== '';
+          const get = id => ok(states[id]?.state) ? states[id].state : null;
+          const parseDT = (s) => {
+            if (!ok(s)) return null;
+            if (/^\d+$/.test(String(s))) { const n = Number(s); return new Date(n < 2e10 ? n*1000 : n); }
+            const t = String(s).replace('T',' ').trim();
+            const parts = t.split(' ');
+            if (parts.length === 2 && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
+              const [Y,M,D] = parts[0].split('-').map(Number);
+              const [h,m,ss] = parts[1].split(':').map(x => Number(x)||0);
+              return new Date(Y,(M||1)-1,D||1,h||0,m||0,ss||0);
+            }
+            const d = new Date(s); return isNaN(d) ? null : d;
+          };
+          const fmtHM = d => d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+
+          const endStr = get('input_datetime.cumulus_last_full_heat_end')
+                      || get('sensor.cumulus_last_full_heat_end')
+                      || get('sensor.cumulus_last_full_heat_fin')
+                      || get('sensor.cumulus_last_full_heat_end_time');
+          const end = parseDT(endStr);
+          if (!end) return 'Dernière chauffe complète : —';
+
+          const now  = new Date();
+          const today= now.toDateString();
+          const yest = new Date(now); yest.setDate(now.getDate()-1);
+
+          const when = (end.toDateString() === today)
+            ? `aujourd’hui à ${fmtHM(end)}`
+            : (end.toDateString() === yest.toDateString())
+              ? `hier à ${fmtHM(end)}`
+              : `le ${end.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})} à ${fmtHM(end)}`;
+
+          return `Dernière chauffe complète : ${when}`;
+        ]]]
+      lock: |
+        [[[
+          const inter = states['input_boolean.cumulus_interdit']?.state === 'on';
+          if (!inter) return '';
+          return `<ha-icon icon="mdi:lock-alert" style="width:18px;height:18px;color:#ef4444"></ha-icon>`;
+        ]]]
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 8px
+        - min-height: 76px
+        - box-shadow: 0 2px 8px rgba(0,0,0,.10)
+        - border: 1px solid rgba(0,0,0,.06)
+        - border-left: |
+            [[[
+              const inter = states['input_boolean.cumulus_interdit']?.state === 'on';
+              return inter ? '4px solid #ef4444' : '1px solid rgba(0,0,0,.06)';
+            ]]]
+        - background: |-
+            [[[
+              const base = 'linear-gradient(135deg, rgba(30,58,138,.16), rgba(124,58,237,.12))';
+              const glow = 'radial-gradient(120% 140% at 0% 0%, rgba(191,219,254,.10) 0%, rgba(255,255,255,0) 60%)';
+              return `${base}, ${glow}`;
+            ]]]
+      grid:
+        - grid-template-areas: |
+            "power n   led"
+            "power l   led"
+            "power last led"
+        - grid-template-columns: 52px 1fr 52px
+        - grid-template-rows: min-content min-content min-content
+        - row-gap: 0
+        - align-items: center
+        - align-content: center
+      name:
+        - justify-self: center
+        - align-self: end
+        - font-weight: 800
+        - font-size: 2.6rem
+        - line-height: 1.05
+        - letter-spacing: 0.1px
+        - margin: 0
+      label:
+        - justify-self: center
+        - align-self: start
+        - margin: 0
+        - font-weight: 700
+        - font-size: 0.9rem
+        - opacity: 0.92
+      custom_fields:
+        power:
+          - justify-self: start
+          - pointer-events: auto
+        led:
+          - justify-self: end
+          - pointer-events: none
+        last:
+          - grid-area: last
+          - justify-self: center
+          - align-self: start
+          - margin: 2px 0 0 0
+          - font-weight: 500
+          - font-size: .86rem
+          - color: "#64748b"
+        lock:
+          - position: absolute
+          - top: 6px
+          - right: 6px
+          - filter: drop-shadow(0 0 2px rgba(0,0,0,.25))
+    triggers_update:
+      - binary_sensor.cumulus_chauffe_reelle_instant
+      - binary_sensor.cumulus_chauffe_reelle
+      - sensor.cumulus_import_reseau_w
+      - sensor.cumulus_seuil_fin_chauffe_w
+      - timer.cumulus_deadband_ui
+      - input_boolean.cumulus_interdit
+      - input_text.cumulus_entity_contacteur
+      - input_datetime.cumulus_last_full_heat_end
+      - sensor.cumulus_last_full_heat_end
+      - sensor.cumulus_last_full_heat_fin
+      - sensor.cumulus_last_full_heat_end_time
+    update_interval: 1
+    tap_action: none
+    hold_action: none
+  - type: custom:button-card
+    entity: input_boolean.cumulus_jour_autorise
+    variables:
+      force_state: null
+    name: |
+      [[[
+        const f = variables.force_state;
+        const on = (f === 'on') ? true : (f === 'off') ? false : (entity?.state === 'on');
+        return on ? 'Journée autorisée (1 j / 2)' : 'Jour non autorisé (1 j / 2)';
+      ]]]
+    icon: |
+      [[[
+        const f = variables.force_state;
+        const on = (f === 'on') ? true : (f === 'off') ? false : (entity?.state === 'on');
+        return on ? 'mdi:calendar-check' : 'mdi:calendar-remove';
+      ]]]
+    show_state: false
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+        - background: |
+            [[[
+              const f = variables.force_state;
+              const on = (f === 'on') ? true : (f === 'off') ? false : (entity?.state === 'on');
+              return on
+                ? 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))'
+                : 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))';
+            ]]]
+      grid:
+        - grid-template-areas: "\"i n\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - width: 24px
+        - color: |
+            [[[
+              const f = variables.force_state;
+              const on = (f === 'on') ? true : (f === 'off') ? false : (entity?.state === 'on');
+              return on ? '#22c55e' : '#ef4444';
+            ]]]
+      name:
+        - font-weight: 700
+        - font-size: .98rem
+    tap_action:
+      action: toggle
+      confirmation:
+        text: Confirmer
+    hold_action:
+      action: more-info
+  - type: custom:button-card
+    entity: binary_sensor.cumulus_skip_hc_tonight
+    variables:
+      force_skip: null
+      force_jour_ok: null
+      force_verrou: null
+      force_interdit: null
+      force_vacances: null
+      force_override: null
+    show_state: false
+    show_label: true
+    name: |
+      [[[
+        const isOn = id => states[id]?.state === 'on';
+        const asBool = v => (v===true) ? true : (v===false) ? false : null;
+
+        const jourOK   = (asBool(variables.force_jour_ok)   ?? isOn('input_boolean.cumulus_jour_autorise'));
+        const verrou   = (asBool(variables.force_verrou)    ?? isOn('input_boolean.cumulus_verrou_jour'));
+        const interdit = (asBool(variables.force_interdit)  ?? isOn('input_boolean.cumulus_interdit'));
+        const vac      = (asBool(variables.force_vacances)  ?? isOn('input_boolean.cumulus_vacances'));
+        const override = (asBool(variables.force_override)  ?? isOn('input_boolean.cumulus_solcast_override'));
+
+        let skip = entity?.state === 'on';
+        if (variables.force_skip === 'on')  skip = true;
+        if (variables.force_skip === 'off') skip = false;
+
+        const blocked = (!jourOK) || verrou || interdit || vac || (skip && !override);
+        return blocked ? 'Pas d’heures creuses ce soir' : 'Heures creuses ce soir';
+      ]]]
+    icon: |
+      [[[
+        const isOn = id => states[id]?.state === 'on';
+        const asBool = v => (v===true) ? true : (v===false) ? false : null;
+
+        const jourOK   = (asBool(variables.force_jour_ok)   ?? isOn('input_boolean.cumulus_jour_autorise'));
+        const verrou   = (asBool(variables.force_verrou)    ?? isOn('input_boolean.cumulus_verrou_jour'));
+        const interdit = (asBool(variables.force_interdit)  ?? isOn('input_boolean.cumulus_interdit'));
+        const vac      = (asBool(variables.force_vacances)  ?? isOn('input_boolean.cumulus_vacances'));
+        const override = (asBool(variables.force_override)  ?? isOn('input_boolean.cumulus_solcast_override'));
+
+        let skip = entity?.state === 'on';
+        if (variables.force_skip === 'on')  skip = true;
+        if (variables.force_skip === 'off') skip = false;
+
+        const blocked = (!jourOK) || verrou || interdit || vac || (skip && !override);
+        return blocked ? 'mdi:calendar-remove' : 'mdi:calendar-check';
+      ]]]
+    label: |
+      [[[
+        const isOn = id => states[id]?.state === 'on';
+        const asBool = v => (v===true) ? true : (v===false) ? false : null;
+
+        const jourOK   = (asBool(variables.force_jour_ok)   ?? isOn('input_boolean.cumulus_jour_autorise'));
+        const verrou   = (asBool(variables.force_verrou)    ?? isOn('input_boolean.cumulus_verrou_jour'));
+        const interdit = (asBool(variables.force_interdit)  ?? isOn('input_boolean.cumulus_interdit'));
+        const vac      = (asBool(variables.force_vacances)  ?? isOn('input_boolean.cumulus_vacances'));
+        const override = (asBool(variables.force_override)  ?? isOn('input_boolean.cumulus_solcast_override'));
+
+        let skip = entity?.state === 'on';
+        if (variables.force_skip === 'on')  skip = true;
+        if (variables.force_skip === 'off') skip = false;
+
+        // PV forecast
+        const kwh   = Number(states['sensor.solcast_tomorrow_kwh_p90_window']?.state) || 0;
+        const seuil = Number(states['input_number.cumulus_solcast_seuil_kwh']?.state) || 0;
+        const cmp   = (kwh >= seuil) ? '≥' : '<';
+
+        // Motif (si bloqué)
+        let blocked = false, motif = '';
+        if (!jourOK)               { blocked = true; motif = 'Jour non autorisé'; }
+        else if (verrou)           { blocked = true; motif = 'Chauffe du jour terminée'; }
+        else if (interdit)         { blocked = true; motif = 'Interdit'; }
+        else if (vac)              { blocked = true; motif = 'Vacances'; }
+        else if (skip && !override){ blocked = true; motif = `Solcast demain (P90 fenêtre) : ${kwh.toFixed(1)} ${cmp} ${seuil.toFixed(1)} kWh`; }
+
+        if (blocked) {
+          return motif || 'Motif inconnu';
+        } else {
+          // autorisées — on affiche l’info Solcast, et on note override si actif ET que Solcast aurait bloqué
+          const wouldSkipSolcast = (kwh >= seuil);
+          return `Solcast demain (P90 fenêtre) : ${kwh.toFixed(1)} ${cmp} ${seuil.toFixed(1)} kWh`
+                 + ((override && wouldSkipSolcast) ? ' — override actif' : '');
+        }
+      ]]]
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+        - background: |
+            [[[
+              const isOn = id => states[id]?.state === 'on';
+              const asBool = v => (v===true) ? true : (v===false) ? false : null;
+
+              const jourOK   = (asBool(variables.force_jour_ok)   ?? isOn('input_boolean.cumulus_jour_autorise'));
+              const verrou   = (asBool(variables.force_verrou)    ?? isOn('input_boolean.cumulus_verrou_jour'));
+              const interdit = (asBool(variables.force_interdit)  ?? isOn('input_boolean.cumulus_interdit'));
+              const vac      = (asBool(variables.force_vacances)  ?? isOn('input_boolean.cumulus_vacances'));
+              const override = (asBool(variables.force_override)  ?? isOn('input_boolean.cumulus_solcast_override'));
+
+              let skip = entity?.state === 'on';
+              if (variables.force_skip === 'on')  skip = true;
+              if (variables.force_skip === 'off') skip = false;
+
+              const blocked = (!jourOK) || verrou || interdit || vac || (skip && !override);
+              return blocked
+                ? 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))'
+                : 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))';
+            ]]]
+      grid:
+        - grid-template-areas: "\"i n\" \"i l\""
+        - grid-template-columns: 36px 1fr
+        - row-gap: 2px
+      icon:
+        - width: 24px
+        - color: |
+            [[[
+              const isOn = id => states[id]?.state === 'on';
+              const asBool = v => (v===true) ? true : (v===false) ? false : null;
+
+              const jourOK   = (asBool(variables.force_jour_ok)   ?? isOn('input_boolean.cumulus_jour_autorise'));
+              const verrou   = (asBool(variables.force_verrou)    ?? isOn('input_boolean.cumulus_verrou_jour'));
+              const interdit = (asBool(variables.force_interdit)  ?? isOn('input_boolean.cumulus_interdit'));
+              const vac      = (asBool(variables.force_vacances)  ?? isOn('input_boolean.cumulus_vacances'));
+              const override = (asBool(variables.force_override)  ?? isOn('input_boolean.cumulus_solcast_override'));
+
+              let skip = entity?.state === 'on';
+              if (variables.force_skip === 'on')  skip = true;
+              if (variables.force_skip === 'off') skip = false;
+
+              const blocked = (!jourOK) || verrou || interdit || vac || (skip && !override);
+              return blocked ? '#ef4444' : '#22c55e';
+            ]]]
+      name:
+        - font-weight: 800
+        - font-size: 1.05rem
+        - line-height: 1.15
+      label:
+        - white-space: normal
+        - line-height: 1.2
+        - opacity: 0.95
+        - font-size: .86rem
+    triggers_update:
+      - binary_sensor.cumulus_skip_hc_tonight
+      - input_boolean.cumulus_jour_autorise
+      - input_boolean.cumulus_verrou_jour
+      - input_boolean.cumulus_interdit
+      - input_boolean.cumulus_vacances
+      - input_boolean.cumulus_solcast_override
+      - sensor.solcast_tomorrow_kwh_p90_window
+      - input_number.cumulus_solcast_seuil_kwh
+  - square: false
+    type: grid
+    cards:
+      - type: custom:button-card
+        entity: input_number.cumulus_soc_start_pct
+        name: Minimum (PV)
+        icon: mdi:battery-50
+        show_state: true
+        state_display: |
+          [[[
+            const v = Number(entity?.state);
+            return isFinite(v) ? `${v.toFixed(0)} %` : (entity?.state || '');
+          ]]]
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - background: >-
+                linear-gradient(135deg, rgba(34,197,94,.10),
+                rgba(6,182,212,.05))
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+          grid:
+            - grid-template-areas: "\"i n\" \"s s\""
+            - grid-template-columns: 36px 1fr
+          icon:
+            - color: "#22c55e"
+            - width: 24px
+          name:
+            - font-weight: 600
+      - type: custom:button-card
+        entity: input_number.cumulus_soc_stop_pct
+        name: Sécurité (coupure)
+        icon: mdi:battery-alert-variant-outline
+        show_state: true
+        state_display: |
+          [[[
+            const v = Number(entity?.state);
+            return isFinite(v) ? `${v.toFixed(0)} %` : (entity?.state || '');
+          ]]]
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - background: >-
+                linear-gradient(135deg, rgba(239,68,68,.10),
+                rgba(6,182,212,.05))
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+          grid:
+            - grid-template-areas: "\"i n\" \"s s\""
+            - grid-template-columns: 36px 1fr
+          icon:
+            - color: "#ef4444"
+            - width: 24px
+          name:
+            - font-weight: 600
+    title: Charge de la Batterie
+    columns: 2
+  - type: custom:button-card
+    entity: sensor.cumulus_soc_solarbank_pct
+    name: |
+      [[[
+        const soc = Number(entity?.state) || 0;
+        const start = Number(states['input_number.cumulus_soc_start_pct']?.state) || 0;
+        const stop  = Number(states['input_number.cumulus_soc_stop_pct']?.state)  || 0;
+        return `Charge batterie : ${Math.round(soc)} % · Début ≥ ${Math.round(start)} % · Arrêt < ${Math.round(stop)} %`;
+      ]]]
+    icon: |
+      [[[
+        const soc = Number(entity?.state) || 0;
+        return soc >= 60 ? 'mdi:battery-high' : soc >= 30 ? 'mdi:battery-medium' : 'mdi:battery-low';
+      ]]]
+    show_state: false
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+        - background: |
+            [[[
+              const soc = Number(entity?.state) || 0;
+              return soc >= 60
+                ? 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))'
+                : soc >= 30
+                  ? 'linear-gradient(135deg, rgba(245,158,11,.14), rgba(6,182,212,.06))'
+                  : 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))';
+            ]]]
+      grid:
+        - grid-template-areas: "\"i n\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - width: 24px
+        - color: |
+            [[[
+              const soc = Number(entity?.state) || 0;
+              return soc >= 60 ? '#22c55e' : soc >= 30 ? '#f59e0b' : '#ef4444';
+            ]]]
+      name:
+        - font-weight: 700
+        - font-size: .98rem
+  - square: false
+    type: grid
+    cards:
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_en_hc
+        name: |
+          [[[
+            return (entity?.state === 'on') ? 'Heures Creuses' : 'Heures Pleines';
+          ]]]
+        icon: |
+          [[[
+            return (entity?.state === 'on') ? 'mdi:clock-time-three' : 'mdi:clock-outline';
+          ]]]
+        show_state: false
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: |
+                [[[
+                  const on = entity?.state === 'on';
+                  return on
+                    ? 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))'
+                    : 'linear-gradient(135deg, rgba(245,158,11,.14), rgba(6,182,212,.06))';
+                ]]]
+          grid:
+            - grid-template-areas: "\"i n\""
+            - grid-template-columns: 36px 1fr
+          icon:
+            - width: 24px
+            - color: |
+                [[[
+                  return (entity?.state === 'on') ? '#22c55e' : '#f59e0b';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: .98rem
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_fenetre_pv
+        name: |
+          [[[
+            return (entity?.state === 'on') ? 'En fenêtre PV' : 'Hors fenêtre PV';
+          ]]]
+        icon: |
+          [[[
+            return (entity?.state === 'on') ? 'mdi:weather-sunny' : 'mdi:weather-sunny-off';
+          ]]]
+        show_state: false
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: |
+                [[[
+                  const on = entity?.state === 'on';
+                  return on
+                    ? 'linear-gradient(135deg, rgba(245,158,11,.12), rgba(6,182,212,.06))'
+                    : 'linear-gradient(135deg, rgba(156,163,175,.10), rgba(6,182,212,.04))';
+                ]]]
+          grid:
+            - grid-template-areas: "\"i n\""
+            - grid-template-columns: 36px 1fr
+          icon:
+            - width: 24px
+            - color: |
+                [[[
+                  return (entity?.state === 'on') ? '#f59e0b' : '#9ca3af';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: .98rem
+    columns: 2
+  - type: custom:button-card
+    entity: input_boolean.cumulus_vacances
+    name: |
+      [[[
+        const on = entity?.state === 'on';
+        return on ? 'Mode vacances : activé' : 'Mode vacances : désactivé';
+      ]]]
+    icon: mdi:beach
+    show_state: false
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+        - background: |
+            [[[
+              return (entity?.state === 'on')
+                ? 'linear-gradient(135deg, rgba(14,165,233,.14), rgba(6,182,212,.06))'
+                : 'linear-gradient(135deg, rgba(156,163,175,.10), rgba(6,182,212,.04))';
+            ]]]
+      grid:
+        - grid-template-areas: "\"i n\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - width: 24px
+        - color: |
+            [[[
+              // Bleu si ON, gris si OFF
+              return (entity?.state === 'on') ? '#0ea5e9' : '#9ca3af';
+            ]]]
+      name:
+        - font-weight: 700
+        - font-size: .98rem
+    tap_action:
+      action: toggle
+      confirmation:
+        text: Confirmer
+    hold_action:
+      action: more-info
+  - type: custom:button-card
+    entity: input_number.cumulus_solcast_seuil_kwh
+    name: Seuil prévision solaire (P90)
+    icon: mdi:tune-variant
+    show_state: true
+    state_display: |
+      [[[
+        const v = Number(entity?.state);
+        return isFinite(v) ? `${v.toFixed(1)} kWh` : (entity?.state || '');
+      ]]]
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - background: linear-gradient(135deg, rgba(6,182,212,.08), rgba(107,114,128,.04))
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+      grid:
+        - grid-template-areas: "\"i n\" \"s s\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - width: 24px
+        - color: "#06b6d4"
+      name:
+        - font-weight: 600
+  - type: custom:button-card
+    entity: input_number.cumulus_talon_w
+    name: Consommation de base
+    icon: mdi:waves
+    show_state: true
+    state_display: |
+      [[[
+        const v = Number(entity?.state);
+        return isFinite(v) ? `${v.toFixed(0)} W` : (entity?.state || '');
+      ]]]
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - background: linear-gradient(135deg, rgba(6,182,212,.08), rgba(107,114,128,.04))
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+      grid:
+        - grid-template-areas: "\"i n\" \"s s\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - color: "#94a3b8"
+        - width: 24px
+      name:
+        - font-weight: 600
+  - type: custom:button-card
+    entity: input_number.cumulus_on_delay_s
+    name: Délai d'enclenchement (ON)
+    icon: mdi:timer-play
+    show_state: true
+    state_display: |
+      [[[
+        const v = Number(entity?.state);
+        return isFinite(v) ? `${v.toFixed(0)} s` : (entity?.state || '');
+      ]]]
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - background: linear-gradient(135deg, rgba(245,158,11,.10), rgba(6,182,212,.05))
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+      grid:
+        - grid-template-areas: "\"i n\" \"s s\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - color: "#f59e0b"
+        - width: 24px
+      name:
+        - font-weight: 600
+  - type: custom:button-card
+    entity: input_number.cumulus_deadband_s
+    name: Temporisation (après chauffe)
+    icon: mdi:timer-sand
+    show_state: true
+    state_display: |
+      [[[
+        const v = Number(entity?.state);
+        return isFinite(v) ? `${v.toFixed(0)} s` : (entity?.state || '');
+      ]]]
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - background: linear-gradient(135deg, rgba(168,85,247,.10), rgba(6,182,212,.05))
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+      grid:
+        - grid-template-areas: "\"i n\" \"s s\""
+        - grid-template-columns: 36px 1fr
+      icon:
+        - color: "#a855f7"
+        - width: 24px
+      name:
+        - font-weight: 600
+  - square: false
+    type: grid
+    cards:
+      - type: custom:button-card
+        entity: input_datetime.cumulus_heures_creuses_debut
+        name: Début
+        icon: mdi:clock-start
+        show_state: true
+        state_display: >
+          [[[ const s=(entity&&entity.state)?entity.state:''; return s ?
+          s.slice(0,5) : '--:--'; ]]]
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - background: >-
+                linear-gradient(135deg, rgba(14,165,233,.10),
+                rgba(6,182,212,.04))
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+          grid:
+            - grid-template-areas: "\"i n\" \"s s\""
+            - grid-template-columns: 36px 1fr
+            - row-gap: 4px
+          icon:
+            - color: "#0ea5e9"
+            - width: 24px
+          name:
+            - font-weight: 600
+      - type: custom:button-card
+        entity: input_datetime.cumulus_heures_creuses_fin
+        name: Fin
+        icon: mdi:clock-end
+        show_state: true
+        state_display: >
+          [[[ const s=(entity&&entity.state)?entity.state:''; return s ?
+          s.slice(0,5) : '--:--'; ]]]
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - background: >-
+                linear-gradient(135deg, rgba(14,165,233,.10),
+                rgba(6,182,212,.04))
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+          grid:
+            - grid-template-areas: "\"i n\" \"s s\""
+            - grid-template-columns: 36px 1fr
+            - row-gap: 4px
+          icon:
+            - color: "#0ea5e9"
+            - width: 24px
+          name:
+            - font-weight: 600
+    columns: 2
+    title: Fenêtre Chauffe Nocturne
+  - square: false
+    type: grid
+    cards:
+      - type: custom:button-card
+        entity: input_datetime.cumulus_plage_pv_debut
+        name: Début
+        icon: mdi:weather-sunset-up
+        show_state: true
+        state_display: >
+          [[[ const s=(entity&&entity.state)?entity.state:''; return s ?
+          s.slice(0,5) : '--:--'; ]]]
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - background: >-
+                linear-gradient(135deg, rgba(6,182,212,.10),
+                rgba(6,182,212,.04))
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+          grid:
+            - grid-template-areas: "\"i n\" \"s s\""
+            - grid-template-columns: 36px 1fr
+            - row-gap: 4px
+          icon:
+            - color: "#06b6d4"
+            - width: 24px
+          name:
+            - font-weight: 600
+      - type: custom:button-card
+        entity: input_datetime.cumulus_plage_pv_fin
+        name: Fin
+        icon: mdi:weather-sunset-down
+        show_state: true
+        state_display: >
+          [[[ const s=(entity&&entity.state)?entity.state:''; return s ?
+          s.slice(0,5) : '--:--'; ]]]
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - background: >-
+                linear-gradient(135deg, rgba(6,182,212,.10),
+                rgba(6,182,212,.04))
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+          grid:
+            - grid-template-areas: "\"i n\" \"s s\""
+            - grid-template-columns: 36px 1fr
+            - row-gap: 4px
+          icon:
+            - color: "#06b6d4"
+            - width: 24px
+          name:
+            - font-weight: 600
+    columns: 2
+    title: Fenêtre Chauffe Photovoltaïque
+  - square: false
+    type: grid
+    title: Actions Manuelles
+    cards:
+      - type: custom:button-card
+        entity: input_boolean.cumulus_solcast_override
+        name: |
+          [[[
+            const on = entity?.state === 'on';
+            return on ? 'Forçage heures creuses ce soir : activé'
+                      : 'Forçage heures creuses ce soir : désactivé';
+          ]]]
+        icon: mdi:shield-off-outline
+        show_state: false
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: |
+                [[[
+                  return (entity?.state === 'on')
+                    ? 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))'
+                    : 'linear-gradient(135deg, rgba(156,163,175,.10), rgba(6,182,212,.04))';
+                ]]]
+          grid:
+            - grid-template-areas: "\"i n\""
+            - grid-template-columns: 36px 1fr
+          icon:
+            - width: 24px
+            - color: |
+                [[[
+                  return (entity?.state === 'on') ? '#22c55e' : '#9ca3af';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: .98rem
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Confirmer
+        hold_action:
+          action: more-info
+      - type: custom:button-card
+        entity: input_boolean.cumulus_boost
+        name: |
+          [[[
+            const on = entity?.state === 'on';
+            return on ? 'Boost anti-légionelle : actif'
+                      : 'Boost anti-légionelle : inactif';
+          ]]]
+        icon: mdi:thermometer-high
+        show_state: false
+        styles:
+          card:
+            - border-radius: 16px
+            - padding: 10px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: |
+                [[[
+                  return (entity?.state === 'on')
+                    ? 'linear-gradient(135deg, rgba(245,158,11,.14), rgba(6,182,212,.06))'
+                    : 'linear-gradient(135deg, rgba(156,163,175,.10), rgba(6,182,212,.04))';
+                ]]]
+          grid:
+            - grid-template-areas: "\"i n\""
+            - grid-template-columns: 36px 1fr
+          icon:
+            - width: 24px
+            - color: |
+                [[[
+                  return (entity?.state === 'on') ? '#f59e0b' : '#9ca3af';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: .98rem
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Confirmer
+        hold_action:
+          action: more-info
+    columns: 1
+  - type: custom:button-card
+    name: Demarrage PV — Diagnostic
+    icon: mdi:bug
+    show_state: false
+    show_label: true
+    triggers_update:
+      - sensor.cumulus_pv_power_w
+      - input_number.cumulus_seuil_pv_on_w
+      - binary_sensor.cumulus_fenetre_pv
+      - input_boolean.cumulus_verrou_jour
+      - input_boolean.cumulus_jour_autorise
+      - input_boolean.cumulus_vacances
+      - sensor.cumulus_soc_solarbank_pct
+      - input_number.cumulus_soc_min_pv_pct
+      - binary_sensor.cumulus_deadband_actif
+    label: |
+      [[[
+        const s     = states;
+        const pv    = Number(s['sensor.cumulus_pv_power_w']?.state) || 0;
+        const seuil = Number(s['input_number.cumulus_seuil_pv_on_w']?.state) || 100;
+        const fen   = s['binary_sensor.cumulus_fenetre_pv']?.state === 'on';
+        const verrou= s['input_boolean.cumulus_verrou_jour']?.state === 'on';
+        const jourH = s['input_boolean.cumulus_jour_autorise'];
+        const jour  = jourH ? (jourH.state === 'on') : true; // si helper absent, on ne bloque pas
+        const vac   = s['input_boolean.cumulus_vacances']?.state === 'on';
+        const soc   = Number(s['sensor.cumulus_soc_solarbank_pct']?.state) || 0;
+        const socMin= Number(s['input_number.cumulus_soc_min_pv_pct']?.state) || 25;
+        const dead  = s['binary_sensor.cumulus_deadband_actif']?.state === 'on';
+
+        const reasons = [];
+        if (dead)  reasons.push('temporisation active');
+        if (!fen)  reasons.push('hors fenetre PV');
+        if (verrou)reasons.push('verrou jour actif');
+        if (!jour) reasons.push('jour non autorise (1j/2)');
+        if (vac)   reasons.push('mode vacances actif');
+        if (pv < seuil) reasons.push('PV ' + pv + ' < seuil ' + seuil);
+        if (soc < (socMin - 0.5)) reasons.push('SOC ' + soc + '% < min ' + socMin + '% -0.5');
+
+        const header = (reasons.length === 0)
+          ? 'OK - conditions reunies'
+          : 'BLOQUE - ' + reasons[0];
+
+        const lines = [
+          header,
+          'PV ' + pv + ' / seuil ' + seuil + ' - fenetre: ' + (fen ? 'oui' : 'non'),
+          'verrou: ' + (verrou ? 'ON' : 'off') + ' - jour OK: ' + (jour ? 'oui' : 'non') + (jourH ? '' : ' (helper absent)'),
+          'vacances: ' + (vac ? 'ON' : 'off'),
+          'SOC ' + soc + '% / min ' + socMin + '%'
+        ];
+        return lines.join('\n');
+      ]]]
+    tap_action:
+      action: none
+    styles:
+      card:
+        - border-radius: 16px
+        - padding: 10px
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+      name:
+        - font-weight: 600
+      label:
+        - white-space: pre-line
+  - type: custom:button-card
+    name: Temporisation (état)
+    icon: mdi:timer-sand
+    show_label: true
+    label: |
+      [[[
+        const t = states['timer.cumulus_deadband_ui'];
+        const rem = t?.attributes?.remaining || '—';
+        return `état: ${t?.state} • restant: ${rem}`;
+      ]]]
+    triggers_update:
+      - timer.cumulus_deadband_ui
+    update_interval: 1
+    tap_action: none
