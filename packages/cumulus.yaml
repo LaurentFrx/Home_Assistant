@@ -1,5 +1,5 @@
 ###############################################################################
-# CUMULUS — v2025-09-14c-triggerfix
+# CUMULUS — v2025-09-19a-codex
 #
 # Changements majeurs par rapport aux versions antérieures :
 # - Seuil PV par défaut = 100 W (input_number.cumulus_seuil_pv_on_w)
@@ -329,7 +329,8 @@ automation:
           {{ states('sensor.cumulus_pv_power_w')|float(0)
              > states('input_number.cumulus_seuil_pv_on_w')|float(100) }}
         for:
-          seconds: 10
+          seconds: >-
+            {{ states('input_number.cumulus_on_delay_s')|int(0) }}
     condition:
       - condition: template
         value_template: >-
@@ -347,23 +348,48 @@ automation:
       - condition: template
         # SOC ≥ start - 0,5 pt
         value_template: >-
-          {{ states('cumulus_soc_solarbank_pct')|float(0)
-             >= (states('input_number.cumulus_soc_start_pct')|float(25) - 0.5) }}
+          {% set soc = states('sensor.cumulus_soc_solarbank_pct')|float(0) %}
+          {{
+            soc
+            >= (states('input_number.cumulus_soc_start_pct')|float(25) - 0.5)
+          }}
     action:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
-          db_s: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+          threshold_w: >-
+            {{ states('input_number.cumulus_seuil_pv_on_w')|float(100) }}
+          db_s: >-
+            {% set delay = states('input_number.cumulus_on_delay_s')|int(0) %}
+            {{ (states('input_number.cumulus_mini_deadband_no_delay_s')|int(5))
+               if delay <= 0
+               else (states('input_number.cumulus_deadband_s')|int(100)) }}
+      - if:
+          # Abandonne le démarrage si la production est retombée sous le seuil
+          # pendant le délai de confirmation.
+          - condition: template
+            value_template: >-
+              {{ states('sensor.cumulus_pv_power_w')|float(0)
+                 <= (threshold_w | float(100)) }}
+        then:
+          - stop: "PV repasse sous le seuil avant l'action"
       - choose:
           - conditions:
               - condition: template
                 value_template: "{{ is_state(sw_id, 'off') }}"
+              - condition: template
+                value_template: >-
+                  {{ states('sensor.cumulus_pv_power_w')|float(0)
+                     > (threshold_w | float(100)) }}
             sequence:
               - service: switch.turn_on
-                target: { entity_id: "{{ sw_id }}" }
+                target:
+                  entity_id: "{{ sw_id }}"
               - service: timer.start
-                target: { entity_id: timer.cumulus_deadband_ui }
+                target:
+                  entity_id: timer.cumulus_deadband_ui
                 data:
-                  duration: "{{ db_s }}"
+                  duration:
+                    seconds: "{{ db_s|int }}"
         default: []
     mode: single
 
@@ -387,16 +413,23 @@ automation:
     action:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+          db_s: >-
+            {{ (states('input_number.cumulus_mini_deadband_no_delay_s')|int(5))
+               if (states('input_number.cumulus_on_delay_s')|int(0)) <= 0
+               else (states('input_number.cumulus_deadband_s')|int(100)) }}
       - if:
           - condition: template
             value_template: "{{ is_state(sw_id, 'on') }}"
         then:
           - service: switch.turn_off
-            target: { entity_id: "{{ sw_id }}" }
+            target:
+              entity_id: "{{ sw_id }}"
           - service: timer.start
-            target: { entity_id: timer.cumulus_deadband_ui }
+            target:
+              entity_id: timer.cumulus_deadband_ui
             data:
-              duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+              duration:
+                seconds: "{{ db_s|int }}"
     mode: restart
 
   # 3) Sécurité SOC bas : OFF si SOC < stop (%) pendant 10 s
@@ -405,19 +438,29 @@ automation:
     trigger:
       - platform: template
         value_template: >-
-          {{ states('cumulus_soc_solarbank_pct')|float(0)
-             < states('input_number.cumulus_soc_stop_pct')|float(15) }}
+          {% set soc = states('sensor.cumulus_soc_solarbank_pct')|float(0) %}
+          {{
+            soc
+            < states('input_number.cumulus_soc_stop_pct')|float(15)
+          }}
         for:
           seconds: 10
     action:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+          db_s: >-
+            {{ (states('input_number.cumulus_mini_deadband_no_delay_s')|int(5))
+               if (states('input_number.cumulus_on_delay_s')|int(0)) <= 0
+               else (states('input_number.cumulus_deadband_s')|int(100)) }}
       - service: switch.turn_off
-        target: { entity_id: "{{ sw_id }}" }
+        target:
+          entity_id: "{{ sw_id }}"
       - service: timer.start
-        target: { entity_id: timer.cumulus_deadband_ui }
+        target:
+          entity_id: timer.cumulus_deadband_ui
         data:
-          duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+          duration:
+            seconds: "{{ db_s|int }}"
     mode: restart
 
   # 4) Détection fin de chauffe par import
@@ -441,11 +484,14 @@ automation:
             value_template: "{{ is_state(sw_id, 'on') }}"
         then:
           - service: switch.turn_off
-            target: { entity_id: "{{ sw_id }}" }
+            target:
+              entity_id: "{{ sw_id }}"
       - service: input_boolean.turn_on
-        target: { entity_id: input_boolean.cumulus_verrou_jour }
+        target:
+          entity_id: input_boolean.cumulus_verrou_jour
       - service: input_boolean.turn_on
-        target: { entity_id: input_boolean.temp_atteinte_aujourdhui }
+        target:
+          entity_id: input_boolean.temp_atteinte_aujourdhui
     mode: restart
 
   # 5) ON au début des HC si prévu
@@ -468,12 +514,19 @@ automation:
     action:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+          db_s: >-
+            {{ (states('input_number.cumulus_mini_deadband_no_delay_s')|int(5))
+               if (states('input_number.cumulus_on_delay_s')|int(0)) <= 0
+               else (states('input_number.cumulus_deadband_s')|int(100)) }}
       - service: switch.turn_on
-        target: { entity_id: "{{ sw_id }}" }
+        target:
+          entity_id: "{{ sw_id }}"
       - service: timer.start
-        target: { entity_id: timer.cumulus_deadband_ui }
+        target:
+          entity_id: timer.cumulus_deadband_ui
         data:
-          duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
+          duration:
+            seconds: "{{ db_s|int }}"
     mode: single
 
   # 6) OFF à la fin des HC
@@ -487,7 +540,8 @@ automation:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
       - service: switch.turn_off
-        target: { entity_id: "{{ sw_id }}" }
+        target:
+          entity_id: "{{ sw_id }}"
     mode: single
 
   # 7) Reset du tag "temp atteinte" chaque jour (après fin HC)
@@ -498,7 +552,9 @@ automation:
         at: "08:10:00"
     action:
       - service: input_boolean.turn_off
-        target: { entity_id: input_boolean.temp_atteinte_aujourdhui }
+        target:
+          entity_id: input_boolean.temp_atteinte_aujourdhui
       - service: input_boolean.turn_off
-        target: { entity_id: input_boolean.cumulus_verrou_jour }
+        target:
+          entity_id: input_boolean.cumulus_verrou_jour
     mode: single
