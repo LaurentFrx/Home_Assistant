@@ -1,14 +1,14 @@
-﻿###############################################################################
+###############################################################################
 # CUMULUS - v2025-09-20a-triggerfix
 #
 # Changements majeurs par rapport aux versions antÃ©rieures :
 # - Seuil PV par dÃ©faut = 100 W (input_number.cumulus_seuil_pv_on_w)
 # - Automation "ce_on_pv_simple" durcie : dÃ©clenchement au-dessus du seuil avec
 #   dÃ©lai configurable ; re-vÃ©rification du seuil avant ON
-# - Condition SOC avec marge âˆ’0,5 pt
+# - Condition SOC avec marge âˆ'0,5 pt
 # - binaire cumulus_chauffe_reelle en template (pilotÃ© par variations de mesures)
 # - Limiteur dâ€™import : OFF si import > seuil (talon+marge) pendant â‰¥ 8 s
-# - SpÃ©cial â€œno_delayâ€ : mini-deadband post-ON = 5 s (sinon deadband = 100 s)
+# - SpÃ©cial â€œno_delayâ€ : mini-deadband post-ON = 5 s (sinon deadband = 100 s)
 # - Ajouts dÃ©tect. fin par import (seuil = talon + marge_fin_import)
 #
 # RÃ¨gles inviolables :
@@ -22,19 +22,19 @@ input_text:
   cumulus_entity_import_w:
     name: ENTITÃ‰ - Import rÃ©seau (W)
     icon: mdi:transmission-tower-import
-    # â† remplace si besoin par lâ€™ID rÃ©el du capteur dâ€™import rÃ©seau
+    # â† remplace si besoin par lâ€™ID rÃ©el du capteur dâ€™import rÃ©seau
     initial: sensor.smart_meter_grid_import
 
   cumulus_entity_contacteur:
     name: ENTITÃ‰ - Contacteur cumulus (switch)
     icon: mdi:water-boiler
-    # â† remplace si besoin, ceci est le fallback historique
+    # â† remplace si besoin, ceci est le fallback historique
     initial: switch.shellypro1_ece334ee1b64
 
   cumulus_entity_soc_solarbank:
     name: ENTITÃ‰ - SOC Solarbank (%)
     icon: mdi:battery
-    # â† capteur SOC SB rÃ©el chez toi
+    # â† capteur SOC SB rÃ©el chez toi
     initial: sensor.system_sanguinet_etat_de_charge_du_sb
 
 # ============================ AIDES / RÃ‰GLAGES ============================ #
@@ -250,7 +250,7 @@ template:
         state: >-
           {{ states('sensor.cumulus_import_min_si_chauffe_w')|float(0) + states('input_number.cumulus_marge_fin_import_w')|float(150) }}
 
-      # Journal (timestamps) â€“ maintenus pour compat
+      # Journal (timestamps) â€" maintenus pour compat
       - name: "cumulus_last_full_heat_start"
         unique_id: cumulus_last_full_heat_start
         state: "{{ states('sensor.cumulus_last_full_heat_start') }}"
@@ -321,7 +321,7 @@ automation:
 
   # 1) DÃ©marrage PV simple
   - id: ce_on_pv_simple
-    alias: Cumulus â€” ON sur PV (simple)
+    alias: Cumulus â€" ON sur PV (simple)
     description: "DÃ©marre quand la prod PV dÃ©passe le seuil pendant cumulus_on_delay_s."
     trigger:
       # On dÃ©clenche quand PV > seuil (utilise un gabarit pour pouvoir lire l'input_number)
@@ -368,7 +368,7 @@ automation:
 
   # 2) Limiteur d'import : coupe si import trop haut pendant â‰¥8 s
   - id: cumulus_limiteur_import
-    alias: Cumulus â€” Limiteur d'import
+    alias: Cumulus â€" Limiteur d'import
     trigger:
       - platform: numeric_state
         entity_id: sensor.cumulus_import_reseau_w
@@ -399,7 +399,7 @@ automation:
 
   # 3) SÃ©curitÃ© SOC bas : OFF si SOC < stop (%) pendant 10 s
   - id: cumulus_securite_soc_bas
-    alias: Cumulus â€” SÃ©curitÃ© SOC bas
+    alias: Cumulus â€" SÃ©curitÃ© SOC bas
     trigger:
       - platform: template
         value_template: >-
@@ -420,7 +420,7 @@ automation:
 
   # 4) DÃ©tection fin de chauffe par import
   - id: cumulus_fin_detectee_par_import
-    alias: Cumulus â€” Fin dÃ©tectÃ©e par import (OFF + verrou + tag du jour)
+    alias: Cumulus â€" Fin dÃ©tectÃ©e par import (OFF + verrou + tag du jour)
     trigger:
       - platform: state
         entity_id: binary_sensor.cumulus_fini_par_import
@@ -448,7 +448,7 @@ automation:
 
   # 5) ON au dÃ©but des HC si prÃ©vu
   - id: cumulus_on_debut_hc_si_prevu
-    alias: Cumulus â€” ON dÃ©but HC si prÃ©vu
+    alias: Cumulus â€" ON dÃ©but HC si prÃ©vu
     trigger:
       - platform: state
         entity_id: binary_sensor.cumulus_en_hc
@@ -474,9 +474,9 @@ automation:
           duration: "{{ states('input_number.cumulus_deadband_s')|int(100) }}"
     mode: single
 
-  # 6) OFF Ã  la fin des HC
+  # 6) OFF Ã  la fin des HC
   - id: cumulus_off_fin_hc
-    alias: Cumulus â€” OFF fin HC
+    alias: Cumulus â€" OFF fin HC
     trigger:
       - platform: state
         entity_id: binary_sensor.cumulus_en_hc
@@ -490,7 +490,7 @@ automation:
 
   # 7) Reset du tag "temp atteinte" chaque jour (aprÃ¨s fin HC)
   - id: cumulus_reset_daily_flags
-    alias: Cumulus â€” Reset journalier (aprÃ¨s HC)
+    alias: Cumulus â€" Reset journalier (aprÃ¨s HC)
     trigger:
       - platform: time
         at: "08:10:00"
