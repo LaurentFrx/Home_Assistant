@@ -1,0 +1,149 @@
+type: custom:apexcharts-card
+header:
+  show: true
+  title: PV — Réel (SB+APS) vs Solcast (aujourd’hui)
+  show_states: true
+  colorize_states: true
+
+now:
+  show: true
+  color: "#60a5fa"
+
+apex_config:
+  xaxis:
+    type: datetime
+    labels:
+      datetimeUTC: false
+    min: >-
+      [[[ const pad = 30*60*1000, day = 24*3600*1000;
+          const sun = hass.states["sun.sun"]?.attributes || {};
+          const now = new Date();
+          const sameDay = d => d && d.getDate()===now.getDate()
+                              && d.getMonth()===now.getMonth()
+                              && d.getFullYear()===now.getFullYear();
+          const nr = sun.next_rising ? new Date(sun.next_rising) : null;
+          const rise = nr ? (sameDay(nr) ? nr : new Date(nr.getTime()-day))
+                          : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6,0,0);
+          return rise.getTime() - pad;
+      ]]]
+    max: >-
+      [[[ const pad = 30*60*1000, day = 24*3600*1000;
+          const sun = hass.states["sun.sun"]?.attributes || {};
+          const now = new Date();
+          const sameDay = d => d && d.getDate()===now.getDate()
+                              && d.getMonth()===now.getMonth()
+                              && d.getFullYear()===now.getFullYear();
+          const ns = sun.next_setting ? new Date(sun.next_setting) : null;
+          const set = ns ? (sameDay(ns) ? ns : new Date(ns.getTime()-day))
+                         : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21,0,0);
+          return set.getTime() + pad;
+      ]]]
+  markers:
+    size: 0
+  stroke:
+    curve: straight
+    dashArray:
+      - 0
+      - 0
+      - 6
+
+yaxis:
+  - min: 0
+
+all_series_config:
+  stroke_width: 2
+
+series:
+  - name: Réel (W)
+    entity: sensor.pv_total_entree_sb_aps_w
+    type: area
+    extend_to: false
+    group_by:
+      duration: 5min
+      func: avg
+      fill: "null"
+    show:
+      in_header: false
+      legend_value: false
+
+  - name: Solcast (W)
+    entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+    type: line
+    unit: W
+    extend_to: false
+    show:
+      in_header: false
+      legend_value: false
+    data_generator: >
+      const pad=30*60*1000, day=24*3600*1000, now=new Date();
+      const sun=hass.states['sun.sun']?.attributes||{};
+      const same=d=>d&&d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+      const nr=sun.next_rising?new Date(sun.next_rising):null, ns=sun.next_setting?new Date(sun.next_setting):null;
+      const rise=nr?(same(nr)?nr:new Date(nr.getTime()-day)):new Date(now.getFullYear(),now.getMonth(),now.getDate(),6,0,0);
+      const set =ns?(same(ns)?ns:new Date(ns.getTime()-day)):new Date(now.getFullYear(),now.getMonth(),now.getDate(),21,0,0);
+      const start=rise.getTime()-pad, end=set.getTime()+pad;
+
+      const a=(entity ?? hass.states['sensor.solcast_pv_forecast_previsions_pour_aujourd_hui'])?.attributes||{};
+      const rows=a.detailedForecast || a.forecasts || a.detailed || a.detailedHour || a.timeseries || [];
+      if (!Array.isArray(rows) || !rows.length) return [];
+      const out=[];
+      for (const p of rows){
+        const ts=new Date(p.period_end||p.period_start||p.time||p.datetime).getTime();
+        if (!Number.isFinite(ts) || ts<start || ts>end) continue;
+        let v=Number(p.pv_estimate90 ?? p.pv_estimate ?? p.pv_estimate10 ?? p.pv ?? p.value ?? p.power ?? 0);
+        if (v>0 && v<=50) v*=1000;
+        out.push([ts,Math.round(v)]);
+      }
+      return out;
+
+  - name: Solcast demain (W)
+    entity: sensor.solcast_pv_forecast_previsions_pour_demain
+    type: line
+    unit: W
+    extend_to: false
+    show:
+      in_header: false
+      legend_value: false
+    data_generator: >
+      const pad=30*60*1000, day=24*3600*1000, now=new Date();
+      const sun=hass.states['sun.sun']?.attributes||{};
+      const same=d=>d&&d.getDate()===now.getDate()&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+      const nr=sun.next_rising?new Date(sun.next_rising):null, ns=sun.next_setting?new Date(sun.next_setting):null;
+      const rise=nr?(same(nr)?nr:new Date(nr.getTime()-day)):new Date(now.getFullYear(),now.getMonth(),now.getDate(),6,0,0);
+      const set =ns?(same(ns)?ns:new Date(ns.getTime()-day)):new Date(now.getFullYear(),now.getMonth(),now.getDate(),21,0,0);
+      const start=rise.getTime()-pad, end=set.getTime()+pad;
+
+      const a=(entity ?? hass.states['sensor.solcast_pv_forecast_previsions_pour_demain'])?.attributes||{};
+      const rows=a.detailedForecast || a.forecasts || a.detailed || a.detailedHour || a.timeseries || [];
+      if (!Array.isArray(rows) || !rows.length) return [];
+      const out=[];
+      for (const p of rows){
+        const tRaw=new Date(p.period_end||p.period_start||p.time||p.datetime).getTime();
+        if (!Number.isFinite(tRaw)) continue;
+        const ts=tRaw - day;
+        if (ts<start || ts>end) continue;
+        let v=Number(p.pv_estimate90 ?? p.pv_estimate ?? p.pv_estimate10 ?? p.pv ?? p.value ?? p.power ?? 0);
+        if (v>0 && v<=50) v*=1000;
+        out.push([ts,Math.round(v)]);
+      }
+      out.sort((a,b)=>a[0]-b[0]);
+      if (out.length) out.push([out[out.length-1][0]+1000,null]);
+      return out;
+
+  - name: Réel (kWh)
+    entity: sensor.pv_total_day_kwh
+    unit: kWh
+    show:
+      in_chart: false
+      in_header: true
+      name_in_header: true
+    transform: return Math.round((Number(x)||0)*10)/10;
+
+  - name: Solcast (kWh)
+    entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+    unit: kWh
+    show:
+      in_chart: false
+      in_header: true
+      name_in_header: true
+    transform: return Math.round((Number(x)||0)*10)/10;
