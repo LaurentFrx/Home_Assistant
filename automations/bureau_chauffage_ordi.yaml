@@ -1,0 +1,28 @@
+- id: '1709843952840'
+  alias: Bureau chauffage avec ordi
+  description: ''
+  trigger:
+    - platform: state
+      entity_id: switch.ordi_moniteur
+      from: "off"
+      to: "on"
+  condition: []
+  action:
+    - service: climate.set_temperature
+      target:
+        entity_id: climate.bureau
+      data:
+        temperature: 21
+
+    - wait_for_trigger:
+        - platform: state
+          entity_id: switch.ordi_moniteur
+          from: "on"
+          to: "off"
+
+    - service: climate.set_temperature
+      target:
+        entity_id: climate.bureau
+      data:
+        temperature: 18.5
+  mode: single

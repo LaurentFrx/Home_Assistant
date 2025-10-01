@@ -1,0 +1,7 @@
+ouverture_portail:
+  alias: "Ouverture Portail"
+  sequence:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.portail
+  icon: mdi:gate

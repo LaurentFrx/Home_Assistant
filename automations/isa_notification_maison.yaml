@@ -1,0 +1,21 @@
+- id: '1710165833091'
+  alias: 'Isa notification maison'
+  description: ''
+  use_blueprint:
+    path: 'panhans/zone_notification_extended.yaml'
+    input:
+      persons:
+        - person.isabelle
+      zones:
+        - zone.fred_isa
+      zones_leaving:
+        - zone.college
+        - zone.fred_isa
+      notify_device: '20244acb8f9f3b67ab06c827d3b26663'
+      status_bar_icon: 'mdi:account'
+      title_leaving: '{{ person }} s’en va'
+      message_leaving: '{{ person }} quitte {{ zone }}.'
+      message_arriving: '{{ person }} arrive à {{ zone }}.'
+      title_arriving: '{{ person }} arrive à {{ zone }}'
+      duration: 0
+      critical_notification: true

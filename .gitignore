@@ -1,0 +1,57 @@
+# ==== Home Assistant — fichiers sensibles / volatiles ====
+secrets.yaml
+
+# Bases de données & journaux
+home-assistant_v2.db*
+*.db
+*.db-shm
+*.db-wal
+*.log*
+
+# Dossiers runtime
+.cloud/
+deps/
+backup/
+tmp/
+tts/
+media/
+
+# ==== HACS volumineux ====
+www/community/
+custom_components/hacs/
+
+# Cache du dossier www
+www/.cache/
+
+# ==== Python ====
+**/__pycache__/
+**/*.pyc
+
+# ==== Node / builds front ====
+node_modules/
+dist/
+
+# ==== Dashboards UI (.storage) — n’inclure que Lovelace ====
+/.storage/*
+!/.storage/
+!/.storage/lovelace
+!/.storage/lovelace_dashboards
+!/.storage/lovelace_resources
+!/.storage/lovelace.*
+
+# ==== Éditeurs / OS ====
+*.bak
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# Garde .vscode mais versionne 2 fichiers utiles seulement
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ==== Intégrations diverses optionnelles ====
+homebridge/
+
+# ==== Fichiers Solcast locaux ====
+solcast-*.json

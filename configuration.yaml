@@ -1,0 +1,53 @@
+# === Composants par défaut essentiels ===
+default_config:
+
+# === Inclusion des notification mobiles ===
+mobile_app:
+
+# === Personnalisation de Home Assistant ===
+homeassistant:
+  packages: !include_dir_named packages    
+  customize:
+    climate.thermostat_sdb:
+      friendly_name: ""
+    sensor.energie_entrant_dans_la_solarbank:
+      device_class: energy
+      state_class: total_increasing
+      unit_of_measurement: kWh
+    sensor.energie_sortant_de_la_solarbank:
+      device_class: energy
+      state_class: total_increasing
+      unit_of_measurement: kWh
+
+# === Thèmes personnalisés ===
+frontend:
+  themes: !include_dir_merge_named themes
+
+# === Capteurs externalisés ===
+sensor: !include_dir_merge_list sensors
+binary_sensor: !include_dir_merge_list binary_sensors
+
+# === Scènes, scripts, automatisations et templates ===
+scene: !include scenes.yaml
+script: !include_dir_merge_named scripts
+automation: !include_dir_merge_list automations
+template: !include_dir_merge_list templates
+
+# === Intégrations tierces ===
+daikin_onecta:
+  email: '***'
+  password: '***'
+# -> Recommandé : déplacez ces secrets dans secrets.yaml (ex. !secret daikin_email / !secret daikin_password)
+
+# === Helpers (UI > Configuration > Helpers) ===
+input_boolean:   !include_dir_merge_named helpers/input_boolean
+input_number:    !include_dir_merge_list   helpers/input_number
+input_datetime:  !include_dir_merge_named helpers/input_datetime
+
+# === Journalisation ===
+logger:
+  default: info
+  logs:
+    homeassistant.components.mobile_app: debug
+    homeassistant.components.http: debug
+    homeassistant.config: debug

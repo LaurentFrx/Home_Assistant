@@ -1,0 +1,30 @@
+- id: '1709595278512'
+  alias: Réveil collège chauffage douche
+  description: >
+    Mets la salle de bain à 22°C pour la première douche du matin.  
+    Ne s’active pas les jours fériés, ni pendant les vacances scolaires, ni après 11h.  
+    Redescend en mode Eco quand Isa quitte la maison.  
+    Se désactive après exécution.
+  trigger:
+    - platform: calendar
+      entity_id: calendar.planning_cours_isa
+      event: start
+      offset: "-02:30:00"
+  condition:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: "off"
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: "off"
+    - condition: time
+      before: "11:00:00"
+    - condition: template
+      value_template: >
+        {% set last = state_attr('automation.reveil_college_chauffage_douche','last_triggered') %}
+        {{ last is none or last.day != now().day }}
+  action:
+    - service: script.turn_on
+      target:
+        entity_id: script.chauf_sdb
+  mode: single

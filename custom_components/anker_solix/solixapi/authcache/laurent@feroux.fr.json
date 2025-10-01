@@ -1,0 +1,30 @@
+{
+  "user_id": "71e52a996d0dc38d4712daec783aaf56597df40b",
+  "email": "laurent@feroux.fr",
+  "nick_name": "Laurent",
+  "auth_token": "2951faccc8256b9757fce75530392217278e9fa27484e4d8",
+  "token_expires_at": 1754756070,
+  "avatar": "",
+  "mac_addr": "",
+  "domain": "",
+  "ab_code": "FR",
+  "token_id": 72533988,
+  "geo_key": "AIzaSyAq0l7djwj_R4Kx0a6ggpafRiTg2mxjLJQ",
+  "privilege": 0,
+  "phone_code": "",
+  "phone": "0638256495",
+  "phone_number": "",
+  "phone_code_2fa": "",
+  "phone_2fa": "",
+  "server_secret_info": {
+    "public_key": "04c809d2534c48cfedc01dbcc2aadeb302e81f282a1584ec244afed13332ec366306cdcd5eb617c1f484ce1c88ea8455a7880d1ddd37dcd60179eccc0f689283a4"
+  },
+  "params": [],
+  "trust_list": null,
+  "fa_info": {
+    "step": 0,
+    "info": ""
+  },
+  "country_code": "FR",
+  "ap_cloud_user_id": "71e52a996d0dc38d4712daec783aaf56597df40b"
+}

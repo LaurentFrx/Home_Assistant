@@ -1,0 +1,95 @@
+homeassistant: true
+advanced:
+  network_key:
+    - 120
+    - 79
+    - 163
+    - 145
+    - 85
+    - 140
+    - 206
+    - 122
+    - 178
+    - 99
+    - 218
+    - 107
+    - 52
+    - 63
+    - 9
+    - 166
+  pan_id: 7854
+  ext_pan_id:
+    - 204
+    - 212
+    - 65
+    - 9
+    - 216
+    - 255
+    - 182
+    - 245
+  homeassistant_legacy_entity_attributes: false
+  legacy_api: true
+  legacy_availability_payload: true
+  log_syslog:
+    app_name: Zigbee2MQTT
+    eol: /n
+    host: localhost
+    localhost: localhost
+    path: /dev/log
+    pid: process.pid
+    port: 514
+    protocol: udp4
+    type: '5424'
+  last_seen: ISO_8601
+mqtt:
+  server: mqtt://core-mosquitto:1883
+  user: addons
+  password: theelei3gimaugieghotohthaeth4du3lea9moHae1ua3ooChohnier5jeihei1w
+serial:
+  port: /dev/ttyACM0
+  adapter: ezsp
+frontend:
+  port: 8099
+device_options:
+  legacy: false
+devices:
+  '0xa4c138e5f4489410':
+    friendly_name: ordi moniteur
+    power_precision: 3
+    current_precision: 3
+  '0xf4b3b1fffedd71e0':
+    friendly_name: 'radiateur sdb '
+    power_precision: 3
+    energy_precision: 3
+  '0x3410f4fffe1ca323':
+    friendly_name: Thermo SdB
+    temperature_precision: 2
+  '0x28dba7fffe1b9864':
+    friendly_name: Thermo Salon
+  '0x881a14fffeea0871':
+    friendly_name: Thermo Garage
+  '0xa4c138219a991aa8':
+    friendly_name: Chargeur Isa
+    power_precision: 2
+    voltage_precision: 2
+  '0xa4c138c8b76cd4da':
+    friendly_name: Chargeur Laurent
+  '0xa4c138fe51c57819':
+    friendly_name: Frigo
+  '0xa4c138bfdc45b04b':
+    friendly_name: Imprimante Epson
+  '0xa4c1383d394955cb':
+    friendly_name: Lave_vaisselle
+    power_precision: 3
+  '0xa4c138110b73d75b':
+    friendly_name: Lave-linge
+  '0x0cae5ffffeb4d005':
+    friendly_name: Bouton SdB
+  '0x6c5cb1fffe8722b8':
+    friendly_name: VR Ch Parents
+  '0xdc8e95fffe206f53':
+    friendly_name: VR Salon
+    invert_cover: false
+  '0xbc026efffead3ca4':
+    friendly_name: Portail
+availability: true

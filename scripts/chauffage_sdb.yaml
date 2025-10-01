@@ -1,0 +1,25 @@
+# Chauffage de la salle de bain en mode BOOST puis retour en ECO
+# Utilisé pour tester le thermostat de la SdB
+
+script_chauffage_sdb:
+  alias: "Chauffage SdB"
+  icon: mdi:heat-wave
+  mode: single
+  sequence:
+    - service: climate.set_preset_mode
+      target:
+        entity_id: climate.thermostat_sdb
+      data:
+        preset_mode: boost
+
+    - wait_for_trigger:
+        - platform: zone
+          entity_id: person.isabelle
+          zone: zone.home
+          event: leave
+
+    - service: climate.set_preset_mode
+      target:
+        entity_id: climate.thermostat_sdb
+      data:
+        preset_mode: eco

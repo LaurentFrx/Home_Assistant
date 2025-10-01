@@ -1,0 +1,11 @@
+ouverture_volets:
+  alias: "Ouverture Volets"
+  sequence:
+    - device_id: fa78ba9de95f51ce203d466dc736cd1c
+      domain: cover
+      entity_id: cover.6726e30276bc76bc2831a57389e5c713
+      type: open
+    - device_id: c299e707a7e233fc97589680886a508c
+      domain: cover
+      entity_id: cover.da5ca54c7fae97d6d3f5be3087e6c3ff
+      type: open

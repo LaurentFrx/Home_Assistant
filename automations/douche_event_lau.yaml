@@ -1,0 +1,27 @@
+- id: '1710543339247'
+  alias: Douche événements Laurent
+  description: 'Mets la salle de bain à 22°C pour la première douche du matin
+
+    Ne s active pas les jours fériers et pendant les vacances scolaires ni après midi
+
+    redescend la température à 18,5°C après la douche.
+
+    se désactive après l exécution.'
+  trigger:
+  - platform: calendar
+    event: start
+    offset: '-2:0:0'
+    entity_id: calendar.wakawarider_gmail_com
+  condition:
+  - condition: time
+    before: '11:00:00'
+  - condition: template
+    value_template: '{{ not state_attr(''automation.douche_evenements_laurent'', ''last_triggered'').day==now().day
+      }}'
+  action:
+  - service: script.turn_on
+    target:
+      entity_id:
+      - script.chauf_sdb
+    data: {}
+  mode: single

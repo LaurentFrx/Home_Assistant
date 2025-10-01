@@ -1,0 +1,14 @@
+# Passe le thermostat du salon à 24 °C en mode chauffage
+# Mode single pour éviter le chevauchement d'exécution
+
+script_chauffage_rdc:
+  alias: "Chauffage RDC"
+  icon: mdi:heat-wave
+  mode: single
+  sequence:
+    - service: climate.set_temperature
+      target:
+        entity_id: climate.daikin_split_salon_room_temperature
+      data:
+        temperature: 24
+        hvac_mode: heat

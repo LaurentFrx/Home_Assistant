@@ -1,0 +1,64 @@
+
+  - trigger:
+      - platform: state
+        entity_id: sensor.epson_et_2870_series_black_ink
+    sensor:
+      - name: "Epson ET-2870 Black Ink (cached)"
+        unique_id: epson_et2870_black_ink_cached
+        unit_of_measurement: "%"
+        state: >
+          {% set s = trigger.to_state.state if trigger is defined else states('sensor.epson_et_2870_series_black_ink') %}
+          {% if s not in ['unknown','unavailable','none'] %}
+            {{ s|float(0) }}
+          {% else %}
+            {{ this.state|float(0) }}
+          {% endif %}
+        availability: true
+
+  - trigger:
+      - platform: state
+        entity_id: sensor.epson_et_2870_series_cyan_ink
+    sensor:
+      - name: "Epson ET-2870 Cyan Ink (cached)"
+        unique_id: epson_et2870_cyan_ink_cached
+        unit_of_measurement: "%"
+        state: >
+          {% set s = trigger.to_state.state if trigger is defined else states('sensor.epson_et_2870_series_cyan_ink') %}
+          {% if s not in ['unknown','unavailable','none'] %}
+            {{ s|float(0) }}
+          {% else %}
+            {{ this.state|float(0) }}
+          {% endif %}
+        availability: true
+
+  - trigger:
+      - platform: state
+        entity_id: sensor.epson_et_2870_series_magenta_ink
+    sensor:
+      - name: "Epson ET-2870 Magenta Ink (cached)"
+        unique_id: epson_et2870_magenta_ink_cached
+        unit_of_measurement: "%"
+        state: >
+          {% set s = trigger.to_state.state if trigger is defined else states('sensor.epson_et_2870_series_magenta_ink') %}
+          {% if s not in ['unknown','unavailable','none'] %}
+            {{ s|float(0) }}
+          {% else %}
+            {{ this.state|float(0) }}
+          {% endif %}
+        availability: true
+
+  - trigger:
+      - platform: state
+        entity_id: sensor.epson_et_2870_series_yellow_ink
+    sensor:
+      - name: "Epson ET-2870 Yellow Ink (cached)"
+        unique_id: epson_et2870_yellow_ink_cached
+        unit_of_measurement: "%"
+        state: >
+          {% set s = trigger.to_state.state if trigger is defined else states('sensor.epson_et_2870_series_yellow_ink') %}
+          {% if s not in ['unknown','unavailable','none'] %}
+            {{ s|float(0) }}
+          {% else %}
+            {{ this.state|float(0) }}
+          {% endif %}
+        availability: true

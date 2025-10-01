@@ -1,0 +1,91 @@
+volets:
+  styles:
+    card:
+      - padding: 3px
+      - border-radius: 14px
+      - background: linear-gradient(135deg, rgba(6,182,212,.10), rgba(6,182,212,.05))
+      - overflow: hidden
+      - box-shadow: 0 2px 10px rgba(0,0,0,.12)
+
+ink_gauge:
+  variables:
+    theme: 'linear-gradient(135deg, rgba(148,163,184,.20), rgba(6,182,212,.10))'
+    fill_top_rgba: 'rgba(150,150,150,.55)'
+    fill_bot_rgba: 'rgba(150,150,150,.06)'
+    text_color: 'var(--primary-text-color)'
+    low_threshold: 10
+    last_replacement: ''
+  show_icon: false
+  show_name: false
+  show_label: false
+  show_state: true
+  size: 100%
+  tooltip: >
+    [[[
+      const id = entity && entity.entity_id ? entity.entity_id : null;
+      const d = variables.last_replacement || (id ? states[id]?.last_changed : null);
+      const asDate = d ? new Date(d) : null;
+      const txt = asDate ? asDate.toLocaleString('fr-FR') : 'inconnue';
+      return `Dernier remplacement : ${txt}`;
+    ]]]
+  custom_fields:
+    badge: >
+      [[[
+        const v = Number(entity.state)||0;
+        return (v < variables.low_threshold) ? 'FAIBLE' : '';
+      ]]]
+  styles:
+    grid:
+      - grid-template-areas: '"s"'
+      - grid-template-columns: 100%
+      - grid-template-rows: 100%
+    state:
+      - font-size: 1rem
+      - font-weight: 800
+      - color: '[[[ return variables.text_color ]]]'
+      - text-shadow: 0 1px 0 rgba(255,255,255,.6), 0 0 2px rgba(0,0,0,.28)
+    card:
+      - height: 3rem
+      - padding: 0
+      - margin: 0
+      - border-radius: 14px
+      - box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 2px 8px rgba(0,0,0,.10)
+      - background: >
+          [[[
+            const v = Math.max(0, Math.min(100, Number(entity.state)||0));
+            const fill = `linear-gradient(to top,
+              ${variables.fill_top_rgba} 0%,
+              ${variables.fill_top_rgba} ${v}%,
+              ${variables.fill_bot_rgba} ${v}%,
+              ${variables.fill_bot_rgba} 100%)`;
+            const track = 'linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.18))';
+            const gloss = 'linear-gradient(180deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 40%)';
+            return `${gloss}, ${fill}, ${track}, ${variables.theme}`;
+          ]]]
+    custom_fields:
+      badge:
+        - position: absolute
+        - top: 4px
+        - right: 6px
+        - padding: 1px 6px
+        - border-radius: 999px
+        - background: rgba(239,68,68,.92)
+        - color: '#fff'
+        - font-size: 10px
+        - font-weight: 800
+        - letter-spacing: .4px
+        - line-height: 1.4
+        - box-shadow: 0 1px 2px rgba(0,0,0,.22)
+        - opacity: >
+            [[[
+              const v = Number(entity.state)||0;
+              return (v < variables.low_threshold) ? 1 : 0;
+            ]]]
+        - transform: >
+            [[[
+              const v = Number(entity.state)||0;
+              return (v < variables.low_threshold) ? 'translateZ(0)' : 'translateY(-6px)';
+            ]]]
+  card_mod:
+    style: |
+      /* prêt pour extensions locales */

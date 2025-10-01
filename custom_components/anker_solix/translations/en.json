@@ -1,0 +1,1596 @@
+{
+    "selector": {
+        "exclude": {
+            "options": {
+                "account_info": "Account info",
+                "site_price": "System price values",
+                "device_auto_upgrade": "Auto-Updates",
+                "device_tag": "Device Labels",
+                "solarbank_cutoff": "Solarbank cutoff values",
+                "solarbank_fittings": "Solarbank accessories",
+                "solarbank_solar_info": "Solarbank inverter info",
+                "solar_energy": "Solar energy stats",
+                "solarbank_energy": "Solarbank energy stats",
+                "solarbank": "Solarbanks",
+                "solarbank_pps": "Solarbank power stations",
+                "inverter": "Inverter",
+                "combiner_box": "Combiner boxes",
+                "pps": "Portable power stations",
+                "powerpanel": "Power panels",
+                "powerpanel_energy": "Power panel energy stats",
+                "powerpanel_avg_power": "Power panel ⌀-power",
+                "powercooler": "Power cooler",
+                "smartmeter": "Smart meter",
+                "smartmeter_energy": "Smart meter energy stats",
+                "smartplug": "Smart plugs",
+                "smartplug_energy": "Smart plug energy stats",
+                "hes": "Home energy systems",
+                "hes_energy": "HES energy stats",
+                "hes_avg_power": "HES ⌀-power",
+                "vehicle": "Vehicles",
+                "ev_charger": "EV Charger",
+                "charger": "Power charger"
+            }
+        },
+        "plan": {
+            "options": {
+                "custom_rate_plan": "Custom plan",
+                "blend_plan": "Blend plan",
+                "manual_backup": "Backup charge plan",
+                "use_time": "Time of Use plan"
+            }
+        },
+        "weekday": {
+            "options": {
+                "sun": "Sunday",
+                "mon": "Monday",
+                "tue": "Tuesday",
+                "wed": "Wednesday",
+                "thu": "Thursday",
+                "fri": "Friday",
+                "sat": "Saturday"
+            }
+        },
+        "month": {
+            "options": {
+                "jan": "January",
+                "feb": "February",
+                "mar": "March",
+                "apr": "April",
+                "may": "May",
+                "jun": "June",
+                "jul": "July",
+                "aug": "August",
+                "sep": "September",
+                "oct": "October",
+                "nov": "November",
+                "dec": "December"
+            }
+        },
+        "daytype": {
+            "options": {
+                "weekday": "Weekday",
+                "weekend": "Weekend",
+                "all": "All"
+            }
+        },
+        "tariff": {
+            "options": {
+                "none": "None",
+                "peak": "Peak",
+                "mid_peak": "Medium peak",
+                "off_peak": "Off peak",
+                "valley": "Valley"
+            }
+        },
+        "request_method": {
+            "options": {
+                "get": "GET",
+                "post": "POST",
+                "put": "PUT"
+            }
+        },
+        "endpoint": {
+            "options": {}
+        }
+    },
+    "config": {
+        "step": {
+            "user": {
+                "title": "Add your Anker Solix devices",
+                "description": "Enter credentials for your Anker cloud account",
+                "data": {
+                    "username": "Username/e-mail",
+                    "password": "Password",
+                    "country_code": "Country",
+                    "accept_terms": "Accept Integration usage terms and conditions"
+                },
+                "data_description": {
+                    "username": "Recommendation: Create a second account in the Anker App and share your system with the second account. A parallel usage of the same account in this integration and the Anker App is not possible.",
+                    "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration. A consent automatically includes future updates, which can extend the integration functionality.\nFurther information: {terms_link}"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Change your configured account",
+                "description": "Enter credentials for your Anker cloud account",
+                "data": {
+                    "username": "Username/e-mail",
+                    "password": "Password",
+                    "country_code": "Country",
+                    "accept_terms": "Accept Integration usage terms and conditions"
+                },
+                "data_description": {
+                    "username": "Recommendation: Create a second account in the Anker App and share your system with the second account. A parallel usage of the same account in this integration and the Anker App is not possible.",
+                    "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration. A consent automatically includes future updates, which can extend the integration functionality.\nFurther information: {terms_link}"
+                }
+            },
+            "user_options": {
+                "title": "Anker Solix options",
+                "description": "Change usage of the Api",
+                "data": {
+                    "scan_interval": "Update interval",
+                    "dev_interval_mult": "Interval multiplier for device details",
+                    "delay_time": "Delay for subsequent Api requests",
+                    "timeout": "Timeout for Api requests",
+                    "endpoint_limit": "Endpoint request limit per minute",
+                    "skip_invalid": "Skip invalid data responses",
+                    "exclude": "Excluded entity categories",
+                    "testmode": "Use integration test mode",
+                    "testfolder": "Folder with json files for integration testing"
+                },
+                "data_description": {
+                    "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate endpoint throttling.",
+                    "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
+                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
+                    "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
+                }
+            }
+        },
+        "error": {
+            "auth": "Username/Password is wrong: {error_detail}",
+            "connection": "Unable to connect to the server: {error_detail}",
+            "exceeded": "Login attempts exceeded: {error_detail}",
+            "duplicate_devices": "{username} has shared devices with existing account {shared_account}, you cannot configure both at the same time!",
+            "accept_terms": "Usage terms and conditions must be accepted",
+            "folder_invalid": "Valid folder required for testmode",
+            "unknown": "Unknown error occurred: {error_detail}"
+        },
+        "abort": {
+            "already_configured": "This account is already configured",
+            "reconfig_successful": "Configuration account successfully changed"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Anker Solix options",
+                "description": "Change usage of the Api",
+                "data": {
+                    "scan_interval": "Update interval",
+                    "dev_interval_mult": "Interval multiplier for device details",
+                    "delay_time": "Delay for subsequent Api requests",
+                    "timeout": "Timeout for Api requests",
+                    "endpoint_limit": "Endpoint request limit per minute",
+                    "skip_invalid": "Skip invalid data responses",
+                    "exclude": "Excluded entity categories",
+                    "testmode": "Use integration test mode",
+                    "testfolder": "Folder with json files for integration testing"
+                },
+                "data_description": {
+                    "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling (once active) allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate and reset active endpoint throttling.",
+                    "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
+                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
+                    "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
+                }
+            }
+        },
+        "error": {
+            "folder_invalid": "Valid folder required for testmode"
+        }
+    },
+    "entity": {
+        "button": {
+            "refresh_device": {
+                "name": "Refresh details"
+            },
+            "refresh_vehicles": {
+                "name": "Refresh vehicles"
+            },
+            "restore_attributes": {
+                "name": "Restore attributes"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "name": "Wifi connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                },
+                "state_attributes": {
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    },
+                    "wifi_mac": {
+                        "name": "Wifi MAC"
+                    },
+                    "wifi_ssid": {
+                        "name": "Wifi SSID"
+                    },
+                    "wifi_signal": {
+                        "name": "Wifi signal"
+                    },
+                    "rssi": {
+                        "name": "Wifi rssi"
+                    },
+                    "wireless_type": {
+                        "name": "Wifi type"
+                    }
+                }
+            },
+            "wired_connection": {
+                "name": "Wired connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                }
+            },
+            "connected": {
+                "name": "Connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                },
+                "state_attributes": {
+                    "network": {
+                        "name": "Network"
+                    },
+                    "network_code": {
+                        "name": "Network code"
+                    },
+                    "post_interval": {
+                        "name": "Post interval"
+                    }
+                }
+            },
+            "ota_update": {
+                "name": "OTA Update",
+                "state": {
+                    "on": "Available",
+                    "off": "Current"
+                },
+                "state_attributes": {
+                    "ota_version": {
+                        "name": "OTA version"
+                    },
+                    "ota_components": {
+                        "name": "OTA Components"
+                    }
+                }
+            },
+            "ai_ems_enabled": {
+                "name": "AI enabled",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                },
+                "state_attributes": {
+                    "status_code": {
+                        "name": "Status code"
+                    },
+                    "status": {
+                        "name": "Status",
+                        "state": {
+                            "unknown": "Unknown",
+                            "untrained": "Untrained",
+                            "learning": "Learning",
+                            "trained": "Trained"
+                        }
+                    }
+                }
+            },
+            "auto_switch": {
+                "name": "AI controlled",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                },
+                "state_attributes": {
+                    "priority": {
+                        "name": "Priority"
+                    },
+                    "running_time": {
+                        "name": "Runtime"
+                    }
+                }
+            },
+            "heating": {
+                "name": "Battery heating",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "micro_inverter_power_exceed": {
+                "name": "Inverter power exceed",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "offgrid_with_micro_inverter_alert": {
+                "name": "Inverter offgrid alert",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "site_admin": {
+                "name": "System administration",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            },
+            "has_unread_msg": {
+                "name": "Messages",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                },
+                "state_attributes": {
+                    "system_msg": {
+                        "name": "System msg",
+                        "state": {
+                            "on": "Yes",
+                            "off": "No"
+                        }
+                    },
+                    "device_msg": {
+                        "name": "Device msg",
+                        "state": {
+                            "on": "Yes",
+                            "off": "No"
+                        }
+                    }
+                }
+            },
+            "use_files": {
+                "name": "Use Files",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            },
+            "smart_charging": {
+                "name": "Smart charging",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            },
+            "connected_to_enodeapi": {
+                "name": "Enode Api",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                }
+            }
+        },
+        "datetime": {
+            "preset_manual_backup_start": {
+                "name": "Backup start"
+            },
+            "preset_manual_backup_end": {
+                "name": "Backup end"
+            }
+        },
+        "number": {
+            "preset_system_output_power": {
+                "name": "System output preset"
+            },
+            "preset_device_output_power": {
+                "name": "Device output preset"
+            },
+            "preset_charge_priority": {
+                "name": "Charge priority limit"
+            },
+            "system_price": {
+                "name": "Fixed price kWh"
+            },
+            "preset_tariff_price": {
+                "name": "Tariff price kWh"
+            },
+            "battery_capacity": {
+                "name": "Battery capacity",
+                "state_attributes": {
+                    "expansions": {
+                        "name": "Expansions"
+                    },
+                    "calculated": {
+                        "name": "Calculated"
+                    },
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
+            },
+            "ac_max_charging_power": {
+                "name": "Max charge"
+            },
+            "energy_consumption_per_100km": {
+                "name": "Consumption"
+            },
+            "dynamic_price_fee": {
+                "name": "Dyn. price fee",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
+            },
+            "dynamic_price_vat": {
+                "name": "Dyn. price VAT",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
+            }
+        },
+        "select": {
+            "power_cutoff": {
+                "name": "SOC reserve"
+            },
+            "preset_usage_mode": {
+                "name": "Usage mode",
+                "state": {
+                    "smartmeter": "Self consumption",
+                    "smartplugs": "Smart plugs",
+                    "manual": "Custom",
+                    "backup": "Backup charge",
+                    "use_time": "Time of Use",
+                    "smart": "Smart",
+                    "time_slot": "Time slot"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
+                    }
+                }
+            },
+            "preset_tariff": {
+                "name": "Tariff ToU",
+                "state": {
+                    "peak": "Peak",
+                    "mid_peak": "Medium peak",
+                    "off_peak": "Off peak",
+                    "valley": "Valley"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tariff"
+                    }
+                }
+            },
+            "system_price_unit": {
+                "name": "Price currency"
+            },
+            "system_price_type": {
+                "name": "Price type",
+                "state": {
+                    "fixed": "Fixed",
+                    "use_time": "Time of Use",
+                    "dynamic": "Dynamic"
+                },
+                "state_attributes": {
+                    "type": {
+                        "name": "Type"
+                    },
+                    "current_mode": {
+                        "name": "Active usage mode"
+                    }
+                }
+            },
+            "dynamic_price_provider": {
+                "name": "Price provider",
+                "state": {
+                    "none": "None"
+                },
+                "state_attributes": {
+                    "country": {
+                        "name": "Country"
+                    },
+                    "company": {
+                        "name": "Company"
+                    },
+                    "area": {
+                        "name": "Area"
+                    },
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
+            },
+            "preset_inverter_limit": {
+                "name": "Inverter limit"
+            },
+            "preset_ac_input_limit": {
+                "name": "AC input limit"
+            },
+            "preset_pv_input_limit": {
+                "name": "PV input limit"
+            },
+            "vehicle_brand": {
+                "name": "1. Brand"
+            },
+            "vehicle_model": {
+                "name": "2. Model"
+            },
+            "vehicle_year": {
+                "name": "3. Year"
+            },
+            "vehicle_variant": {
+                "name": "4. Variant (ID/Cap/AC)"
+            }
+        },
+        "sensor": {
+            "status_desc": {
+                "name": "Cloud state",
+                "state": {
+                    "offline": "Offline",
+                    "online": "Online",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status code"
+                    },
+                    "network": {
+                        "name": "Network"
+                    },
+                    "network_code": {
+                        "name": "Network code"
+                    }
+                }
+            },
+            "charging_status_desc": {
+                "name": "Mode",
+                "state": {
+                    "detection": "Detection",
+                    "protection_charge": "Protection charge",
+                    "bypass": "Bypass",
+                    "bypass_discharge": "Bypass discharge",
+                    "discharge": "Discharge",
+                    "charge": "Charge",
+                    "charge_bypass": "Charge bypass",
+                    "charge_priority":  "Charge priority",
+                    "charge_ac":  "Charge AC",
+                    "full_bypass": "Full bypass",
+                    "wakeup": "Wakeup",
+                    "cold_wakeup": "Cold wakeup",
+                    "fully_charged": "Fully charged",
+                    "standby": "Standby",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "charging_status": {
+                        "name": "Status code"
+                    }
+                }
+            },
+            "hes_station_role": {
+                "name": "Station role",
+                "state": {
+                    "primary": "Primary",
+                    "subordinate": "Subordinate",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "role_status": {
+                        "name": "Role code"
+                    },
+                    "station_id": {
+                        "name": "Station ID"
+                    },
+                    "station_type": {
+                        "name": "Station type"
+                    }
+                }
+            },
+            "charging_power": {
+                "name": "Battery power"
+            },
+            "other_solar_power": {
+                "name": "Solar 3rd party"
+            },
+            "input_power": {
+                "name": "Solar power"
+            },
+            "solar_power_1": {
+                "name": "Solar PV1",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
+            },
+            "solar_power_2": {
+                "name": "Solar PV2",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
+            },
+            "solar_power_3": {
+                "name": "Solar PV3",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
+            },
+            "solar_power_4": {
+                "name": "Solar PV4",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
+            },
+            "micro_inverter_power": {
+                "name": "Inverter power",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
+            },
+            "output_power": {
+                "name": "DC output power"
+            },
+            "ac_socket": {
+                "name": "AC socket power"
+            },
+            "ac_to_home_load": {
+                "name": "AC home power"
+            },
+            "home_load_power": {
+                "name": "Home demand"
+            },
+            "ac_generate_power": {
+                "name": "AC power"
+            },
+            "heating_power": {
+                "name": "Heating power"
+            },
+            "grid_to_battery_power": {
+                "name": "Grid charge"
+            },
+            "micro_inverter_power_limit": {
+                "name": "Inverter limit"
+            },
+            "all_power_limit": {
+                "name": "Total power limit"
+            },
+            "all_ac_input_limit": {
+                "name": "Total AC Input limit"
+            },
+            "power_limit_option": {
+                "name": "Power limit option"
+            },
+            "set_output_power": {
+                "name": "Home preset",
+                "state_attributes": {
+                    "schedule": {
+                        "name": "Schedule"
+                    }
+                }
+            },
+            "set_power_mode": {
+                "name": "Preset mode",
+                "state": {
+                    "normal": "Normal",
+                    "advanced": "Advanced",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
+                    }
+                }
+            },
+            "state_of_charge": {
+                "name": "State of charge"
+            },
+            "battery_energy": {
+                "name": "Battery energy",
+                "state_attributes": {
+                    "capacity": {
+                        "name": "Capacity"
+                    }
+                }
+            },
+            "bws_surplus": {
+                "name": "BWS surplus"
+            },
+            "inverter_info": {
+                "name": "Inverter info",
+                "state_attributes": {
+                    "solar_brand": {
+                        "name": "Brand"
+                    },
+                    "solar_model": {
+                        "name": "Model"
+                    },
+                    "solar_sn": {
+                        "name": "Serialnumber"
+                    }
+                }
+            },
+            "sw_version": {
+                "name": "Firmware"
+            },
+            "sub_package_num": {
+                "name": "Expansion battery"
+            },
+            "battery_count": {
+                "name": "Battery modules"
+            },
+            "parallel_device_count": {
+                "name": "Parallel devices"
+            },
+            "fittings": {
+                "name": "Accessory",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "device_name": {
+                        "name": "Name"
+                    },
+                    "device_pn": {
+                        "name": "Model"
+                    },
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    }
+                }
+            },
+            "current_power": {
+                "name": "Power"
+            },
+            "tag": {
+                "name": "Label"
+            },
+            "err_code": {
+                "name": "Error code"
+            },
+            "temperature": {
+                "name": "Temperature"
+            },
+            "solar_list": {
+                "name": "Inverter"
+            },
+            "solarbank_list": {
+                "name": "Solarbanks"
+            },
+            "powerpanel_list": {
+                "name": "Power panels"
+            },
+            "pps_list": {
+                "name": "Power stations"
+            },
+            "smartmeter_list": {
+                "name": "Smart meters"
+            },
+            "smartplug_list": {
+                "name": "Smart plugs"
+            },
+            "hes_list": {
+                "name": "Home energy systems"
+            },
+            "solarbank_charging_power": {
+                "name": "SB battery power"
+            },
+            "solarbank_input_power": {
+                "name": "SB solar power"
+            },
+            "solarbank_output_power": {
+                "name": "SB home power"
+            },
+            "solarbank_state_of_charge": {
+                "name": "SB state of charge"
+            },
+            "solarbank_timestamp": {
+                "name": "SB data time",
+                "state_attributes": {
+                    "tz_offset_sec": {
+                        "name": "TZ Offset sec"
+                    }
+                }
+            },
+            "active_scene_mode": {
+                "name": "Active usage mode",
+                "state": {
+                    "unknown": "Unknown",
+                    "smartmeter": "Self consumption",
+                    "smartplugs": "Smart plugs",
+                    "manual": "Custom",
+                    "backup": "Backup charge",
+                    "use_time": "Time of Use",
+                    "smart": "Smart",
+                    "time_slot": "Time slot"
+                },
+                "state_attributes": {
+                    "mode_type": {
+                        "name": "Mode type"
+                    }
+                }
+            },
+            "pps_charging_power": {
+                "name": "PPS battery power"
+            },
+            "pps_output_power": {
+                "name": "PPS output power"
+            },
+            "pps_state_of_charge": {
+                "name": "PPS state of charge"
+            },
+            "smart_plugs_power": {
+                "name": "Smart plugs power"
+            },
+            "other_loads_power": {
+                "name": "Other load power"
+            },
+            "total_co2_saving": {
+                "name": "CO₂ savings",
+                "state_attributes": {
+                    "rank": {
+                        "name": "Rank"
+                    },
+                    "trees": {
+                        "name": "Trees"
+                    },
+                    "message": {
+                        "name": "Message"
+                    }
+                }
+            },
+            "total_saved_money": {
+                "name": "Cost savings"
+            },
+            "total_output_energy": {
+                "name": "Yield total"
+            },
+            "total_aiems_profit": {
+                "name": "AI profit",
+                "state_attributes": {
+                    "advantage": {
+                        "name": "Advantage"
+                    },
+                    "percentage": {
+                        "name": "Percentage"
+                    }
+                }
+            },
+            "aiems_runtime_status": {
+                "name": "AI monitoring",
+                "state": {
+                    "unknown": "Unknown",
+                    "inactive": "Inactive",
+                    "running": "Running",
+                    "failure": "Failure"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    },
+                    "runtime": {
+                        "name": "Runtime"
+                    }
+                }
+            },
+            "dynamic_price_total": {
+                "name": "Dyn. price total",
+                "state_attributes": {
+                    "price_calc": {
+                        "name": "Price calculation"
+                    },
+                    "price_time": {
+                        "name": "Price time"
+                    },
+                    "forecast": {
+                        "name": "Forecast"
+                    }
+                }
+            },
+            "spot_price_mwh": {
+                "name": "Dyn. spot price",
+                "state_attributes": {
+                    "provider": {
+                        "name": "Provider"
+                    },
+                    "poll_time": {
+                        "name": "Poll Time"
+                    },
+                    "avg_today": {
+                        "name": "Avg today"
+                    },
+                    "avg_tomorrow": {
+                        "name": "Avg tomorrow"
+                    }
+                }
+            },
+            "set_system_output_power": {
+                "name": "System home preset"
+            },
+            "site_charging_power": {
+                "name": "System charging power"
+            },
+            "grid_status_desc": {
+                "name": "Grid status",
+                "state": {
+                    "ok": "Ok",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "grid_status": {
+                        "name": "Status code"
+                    }
+                }
+            },
+            "grid_to_home_power": {
+                "name": "Grid import"
+            },
+            "photovoltaic_to_grid_power": {
+                "name": "Grid export"
+            },
+            "solar_forecast_today": {
+                "name": "Solar forecast today",
+                "state_attributes": {
+                    "remain_today": {
+                        "name": "Remaining today"
+                    },
+                    "forecast_24h": {
+                        "name": "Forecast 24h"
+                    },
+                    "poll_time": {
+                        "name": "Data poll"
+                    },
+                    "hourly_unit": {
+                        "name": "Hourly unit"
+                    },
+                    "forecast_hourly": {
+                        "name": "Forecast hourly"
+                    }
+                }
+            },
+            "solar_forecast_this_hour": {
+                "name": "Solar forecast this hour",
+                "state_attributes": {
+                    "hour_end": {
+                        "name": "Hour end"
+                    },
+                    "forecast_next_hour": {
+                        "name": "Forecast next hour"
+                    }
+                }
+            },
+            "energy_today": {
+                "name": "Daily energy",
+                "state_attributes": {
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_discharge_energy": {
+                "name": "Daily discharge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Daily charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Daily solar yield",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    },
+                    "hourly_unit": {
+                        "name": "Hourly unit"
+                    },
+                    "produced_hourly": {
+                        "name": "Hourly"
+                    }
+                }
+            },
+            "daily_solar_production_pv1": {
+                "name": "Daily solar PV 1",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv2": {
+                "name": "Daily solar PV 2",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv3": {
+                "name": "Daily solar PV 3",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv4": {
+                "name": "Daily solar PV 4",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_inverter": {
+                "name": "Daily solar micro inverter",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_to_home": {
+                "name": "Daily solar home",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_to_battery": {
+                "name": "Daily solar charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_3rd_party_pv_to_bat": {
+                "name": "Daily 3rd party PV charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_3rd_party_pv_to_grid": {
+                "name": "Daily 3rd party PV export",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_ac_socket": {
+                "name": "Daily AC socket",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_battery_to_home": {
+                "name": "Daily battery home",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_home_usage": {
+                "name": "Daily home usage",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_smartplugs_total": {
+                "name": "Daily smart plugs total",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_import": {
+                "name": "Daily grid import",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Daily grid home",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_to_battery": {
+                "name": "Daily grid charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_to_grid": {
+                "name": "Daily grid export",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Daily share solar",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Daily share battery",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_share": {
+                "name": "Daily share grid",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "data_timestamp": {
+                "name": "Data time",
+                "state_attributes": {
+                    "last_check": {
+                        "name": "Last check"
+                    }
+                }
+            },
+            "charge_power": {
+                "name": "Charge power"
+            },
+            "discharge_power": {
+                "name": "Discharge power"
+            },
+            "sites_poll_time": {
+                "name": "Last data poll",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Runtime sec"
+                    }
+                }
+            },
+            "details_poll_time": {
+                "name": "Last details poll",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Runtime sec"
+                    }
+                }
+            },
+            "energy_poll_time": {
+                "name": "Last energy poll",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Runtime sec"
+                    }
+                }
+            },
+            "update_timestamp": {
+                "name": "Updated"
+            }
+        },
+        "switch": {
+            "auto_upgrade": {
+                "name": "Auto-Upgrade"
+            },
+            "preset_allow_export": {
+                "name": "Allow power export"
+            },
+            "preset_discharge_priority": {
+                "name": "Discharge priority"
+            },
+            "preset_backup_option": {
+                "name": "Backup option"
+            },
+            "allow_grid_export": {
+                "name": "Allow grid export"
+            },
+            "allow_refresh": {
+                "name": "Api Usage",
+                "state_attributes": {
+                    "requests_last_min": {
+                        "name": "Requests last minute"
+                    },
+                    "requests_last_hour": {
+                        "name": "Requests last hour"
+                    }
+                }
+            },
+            "default_vehicle": {
+                "name": "Default vehicle"
+            }
+        }
+    },
+    "entity_component": {
+        "problem": {
+            "state": {
+                "off": "OK",
+                "on": "Problem"
+            }
+        },
+        "_": {
+            "state": {
+                "off": "Off",
+                "on": "On",
+                "unknown": "Unknown"
+            }
+        }
+    },
+    "services": {
+        "get_system_info": {
+            "name": "Request actual system information",
+            "description": "The actual system information will be provided as response to this action",
+            "fields": {
+                "include_cache": {
+                    "name": "Include cache",
+                    "description": "Include cache to merge existing system data from Api cache and new data from the scene_info query"
+                }
+            }
+        },
+        "export_systems": {
+            "name": "Export anonymized Api information of accessible systems and devices into zipped JSON files",
+            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run 10 seconds or several minutes if endpoint throttling is being applied! The Execute button toggles just green once finished."
+        },
+        "get_solarbank_schedule": {
+            "name": "Request actual Solarbank schedule",
+            "description": "The actual Solarbank schedule will be provided as response to this action"
+        },
+        "clear_solarbank_schedule": {
+            "name": "Clear the Solarbank schedule",
+            "description": "The Solarbank schedule will be cleared",
+            "sections": {
+                "sb2_fields": {
+                    "name": "Solarbank 2+ options",
+                    "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
+                }
+            },
+            "fields": {
+                "plan": {
+                    "name": "Plan",
+                    "description": "Select plan to be modified, plan for active usage mode is the default"
+                },
+                "week_days": {
+                    "name": "Weekdays",
+                    "description": "Select weekdays to be removed from schedule"
+                }
+            }
+    },
+        "set_solarbank_schedule": {
+            "name": "Set a new Solarbank Schedule",
+            "description": "Create a new time schedule for the Solarbank with the defined time interval. An existing time schedule is completely replaced by the new interval!",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Solarbank 1 options",
+                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2+)"
+                },
+                "sb2_fields": {
+                    "name": "Solarbank 2+ options",
+                    "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
+                }
+            },
+            "fields": {
+                "start_time": {
+                    "name": "Start time",
+                    "description": "Start time of the interval (seconds are ignored)"
+                },
+                "end_time": {
+                    "name": "End time",
+                    "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "plan": {
+                    "name": "Plan",
+                    "description": "Select plan to be modified, plan for active usage mode is the default (ignored for Solarbank 1)"
+                },
+                "week_days": {
+                    "name": "Weekdays",
+                    "description": "Weekdays for the defined time interval (ignored for Solarbank 1)"
+                },
+                "appliance_load": {
+                    "name": "Home load preset",
+                    "description": "Watt to be delivered to the house by all devices"
+                },
+                "device_load": {
+                    "name": "Device load preset",
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
+                },
+                "allow_export": {
+                    "name": "Allow export",
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2+)"
+                },
+                "discharge_priority": {
+                    "name": "Discharge priority",
+                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2+)"
+                },
+                "charge_priority_limit": {
+                    "name": "Limit for charge priority",
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2+."
+                }
+            }
+        },
+        "update_solarbank_schedule": {
+            "name": "Update Solarbank Schedule",
+            "description": "An existing Solarbank schedule is updated with the defined time interval. Adjacent time intervals are adjusted in time and overlapping ones are replaced.",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Solarbank 1 options",
+                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2+)"
+                },
+                "sb2_fields": {
+                    "name": "Solarbank 2+ options",
+                    "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
+                }
+            },
+            "fields": {
+                "start_time": {
+                    "name": "Start time",
+                    "description": "Start time of the interval (seconds are ignored)"
+                },
+                "end_time": {
+                    "name": "End time",
+                    "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "plan": {
+                    "name": "Plan",
+                    "description": "Select plan to be modified, plan for active usage mode is the default (ignored for Solarbank 1)"
+                },
+                "week_days": {
+                    "name": "Weekdays",
+                    "description": "Weekdays for the defined time interval (ignored for Solarbank 1)"
+                },
+                "appliance_load": {
+                    "name": "Home load preset",
+                    "description": "Watt to be delivered to the house by all devices"
+                },
+                "device_load": {
+                    "name": "Device load preset",
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
+                },
+                "allow_export": {
+                    "name": "Allow export",
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2+)"
+                },
+                "discharge_priority": {
+                    "name": "Discharge priority",
+                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2+)"
+                },
+                "charge_priority_limit": {
+                    "name": "Limit for charge priority",
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2+."
+                }
+            }
+        },
+        "modify_solix_backup_charge": {
+            "name": "Modify backup charge settings",
+            "description": "Adjust the backup time for emergency AC charge of the battery (using max. AC charge power)",
+            "fields": {
+                "backup_start": {
+                    "name": "Backup start",
+                    "description": "Start date and time of the backup period in the form YYYY-MM-DD HH:MM:SS. Default is active period start or now."
+                },
+                "backup_end": {
+                    "name": "Backup end",
+                    "description": "End date and time of the backup period in the form YYYY-MM-DD HH:MM:SS. Default is active period end or now + 3 hours."
+                },
+                "backup_duration": {
+                    "name": "Backup duration",
+                    "description": "Duration of the backup period in the form HH:MM:SS. Used only if no backup end is specified instead of default duration of 3 hours."
+                },
+                "enable_backup": {
+                    "name": "Enable backup period",
+                    "description": "Enable or disable the defined or active backup period"
+                }
+            }
+        },
+        "modify_solix_use_time": {
+            "name": "Modify Time of Use plan",
+            "description": "Adjust the Time of Use plan for Anker Solix devices that support AC charge and a Time of Use mode with flexible power tariffs",
+            "fields": {
+                "start_month": {
+                    "name": "Start month",
+                    "description": "Start month for the season to be modified"
+                },
+                "end_month": {
+                    "name": "End month",
+                    "description": "End month for the season to be modified"
+                },
+                "day_type": {
+                    "name": "Day type",
+                    "description": "Type of days to be modified in the season"
+                },
+                "start_hour": {
+                    "name": "Start hour",
+                    "description": "Start hour of day type to be modified (minutes and seconds are ignored)"
+                },
+                "end_hour": {
+                    "name": "End hour",
+                    "description": "End hour of day type to be modified (minutes and seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "tariff": {
+                    "name": "Tariff",
+                    "description": "Tariff to be used for the selected or active period"
+                },
+                "tariff_price": {
+                    "name": "Tariff price per kWh",
+                    "description": "Tariff price per kWh for the selected or active period"
+                },
+                "delete": {
+                    "name": "Delete selected options from plan",
+                    "description": "If activated, the selected options will be removed from the plan instead of being created or modified. Deletions will always merge ranges in the applicable scope to avoid any gaps. If no option is selected, the whole plan will be deleted."
+                }
+            }
+        },
+        "api_request": {
+            "name": "Api request",
+            "description": "Issue a request to an Anker Solix Api endpoint with optional payload parameters.\nREMINDER: The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration or this Anker Solix Api request action.",
+            "fields": {
+                "method": {
+                    "name": "Method",
+                    "description": "Select type of request to be issued (most endpoints require the post method)"
+                },
+                "endpoint": {
+                    "name": "Endpoint",
+                    "description": "Select or define the endpoint where the request should be sent to (known endpoints are documented in https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98)"
+                },
+                "payload": {
+                    "name": "Payload",
+                    "description": "Optional object with parameter value pairs or list depending on endpoint. Typical parameters are `site_id` or `device_sn`, but parameter names can vary. Some request error messages may reveal required parameter names and format."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "increase_blocked": {
+          "message": "{entity_id} cannot be increased to {value} because minimum change delay of {delay} seconds is not passed"
+        },
+        "out_of_range": {
+            "message": "{entity_id} cannot be set to {value} because it is outside of allowed range {min}-{max}"
+        },
+        "active_testmode": {
+            "message": "{entity_id} cannot be used while configuration is running in testmode"
+        },
+        "apiusage_deactivated": {
+            "message": "{entity_id} cannot be used for requested action {action_name} while Api usage is deactivated"
+        },
+        "shared_devices": {
+            "message": "{username} cannot be loaded because it shares devices with active configuration {shared_account}"
+        },
+        "active_devices": {
+            "message": "{device} cannot be removed because it has registered active entities"
+        },
+        "device_refresh": {
+            "message": "Devices for {coordinator} cannot be updated within less than {min_dev_refresh} seconds"
+        },
+        "device_refresh_active": {
+            "message": "Devices for {coordinator} cannot be updated while another update is still running"
+        },
+        "service_not_supported": {
+            "message": "The entity {entity} does not support the action {service}"
+        },
+        "slot_time_error": {
+            "message": "The action {service} cannot be executed: {error}"
+        },
+        "action_blocked": {
+            "message": "The action {service} cannot be executed again while still running (timeout at {timeout})"
+        }
+    }
+}

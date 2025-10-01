@@ -1,0 +1,31 @@
+template:
+  - sensor:
+      # SoC propre/robuste (utilise ton capteur officiel SolarBank)
+      - name: "Batterie • SoC"
+        unique_id: batterie_soc_clean
+        device_class: battery
+        unit_of_measurement: "%"
+        state: "{{ states('sensor.solarbank_3_e2700_pro_etat_de_charge')|int(0) }}"
+        availability: >
+          {{ states('sensor.solarbank_3_e2700_pro_etat_de_charge') not in ['unknown','unavailable',''] }}
+
+      # Puissance nette batterie (W) - POSITIF = CHARGE | NEGATIF = DECHARGE
+      - name: "Batterie • P net"
+        unique_id: batterie_power_net
+        device_class: power
+        unit_of_measurement: "W"
+        state_class: measurement
+        state: "{{ states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0)|round(0) }}"
+        attributes:
+          direction: >
+            {% set p = this.state|float(0) %}
+            {% if p > 20 %} charge
+            {% elif p < -20 %} décharge
+            {% else %} repos
+            {% endif %}
+          pretty: >
+            {% set p = this.state|float(0) %}
+            {% if p > 20 %} En charge · +{{ p|round(0) }} W
+            {% elif p < -20 %} En décharge · {{ (p|abs)|round(0) }} W
+            {% else %} En repos
+            {% endif %}

@@ -1,0 +1,515 @@
+# packages/solaire_economies_v2.yaml
+###############################################################################
+# ÉCONOMIES SOLAIRES — APS + SolarBank (package unique)
+# Version: v2.4  (ajouts: pv_total_entree_sb_aps_w + pv_total_kwh + pv_total_day_kwh)
+#
+# PRÉREQUIS (Helpers / UI) :
+#   - input_number.edf_prix_hp
+#   - input_number.edf_prix_hc
+#   - input_number.economie_baseline_eur
+#   - input_number.kwh_baseline
+#   - schedule.hc_hours (ON = HC, OFF = HP)   # adapter si votre schedule a un autre nom
+#
+# CAPTEURS SOURCES (intégrations) :
+#   - sensor.solar_total_power                              (APS, W)
+#   - sensor.solarbank_3_e2700_pro_puissance_de_charge      (>0 charge, <0 décharge)
+#   - sensor.system_sanguinet_alimentation_domestique_sb     (SB AC prioritaire, W)
+#   - sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise (SB AC fallback, W)
+#   - sensor.smart_meter_grid_export / sensor.smart_meter_grid_import
+###############################################################################
+
+template:
+  - binary_sensor:
+      - name: hc_actives
+        unique_id: hc_actives_bin
+        state: "{{ is_state('schedule.hc_hours', 'on') }}"
+        icon: mdi:clock-time-eight-outline
+
+  - sensor:
+      - name: solarbank_soc
+        unique_id: solarbank_soc
+        unit_of_measurement: '%'
+        state_class: measurement
+        state: >
+          {% set cands = [
+            'sensor.solarbank_3_e2700_pro_etat_de_charge',
+            'sensor.solarbank_3_e2700_pro_state_of_charge'
+          ] %}
+          {% for e in cands %}
+            {% set s = states(e) %}
+            {% if s not in ['unknown','unavailable','None',None,''] %}
+              {{ (s|string).replace('%','').replace(',','.')|float(0) }}
+              {% break %}
+            {% endif %}
+          {% endfor %}
+
+      # ------------------------ Batterie (W) ---------------------------------
+      - name: batt_charge_w
+        unique_id: batt_charge_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set p = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
+          {{ [p, 0]|max }}
+
+      # Décharge batterie (W) — robuste
+      - name: batt_discharge_w
+        unique_id: batt_discharge_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+            {{ states('sensor.solarbank_3_e2700_pro_puissance_de_charge') not in
+            ['unknown','unavailable','none',''] }}
+        state: >
+            {% set p = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
+            {% set v = [ -p, 0 ]|max %}
+            {{ 0 if v < 0.0005 else v }}
+
+      # ------------------------ Puissance PV SB (garde-fou) ------------------
+      - name: sb_pv_w
+        unique_id: sb_pv_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        # Utilise PV1+PV2 si dispos, sinon le capteur global "puissance_solaire"
+        state: >
+          {% set pv1 = states('sensor.solarbank_3_e2700_pro_solaire_pv1')|float(0) %}
+          {% set pv2 = states('sensor.solarbank_3_e2700_pro_solaire_pv2')|float(0) %}
+          {% set pv  = pv1 + pv2 %}
+          {% if pv == 0 %}
+            {{ states('sensor.solarbank_3_e2700_pro_puissance_solaire')|float(0) }}
+          {% else %}
+            {{ pv }}
+          {% endif %}
+
+      # ------------------------ Sortie AC SolarBank ---------------------------
+      # Priorité au capteur "System Sanguinet", repli sur capteur Anker.
+      # Borne physique : injection <= PV + décharge.
+      - name: sb_ac_output_w
+        unique_id: sb_ac_output_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+            {{ states('sensor.system_sanguinet_alimentation_domestique_sb') not in ['unknown','unavailable','none','']
+            or states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') not in ['unknown','unavailable','none',''] }}
+        state: >
+            {% set bad = ['unknown','unavailable','none',''] %}
+
+            {# 1) lecture prioritaire Sanguinet, sinon Anker #}
+            {% set sys_s = states('sensor.system_sanguinet_alimentation_domestique_sb') %}
+            {% set ank_s = states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') %}
+            {% set sb_raw_s = sys_s if sys_s not in bad else ank_s %}
+            {% set sb_raw = 0 if sb_raw_s in bad else sb_raw_s|float(0) %}
+            {% set sb_raw = [sb_raw, 0]|max %}
+
+            {# 2) borne physique si connue : PV + décharge #}
+            {% set pv_s  = states('sensor.sb_pv_w') %}
+            {% set dch_s = states('sensor.batt_discharge_w') %}
+            {% set pv  = 0 if pv_s  in bad else pv_s|float(0) %}
+            {% set dch = 0 if dch_s in bad else dch_s|float(0) %}
+            {% set cap = pv + dch %}
+
+            {% if cap > 0 %}
+            {{ [sb_raw, cap]|min }}
+            {% else %}
+            {{ sb_raw }}
+            {% endif %}
+        attributes:
+          source: >
+            {% set bad = ['unknown','unavailable','none',''] %}
+            {% set sys_s = states('sensor.system_sanguinet_alimentation_domestique_sb') %}
+            {% set ank_s = states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') %}
+            {% if sys_s not in bad %}system_sanguinet{% elif ank_s not in bad %}anker{% else %}none{% endif %}
+          raw_system_w: >
+            {{ 0 if states('sensor.system_sanguinet_alimentation_domestique_sb') in ['unknown','unavailable','none','']
+                else states('sensor.system_sanguinet_alimentation_domestique_sb')|float(0) }}
+          raw_anker_w: >
+            {{ 0 if states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') in ['unknown','unavailable','none','']
+                else states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise')|float(0) }}
+          cap_used_w: >
+            {% set bad = ['unknown','unavailable','none',''] %}
+            {% set pv = 0 if states('sensor.sb_pv_w') in bad else states('sensor.sb_pv_w')|float(0) %}
+            {% set d  = 0 if states('sensor.batt_discharge_w') in bad else states('sensor.batt_discharge_w')|float(0) %}
+            {% set cap = pv + d %}
+            {{ cap if cap > 0 else none }}
+
+      # ------------------------ Sources directes (W) -------------------------
+      - name: aps_power_w
+        unique_id: aps_power_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.solar_total_power')|float(0) }}"
+
+      - name: grid_export_w
+        unique_id: grid_export_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.smart_meter_grid_export')|float(0) }}"
+
+      # -------- PV total réel (SB entrée PV + APS) ---------------------------
+      - name: pv_total_entree_sb_aps_w
+        unique_id: pv_total_entree_sb_aps_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-power
+        state: >
+          {{ states('sensor.sb_pv_w')|float(0) + states('sensor.aps_power_w')|float(0) }}
+
+      # -------- Puissance évitée (W) = max(0, APS + SB_AC - Export - Batt_charge)
+      - name: power_saved_w
+        unique_id: power_saved_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set p_aps = states('sensor.aps_power_w')|float(0) %}
+          {% set p_sb  = states('sensor.sb_ac_output_w')|float(0) %}
+          {% set p_bin = states('sensor.batt_charge_w')|float(0) %}
+          {% set p_exp = states('sensor.grid_export_w')|float(0) %}
+          {% set raw = p_aps + p_sb - p_exp - p_bin %}
+          {{ [raw, 0]|max }}
+        attributes:
+          formula: "APS + SB_AC - Export - Batt_Charge"
+          aps_w: "{{ states('sensor.aps_power_w')|float(0) }}"
+          sb_ac_w: "{{ states('sensor.sb_ac_output_w')|float(0) }}"
+          export_w: "{{ states('sensor.grid_export_w')|float(0) }}"
+          batt_charge_w: "{{ states('sensor.batt_charge_w')|float(0) }}"
+
+      # ------------------------ Tarifs HP/HC ---------------------------------
+      - name: price_current_eur_kwh
+        unique_id: price_current_eur_kwh
+        unit_of_measurement: "€/kWh"
+        state_class: measurement
+        state: >
+          {% if is_state('schedule.hc_hours','on') %}
+            {{ states('input_number.edf_prix_hc') }}
+          {% else %}
+            {{ states('input_number.edf_prix_hp') }}
+          {% endif %}
+
+      # Débit d'économie (€/h)
+      - name: saving_rate_eur_per_hour
+        unique_id: saving_rate_eur_per_hour
+        unit_of_measurement: "€/h"
+        state_class: measurement
+        state: >
+            {% set _ = now().strftime('%H:%M') %}
+            {% set base = (states('sensor.power_saved_w')|float(0) / 1000)
+                  * states('sensor.price_current_eur_kwh')|float(0) %}
+            {{ base + (1e-6 if base > 0 else 0) }}
+
+      - name: saving_rate_hp_eur_per_hour
+        unique_id: saving_rate_hp_eur_per_hour
+        unit_of_measurement: "€/h"
+        state_class: measurement
+        state: >
+            {% set _ = now().strftime('%H:%M') %}
+            {% set base = (states('sensor.power_saved_hp_w')|float(0) / 1000)
+                  * states('input_number.edf_prix_hp')|float(0) %}
+            {{ base + (1e-6 if base > 0 else 0) }}
+
+      - name: saving_rate_hc_eur_per_hour
+        unique_id: saving_rate_hc_eur_per_hour
+        unit_of_measurement: "€/h"
+        state_class: measurement
+        state: >
+            {% set _ = now().strftime('%H:%M') %}
+            {% set base = (states('sensor.power_saved_hc_w')|float(0) / 1000)
+                  * states('input_number.edf_prix_hc')|float(0) %}
+            {{ base + (1e-6 if base > 0 else 0) }}
+
+      # Split HP/HC
+      - name: power_saved_hp_w
+        unique_id: power_saved_hp_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set p = states('sensor.power_saved_w')|float(0) %}
+          {{ 0 if is_state('binary_sensor.hc_actives','on') else p }}
+
+      - name: power_saved_hc_w
+        unique_id: power_saved_hc_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set p = states('sensor.power_saved_w')|float(0) %}
+          {{ p if is_state('binary_sensor.hc_actives','on') else 0 }}
+
+      # € total avec baseline seulement pendant l'année de mise à jour
+      - name: savings_total_eur_with_baseline
+        unique_id: savings_total_eur_with_baseline
+        unit_of_measurement: "€"
+        state_class: total
+        state: >
+            {% set base = states('sensor.savings_eur')|float(0) %}
+            {% set bl   = states('input_number.economie_baseline_eur')|float(0) %}
+            {% set obj  = states.input_number.economie_baseline_eur %}
+            {% set lc   = obj.last_changed if obj is not none else none %}
+            {% set year_set = (as_local(lc)).year if lc else now().year %}
+            {{ base + (bl if now().year == year_set else 0) }}
+
+      # kWh total avec baseline seulement pendant l'année de mise à jour
+      - name: energy_saved_total_kwh_with_baseline
+        unique_id: energy_saved_total_kwh_with_baseline
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total
+        state: >
+            {% set base = states('sensor.energy_saved_kwh')|float(0) %}
+            {% set bl   = states('input_number.kwh_baseline')|float(0) %}
+            {% set obj  = states.input_number.kwh_baseline %}
+            {% set lc   = obj.last_changed if obj is not none else none %}
+            {% set year_set = (as_local(lc)).year if lc else now().year %}
+            {{ base + (bl if now().year == year_set else 0) }}
+
+      # ------------------------ Aliases Camembert (jour) ---------------------
+      - name: energie_autoconsommee
+        unique_id: pie_energie_autoconsommee_day
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        state: "{{ states('sensor.energy_saved_day_kwh')|float(0) }}"
+
+      - name: import_edf_quotidien
+        unique_id: pie_import_edf_day
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        state: "{{ states('sensor.grid_import_day_kwh')|float(0) }}"
+
+      - name: export_daily
+        unique_id: pie_export_day
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        state: "{{ states('sensor.grid_export_day_kwh')|float(0) }}"
+
+      # ------------------------ Conso & parts (jour) -------------------------
+      - name: consumption_day_kwh
+        unique_id: consumption_day_kwh
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+        state: >
+          {{ states('sensor.energy_saved_day_kwh')|float(0)
+             + states('sensor.grid_import_day_kwh')|float(0) }}
+
+      - name: solar_coverage_day_pct
+        unique_id: solar_coverage_day_pct
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: >
+          {% set conso = states('sensor.consumption_day_kwh')|float(0) %}
+          {% set sol   = states('sensor.energy_saved_day_kwh')|float(0) %}
+          {{ 0 if conso == 0 else (100 * sol / conso) | round(1) }}
+
+      - name: grid_share_day_pct
+        unique_id: grid_share_day_pct
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: >
+          {% set conso = states('sensor.consumption_day_kwh')|float(0) %}
+          {% set imp   = states('sensor.grid_import_day_kwh')|float(0) %}
+          {{ 0 if conso == 0 else (100 * imp / conso) | round(1) }}
+
+      # ------------------------ DIAGNOSTIC (optionnel) -----------------------
+      - name: sb_sys_raw_w
+        unique_id: sb_sys_raw_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.system_sanguinet_alimentation_domestique_sb')|float(0) }}"
+
+      - name: sb_ank_raw_w
+        unique_id: sb_ank_raw_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise')|float(0) }}"
+
+# ---------------------------- Intégrales (Riemann) ---------------------------
+sensor:
+  - platform: integration
+    name: energy_saved_kwh
+    unique_id: energy_saved_kwh
+    source: sensor.power_saved_w
+    method: trapezoidal
+    unit_prefix: k
+    unit_time: h
+    round: 3
+
+  - platform: integration
+    name: energy_saved_hp_kwh
+    unique_id: energy_saved_hp_kwh
+    source: sensor.power_saved_hp_w
+    method: trapezoidal
+    unit_prefix: k
+    unit_time: h
+    round: 3
+
+  - platform: integration
+    name: energy_saved_hc_kwh
+    unique_id: energy_saved_hc_kwh
+    source: sensor.power_saved_hc_w
+    method: trapezoidal
+    unit_prefix: k
+    unit_time: h
+    round: 3
+
+  - platform: integration
+    name: savings_eur
+    unique_id: savings_eur
+    source: sensor.saving_rate_eur_per_hour
+    method: trapezoidal
+    unit_time: h
+    round: 4
+
+  - platform: integration
+    name: savings_hp_eur
+    unique_id: savings_hp_eur
+    source: sensor.saving_rate_hp_eur_per_hour
+    method: trapezoidal
+    unit_time: h
+    round: 4
+
+  - platform: integration
+    name: savings_hc_eur
+    unique_id: savings_hc_eur
+    source: sensor.saving_rate_hc_eur_per_hour
+    method: trapezoidal
+    unit_time: h
+    round: 4
+
+  - platform: integration
+    name: grid_import_kwh
+    unique_id: grid_import_kwh
+    source: sensor.smart_meter_grid_import
+    method: trapezoidal
+    unit_prefix: k
+    unit_time: h
+    round: 3
+
+  - platform: integration
+    name: grid_export_kwh
+    unique_id: grid_export_kwh
+    source: sensor.smart_meter_grid_export
+    method: trapezoidal
+    unit_prefix: k
+    unit_time: h
+    round: 3
+
+  # --- NOUVEAU : intégrale de la production totale (SB PV + APS) ---
+  - platform: integration
+    name: pv_total_kwh
+    unique_id: pv_total_kwh
+    source: sensor.pv_total_entree_sb_aps_w
+    method: trapezoidal
+    unit_prefix: k
+    unit_time: h
+    round: 3
+
+# ------------------- Utility meters (périodisation) -------------------------
+utility_meter:
+  # ÉNERGIE (kWh)
+  energy_saved_day_kwh:
+    name: energy_saved_day_kwh
+    source: sensor.energy_saved_kwh
+    cycle: daily
+  energy_saved_month_kwh:
+    name: energy_saved_month_kwh
+    source: sensor.energy_saved_kwh
+    cycle: monthly
+  energy_saved_year_kwh:
+    name: energy_saved_year_kwh
+    source: sensor.energy_saved_kwh
+    cycle: yearly
+
+  # ÉNERGIE HP/HC (kWh, jour)
+  energy_saved_hp_day_kwh:
+    name: energy_saved_hp_day_kwh
+    source: sensor.energy_saved_hp_kwh
+    cycle: daily
+  energy_saved_hc_day_kwh:
+    name: energy_saved_hc_day_kwh
+    source: sensor.energy_saved_hc_kwh
+    cycle: daily
+
+  # ÉCONOMIES (€)
+  savings_day_eur:
+    name: savings_day_eur
+    source: sensor.savings_eur
+    cycle: daily
+  savings_month_eur:
+    name: savings_month_eur
+    source: sensor.savings_eur
+    cycle: monthly
+  savings_year_eur:
+    name: savings_year_eur
+    source: sensor.savings_eur
+    cycle: yearly
+
+  # ÉCONOMIES HP/HC (€ / jour)
+  savings_hp_day_eur:
+    name: savings_hp_day_eur
+    source: sensor.savings_hp_eur
+    cycle: daily
+  savings_hc_day_eur:
+    name: savings_hc_day_eur
+    source: sensor.savings_hc_eur
+    cycle: daily
+
+  # Import / Export (jour)
+  grid_import_day_kwh:
+    name: grid_import_day_kwh
+    source: sensor.grid_import_kwh
+    cycle: daily
+  grid_export_day_kwh:
+    name: grid_export_day_kwh
+    source: sensor.grid_export_kwh
+    cycle: daily
+
+  # --- NOUVEAU : total PV journalier (kWh) ---
+  pv_total_day_kwh:
+    name: pv_total_day_kwh
+    source: sensor.pv_total_kwh
+    cycle: daily
+
+# -------------------------- Scripts baseline --------------------------------
+script:
+  solaire_set_baseline_from_current:
+    alias: "Solaire – Fixer baseline = totaux actuels"
+    mode: single
+    sequence:
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.economie_baseline_eur
+        data:
+          value: "{{ states('sensor.savings_eur')|float(0) | round(2) }}"
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.kwh_baseline
+        data:
+          value: "{{ states('sensor.energy_saved_kwh')|float(0) | round(3) }}"
+
+  solaire_reset_baseline:
+    alias: "Solaire – Baseline à 0"
+    mode: single
+    sequence:
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.economie_baseline_eur
+        data:
+          value: 0
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.kwh_baseline
+        data:
+          value: 0
