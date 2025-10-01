@@ -56,11 +56,14 @@ homebridge/
 # ==== Fichiers Solcast locaux ====
 solcast-*.json
 
-# Zigbee2MQTT : ne versionner que la config
-zigbee2mqtt/
+# Zigbee2MQTT : ignorer tout le dossier sauf quelques fichiers
+zigbee2mqtt/*
+!zigbee2mqtt/
 !zigbee2mqtt/configuration.yaml
+# Décommente si tu veux aussi versionner ces fichiers :
 # !zigbee2mqtt/devices.yaml
 # !zigbee2mqtt/groups.yaml
+
 
 # Fichiers de backup/anciens
 *.old
