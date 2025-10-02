@@ -447,10 +447,12 @@ utility_meter:
     name: savings_day_eur
     source: sensor.savings_eur
     cycle: daily
+    delta_values: true
   savings_month_eur:
     name: savings_month_eur
     source: sensor.savings_eur
     cycle: monthly
+    delta_values: true
   savings_year_eur:
     name: savings_year_eur
     source: sensor.savings_eur
