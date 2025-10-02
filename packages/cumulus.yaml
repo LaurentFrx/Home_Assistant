@@ -1,5 +1,5 @@
 ###############################################################################
-# CUMULUS — v2025-09-19a-codex (corrigé)
+# CUMULUS — v2025-10-03a
 #
 # Changements majeurs par rapport aux versions antérieures :
 # - Seuil PV par défaut = 100 W (input_number.cumulus_seuil_pv_on_w)
