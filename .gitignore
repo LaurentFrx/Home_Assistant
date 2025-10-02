@@ -31,13 +31,12 @@ www/.cache/
 node_modules/
 dist/
 
-# ==== Dashboards UI (.storage) — n’inclure que Lovelace ====
-/.storage/*
-!/.storage/
-!/.storage/lovelace
-!/.storage/lovelace_dashboards
-!/.storage/lovelace_resources
-!/.storage/lovelace.*
+# ==== Dashboards UI (.storage) — on ignore tout le storage ====
+.storage/
+*_storage
+.ha/
+_HA_VERSION
+_ha_run.lock
 
 # ==== Éditeurs / OS ====
 *.bak
@@ -56,7 +55,7 @@ homebridge/
 # ==== Fichiers Solcast locaux ====
 solcast-*.json
 
-# Zigbee2MQTT : ignorer tout le dossier sauf quelques fichiers
+# ==== Zigbee2MQTT : ignorer tout le dossier sauf quelques fichiers ====
 zigbee2mqtt/*
 !zigbee2mqtt/
 !zigbee2mqtt/configuration.yaml
@@ -64,13 +63,9 @@ zigbee2mqtt/*
 # !zigbee2mqtt/devices.yaml
 # !zigbee2mqtt/groups.yaml
 
-
 # Fichiers de backup/anciens
 *.old
 *backup*.y*ml
 
 # Fichier parasite
 www/None
-
-# (option) caches Solcast
-solcast*.json
