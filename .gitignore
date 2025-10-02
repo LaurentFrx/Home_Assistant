@@ -69,3 +69,5 @@ zigbee2mqtt/*
 
 # Fichier parasite
 www/None
+# HA runtime lock
+[._]ha_run.lock
