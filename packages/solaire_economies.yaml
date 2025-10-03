@@ -28,7 +28,7 @@ template:
   - sensor:
       - name: solarbank_soc
         unique_id: solarbank_soc
-        unit_of_measurement: '%'
+        unit_of_measurement: "%"
         state_class: measurement
         state: >
           {% set cands = [
@@ -60,12 +60,12 @@ template:
         device_class: power
         state_class: measurement
         availability: >
-            {{ states('sensor.solarbank_3_e2700_pro_puissance_de_charge') not in
-            ['unknown','unavailable','none',''] }}
+          {{ states('sensor.solarbank_3_e2700_pro_puissance_de_charge') not in
+          ['unknown','unavailable','none',''] }}
         state: >
-            {% set p = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
-            {% set v = [ -p, 0 ]|max %}
-            {{ 0 if v < 0.0005 else v }}
+          {% set p = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
+          {% set v = [ -p, 0 ]|max %}
+          {{ 0 if v < 0.0005 else v }}
 
       # ------------------------ Puissance PV SB (garde-fou) ------------------
       - name: sb_pv_w
@@ -93,30 +93,30 @@ template:
         device_class: power
         state_class: measurement
         availability: >
-            {{ states('sensor.system_sanguinet_alimentation_domestique_sb') not in ['unknown','unavailable','none','']
-            or states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') not in ['unknown','unavailable','none',''] }}
+          {{ states('sensor.system_sanguinet_alimentation_domestique_sb') not in ['unknown','unavailable','none','']
+          or states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') not in ['unknown','unavailable','none',''] }}
         state: >
-            {% set bad = ['unknown','unavailable','none',''] %}
+          {% set bad = ['unknown','unavailable','none',''] %}
 
-            {# 1) lecture prioritaire Sanguinet, sinon Anker #}
-            {% set sys_s = states('sensor.system_sanguinet_alimentation_domestique_sb') %}
-            {% set ank_s = states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') %}
-            {% set sb_raw_s = sys_s if sys_s not in bad else ank_s %}
-            {% set sb_raw = 0 if sb_raw_s in bad else sb_raw_s|float(0) %}
-            {% set sb_raw = [sb_raw, 0]|max %}
+          {# 1) lecture prioritaire Sanguinet, sinon Anker #}
+          {% set sys_s = states('sensor.system_sanguinet_alimentation_domestique_sb') %}
+          {% set ank_s = states('sensor.solarbank_3_e2700_pro_ac_puissance_de_la_prise') %}
+          {% set sb_raw_s = sys_s if sys_s not in bad else ank_s %}
+          {% set sb_raw = 0 if sb_raw_s in bad else sb_raw_s|float(0) %}
+          {% set sb_raw = [sb_raw, 0]|max %}
 
-            {# 2) borne physique si connue : PV + décharge #}
-            {% set pv_s  = states('sensor.sb_pv_w') %}
-            {% set dch_s = states('sensor.batt_discharge_w') %}
-            {% set pv  = 0 if pv_s  in bad else pv_s|float(0) %}
-            {% set dch = 0 if dch_s in bad else dch_s|float(0) %}
-            {% set cap = pv + dch %}
+          {# 2) borne physique si connue : PV + décharge #}
+          {% set pv_s  = states('sensor.sb_pv_w') %}
+          {% set dch_s = states('sensor.batt_discharge_w') %}
+          {% set pv  = 0 if pv_s  in bad else pv_s|float(0) %}
+          {% set dch = 0 if dch_s in bad else dch_s|float(0) %}
+          {% set cap = pv + dch %}
 
-            {% if cap > 0 %}
-            {{ [sb_raw, cap]|min }}
-            {% else %}
-            {{ sb_raw }}
-            {% endif %}
+          {% if cap > 0 %}
+          {{ [sb_raw, cap]|min }}
+          {% else %}
+          {{ sb_raw }}
+          {% endif %}
         attributes:
           source: >
             {% set bad = ['unknown','unavailable','none',''] %}
@@ -199,30 +199,30 @@ template:
         unit_of_measurement: "€/h"
         state_class: measurement
         state: >
-            {% set _ = now().strftime('%H:%M') %}
-            {% set base = (states('sensor.power_saved_w')|float(0) / 1000)
-                  * states('sensor.price_current_eur_kwh')|float(0) %}
-            {{ base + (1e-6 if base > 0 else 0) }}
+          {% set _ = now().strftime('%H:%M') %}
+          {% set base = (states('sensor.power_saved_w')|float(0) / 1000)
+                * states('sensor.price_current_eur_kwh')|float(0) %}
+          {{ base + (1e-6 if base > 0 else 0) }}
 
       - name: saving_rate_hp_eur_per_hour
         unique_id: saving_rate_hp_eur_per_hour
         unit_of_measurement: "€/h"
         state_class: measurement
         state: >
-            {% set _ = now().strftime('%H:%M') %}
-            {% set base = (states('sensor.power_saved_hp_w')|float(0) / 1000)
-                  * states('input_number.edf_prix_hp')|float(0) %}
-            {{ base + (1e-6 if base > 0 else 0) }}
+          {% set _ = now().strftime('%H:%M') %}
+          {% set base = (states('sensor.power_saved_hp_w')|float(0) / 1000)
+                * states('input_number.edf_prix_hp')|float(0) %}
+          {{ base + (1e-6 if base > 0 else 0) }}
 
       - name: saving_rate_hc_eur_per_hour
         unique_id: saving_rate_hc_eur_per_hour
         unit_of_measurement: "€/h"
         state_class: measurement
         state: >
-            {% set _ = now().strftime('%H:%M') %}
-            {% set base = (states('sensor.power_saved_hc_w')|float(0) / 1000)
-                  * states('input_number.edf_prix_hc')|float(0) %}
-            {{ base + (1e-6 if base > 0 else 0) }}
+          {% set _ = now().strftime('%H:%M') %}
+          {% set base = (states('sensor.power_saved_hc_w')|float(0) / 1000)
+                * states('input_number.edf_prix_hc')|float(0) %}
+          {{ base + (1e-6 if base > 0 else 0) }}
 
       # Split HP/HC
       - name: power_saved_hp_w
@@ -249,12 +249,12 @@ template:
         unit_of_measurement: "€"
         state_class: total
         state: >
-            {% set base = states('sensor.savings_eur')|float(0) %}
-            {% set bl   = states('input_number.economie_baseline_eur')|float(0) %}
-            {% set obj  = states.input_number.economie_baseline_eur %}
-            {% set lc   = obj.last_changed if obj is not none else none %}
-            {% set year_set = (as_local(lc)).year if lc else now().year %}
-            {{ base + (bl if now().year == year_set else 0) }}
+          {% set base = states('sensor.savings_eur')|float(0) %}
+          {% set bl   = states('input_number.economie_baseline_eur')|float(0) %}
+          {% set obj  = states.input_number.economie_baseline_eur %}
+          {% set lc   = obj.last_changed if obj is not none else none %}
+          {% set year_set = (as_local(lc)).year if lc else now().year %}
+          {{ base + (bl if now().year == year_set else 0) }}
 
       # kWh total avec baseline seulement pendant l'année de mise à jour
       - name: energy_saved_total_kwh_with_baseline
@@ -263,12 +263,12 @@ template:
         device_class: energy
         state_class: total
         state: >
-            {% set base = states('sensor.energy_saved_kwh')|float(0) %}
-            {% set bl   = states('input_number.kwh_baseline')|float(0) %}
-            {% set obj  = states.input_number.kwh_baseline %}
-            {% set lc   = obj.last_changed if obj is not none else none %}
-            {% set year_set = (as_local(lc)).year if lc else now().year %}
-            {{ base + (bl if now().year == year_set else 0) }}
+          {% set base = states('sensor.energy_saved_kwh')|float(0) %}
+          {% set bl   = states('input_number.kwh_baseline')|float(0) %}
+          {% set obj  = states.input_number.kwh_baseline %}
+          {% set lc   = obj.last_changed if obj is not none else none %}
+          {% set year_set = (as_local(lc)).year if lc else now().year %}
+          {{ base + (bl if now().year == year_set else 0) }}
 
       # ------------------------ Aliases Camembert (jour) ---------------------
       - name: energie_autoconsommee
@@ -447,12 +447,12 @@ utility_meter:
     name: savings_day_eur
     source: sensor.savings_eur
     cycle: daily
-    delta_values: true
+
   savings_month_eur:
     name: savings_month_eur
     source: sensor.savings_eur
     cycle: monthly
-    delta_values: true
+
   savings_year_eur:
     name: savings_year_eur
     source: sensor.savings_eur
@@ -491,14 +491,12 @@ script:
     mode: single
     sequence:
       - service: input_number.set_value
-        target:
-          entity_id: input_number.economie_baseline_eur
         data:
+          entity_id: input_number.economie_baseline_eur
           value: "{{ states('sensor.savings_eur')|float(0) | round(2) }}"
       - service: input_number.set_value
-        target:
-          entity_id: input_number.kwh_baseline
         data:
+          entity_id: input_number.kwh_baseline
           value: "{{ states('sensor.energy_saved_kwh')|float(0) | round(3) }}"
 
   solaire_reset_baseline:
@@ -506,12 +504,10 @@ script:
     mode: single
     sequence:
       - service: input_number.set_value
-        target:
-          entity_id: input_number.economie_baseline_eur
         data:
+          entity_id: input_number.economie_baseline_eur
           value: 0
       - service: input_number.set_value
-        target:
-          entity_id: input_number.kwh_baseline
         data:
+          entity_id: input_number.kwh_baseline
           value: 0
