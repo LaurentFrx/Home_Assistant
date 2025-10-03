@@ -65,9 +65,9 @@ script:
         example: 22.0
     sequence:
       - variables:
-          ce: "{{ (climate_entity | default(states('input_text.sdb_entity_climate'))) | string }}"
+          ce: "{{ (climate_entity | default(states('input_text.sdb_entity_climate'))) | string | trim }}"
           t: "{{ temp | float(default=22) }}"
-          exists: "{{ states.get(ce) is not none }}"
+          exists: "{{ ce | is_entity_id }}"
       - choose:
           - conditions:
               - condition: template
@@ -146,10 +146,10 @@ template:
       - name: "SDB — Consigne confirmée"
         unique_id: sdb_consigne_confirmee
         state: >-
-          {% set ce = states('input_text.sdb_entity_climate') %}
+          {% set ce = states('input_text.sdb_entity_climate') | trim %}
           {% set req = states('input_number.sdb_last_setpoint_c') | float(0) %}
           {% set cur = state_attr(ce, 'temperature') %}
-          {{ req > 0 and cur is number and (cur - req) | abs < 0.2 }}
+          {{ ce | is_entity_id and req > 0 and cur is number and (cur - req) | abs < 0.2 }}
         icon: >-
           {% set s = this.state %}
           {{ 'mdi:check-circle' if s in ['on','true']
@@ -157,18 +157,18 @@ template:
         attributes:
           requested_setpoint: "{{ states('input_number.sdb_last_setpoint_c') }}"
           current_setpoint: >-
-            {% set ce = states('input_text.sdb_entity_climate') %}
+            {% set ce = states('input_text.sdb_entity_climate') | trim %}
             {{ state_attr(ce, 'temperature') }}
         availability: >-
-          {% set ce = states('input_text.sdb_entity_climate') %}
+          {% set ce = states('input_text.sdb_entity_climate') | trim %}
           {% set req = states('input_number.sdb_last_setpoint_c') %}
-          {{ states.get(ce) is not none and req not in ['unknown','unavailable',''] }}
+          {{ ce | is_entity_id and req not in ['unknown','unavailable',''] }}
 
       - name: "SDB — Sonde température dispo"
         unique_id: sdb_sonde_temperature_dispo
         device_class: connectivity
         state: >-
-          {% set ce = states('input_text.sdb_entity_climate') %}
+          {% set ce = states('input_text.sdb_entity_climate') | trim %}
           {{ state_attr(ce, 'current_temperature') is number }}
         icon: >-
           {% set s = this.state %}
@@ -202,7 +202,7 @@ automation:
           {{ last is none or (as_datetime(last)).date() != now().date() }}
     action:
       - variables:
-          _ce: "{{ states('input_text.sdb_entity_climate') }}"
+          _ce: "{{ states('input_text.sdb_entity_climate') | trim }}"
           _t: "{{ states('input_number.sdb_temp_confort_c') | float(22) }}"
       - repeat:
           count: 10
@@ -253,7 +253,7 @@ automation:
           {{ last is none or (as_datetime(last)).date() != now().date() }}
     action:
       - variables:
-          _ce: "{{ states('input_text.sdb_entity_climate') }}"
+          _ce: "{{ states('input_text.sdb_entity_climate') | trim }}"
           _t: "{{ states('input_number.sdb_temp_eco_c') | float(18.5) }}"
       - repeat:
           count: 6
@@ -278,3 +278,5 @@ automation:
           name: "SDB Éco"
           message: "Consigne NON confirmée après retries."
           entity_id: "{{ _ce }}"
+
+
