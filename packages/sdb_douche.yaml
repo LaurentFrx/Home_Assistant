@@ -12,7 +12,7 @@ input_text:
     name: ENTITÉ - Thermostat salle de bain (climate.*)
     icon: mdi:thermometer
     initial: climate.thermostat_sdb
-    
+
   sdb_temp_sensor:
     name: ENTITÉ - Sonde T° SDB (sensor.*)
     icon: mdi:thermometer
@@ -136,7 +136,7 @@ script:
 template:
   - trigger:
       - platform: time_pattern
-        seconds: "/15"          # recalcul toutes les 15 s
+        seconds: "/15" # recalcul toutes les 15 s
       - platform: state
         entity_id:
           - input_text.sdb_entity_climate
