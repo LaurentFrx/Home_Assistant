@@ -253,12 +253,12 @@ automation:
                           name: "SDB Eco"
                           message: "Consigne confirmee a {{ _t_eco }} degC"
                           entity_id: "{{ _ce }}"
-              default:
-                - service: logbook.log
-                  data:
-                    name: "SDB Eco"
-                    message: "Consigne NON confirmee apres retries."
-                    entity_id: "{{ _ce }}"
+                default:
+                  - service: logbook.log
+                    data:
+                      name: "SDB Eco"
+                      message: "Consigne NON confirmee apres retries."
+                      entity_id: "{{ _ce }}"
         default:
           - service: logbook.log
             data:
