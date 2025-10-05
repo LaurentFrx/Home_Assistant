@@ -59,6 +59,7 @@ Thumbs.db
 homebridge/
 
 # ==== Fichiers Solcast locaux ====
+solcast.json
 solcast-*.json
 
 # ==== Zigbee2MQTT : ignorer tout le dossier sauf quelques fichiers ====
