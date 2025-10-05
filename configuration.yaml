@@ -28,11 +28,6 @@ script: !include_dir_merge_named scripts
 automation: !include_dir_merge_list automations
 template: !include_dir_merge_list templates
 
-# === Intégrations tierces ===
-daikin_onecta:
-  email: !secret daikin_email
-  password: !secret daikin_password
-
 # === Journalisation ===
 logger:
   default: warning
