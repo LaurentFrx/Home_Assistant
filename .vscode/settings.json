@@ -9,6 +9,11 @@
         "editor.autoIndent": "advanced",
         "files.trimTrailingWhitespace": true
     },
+    "[python]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": true
+    },
     "yaml.customTags": [
         "!include scalar",
         "!include_dir_merge_list scalar",
@@ -19,30 +24,29 @@
     "files.encoding": "utf8",
     "editor.wordWrap": "on",
     "editor.renderWhitespace": "boundary",
-    // Démarrer le chat à l’ouverture (ton réglage existant)
-    "chatgpt.openOnStartup": true,
-    // ====== Auto-accept / auto-approve (si l’IA/extension le supporte) ======
-    // Copilot Chat : accepte automatiquement les diffs après 3 s
-    "chat.editing.autoAccept": 3000,
-    // Autoriser les éditions IA sans popup sur ces chemins (sécurisé pour ton repo HA)
-    "chat.tools.edits.autoApprove": {
-        "configuration.yaml": true,
-        "packages/**": true,
-        "**/*.yaml": true,
-        "**/*.yml": true
+
+    // ====== Fichiers exclus ======
+    "files.exclude": {
+        "**/.git": true,
+        "**/__pycache__": true,
+        "**/*.pyc": true
     },
-    // Autoriser certaines commandes terminal “safe” sans confirmation
-    "chat.tools.terminal.autoApprove": {
-        "/^git\\s+(status|diff|log|show|branch|remote)\\b/": true,
-        "/^git\\s+(add|restore|checkout|commit)\\b/": true,
-        "/^(ha|hass)\\b/": true,
-        "/^(python|pip)\\b/": true,
-        // Interdits (restent bloqués)
-        "/^rm\\b/": false,
-        "/^del\\b/i": false,
-        "/^chmod\\b/": false,
-        "/^curl\\b/": false
+
+    // ====== Configuration Claude Code ======
+    // Approbations automatiques des outils fréquemment utilisés
+    "claudeCode.toolApprovals": {
+        "Read": {
+            "patterns": ["**/*.yaml", "**/*.json", "**/*.py"],
+            "action": "allow"
+        },
+        "Glob": {
+            "action": "allow"
+        },
+        "Grep": {
+            "action": "allow"
+        }
     },
+
     // ====== Git : un peu moins de frictions ======
     "git.autofetch": true,
     "git.confirmSync": false

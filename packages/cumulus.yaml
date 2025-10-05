@@ -194,82 +194,6 @@ timer:
 
 template:
 
-  - trigger:
-      - platform: state
-        entity_id:
-          - sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
-          - sensor.solcast_pv_forecast_previsions_pour_demain
-      - platform: homeassistant
-        event: start
-    sensor:
-      # --- Prévision d'AUJOURD'HUI → attribut 'series' = [[ms, W], ...]
-      - name: solcast_today_series_w
-        unique_id: solcast_today_series_w
-        icon: mdi:solar-power
-        state: "{{ now() }}"
-        attributes:
-          series: >
-            {% set s = 'sensor.solcast_pv_forecast_previsions_pour_aujourd_hui' %}
-            {% set a = state_attr(s,'detailedForecast')
-                       or state_attr(s,'forecasts')
-                       or state_attr(s,'detailed')
-                       or state_attr(s,'detailedHour') or [] %}
-            {% set base = now().replace(hour=0, minute=0, second=0, microsecond=0) %}
-            {% set start = (as_timestamp(base.replace(hour=5, minute=50))*1000) | int %}
-            {% set end   = (as_timestamp(base.replace(hour=21,minute=50))*1000) | int %}
-            {% set out = [] %}
-            {% for p in a %}
-              {% set ts = as_datetime(p.period_end or p.period_start or p.time or p.datetime) %}
-              {% if ts %}
-                {% set ms = (as_timestamp(ts)*1000) | int %}
-                {% if start <= ms <= end and ts.date() == now().date() %}
-                  {% set v = p.pv_estimate90 or p.pv_estimate or p.pv_estimate10 or p.pv or p.value or p.power %}
-                  {% if v is number %}
-                    {% set w = (v*1000 if 0 < v <= 50 else v) | round(0) %}
-                    {% set out = out + [[ ms, w ]] %}
-                  {% endif %}
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-            {{ out }}
-
-      # --- Prévision de DEMAIN, recadrée sur les heures d'AUJOURD'HUI ---
-      - name: solcast_tomorrow_as_today_series_w
-        unique_id: solcast_tomorrow_as_today_series_w
-        icon: mdi:solar-power
-        state: "{{ now() }}"
-        attributes:
-          series: >
-            {% set s = 'sensor.solcast_pv_forecast_previsions_pour_demain' %}
-            {% set a = state_attr(s,'detailedForecast')
-                       or state_attr(s,'forecasts')
-                       or state_attr(s,'detailed')
-                       or state_attr(s,'detailedHour') or [] %}
-            {% set base = now().replace(hour=0, minute=0, second=0, microsecond=0) %}
-            {% set dayms = 86400000 %}
-            {% set t0 = (as_timestamp(base)*1000 + dayms) | int %}  {# début demain #}
-            {% set t1 = t0 + dayms %}                                {# fin demain   #}
-            {% set win_start = (as_timestamp(base.replace(hour=5, minute=50))*1000) | int %}
-            {% set win_end   = (as_timestamp(base.replace(hour=21,minute=50))*1000) | int %}
-            {% set out = [] %}
-            {% for p in a %}
-              {% set ts = as_datetime(p.period_end or p.period_start or p.time or p.datetime) %}
-              {% if ts %}
-                {% set ms_raw = (as_timestamp(ts)*1000) | int %}
-                {% if t0 <= ms_raw < t1 %}
-                  {% set ms = ms_raw - dayms %}      {# superpose demain sur AUJOURD'HUI #}
-                  {% if win_start <= ms <= win_end %}
-                    {% set v = p.pv_estimate90 or p.pv_estimate or p.pv_estimate10 or p.pv or p.value or p.power %}
-                    {% if v is number %}
-                      {% set w = (v*1000 if 0 < v <= 50 else v) | round(0) %}
-                      {% set out = out + [[ ms, w ]] %}
-                    {% endif %}
-                  {% endif %}
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-            {{ out }}
-
   # ------------------------------- SENSORS -------------------------------- #
   - sensor:
 
@@ -635,3 +559,4 @@ automation:
         target:
           entity_id: input_boolean.cumulus_verrou_jour
     mode: single
+

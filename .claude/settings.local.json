@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//192.168.1.29/CONFIG/.vscode/**)",
+      "Bash(code:*)",
+      "Bash(git ls-tree:*)",
+      "Read(//192.168.1.29/CONFIG//**)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
