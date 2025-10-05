@@ -49,5 +49,6 @@
 
     // ====== Git : un peu moins de frictions ======
     "git.autofetch": true,
-    "git.confirmSync": false
+    "git.confirmSync": false,
+    "git.ignoreUntracked": true
 }
