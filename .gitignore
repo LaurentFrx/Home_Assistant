@@ -49,6 +49,12 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 
+# ==== Claude Code ====
+.claude/*
+!.claude/
+# Seulement les configs locales (permissions auto)
+.claude/settings.local.json
+
 # ==== Intégrations diverses optionnelles ====
 homebridge/
 
