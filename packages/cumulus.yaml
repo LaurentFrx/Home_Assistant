@@ -49,6 +49,18 @@ input_text:
     # ← capteur prévision solaire lendemain
     initial: sensor.solcast_pv_forecast_previsions_pour_demain
 
+  cumulus_entity_lave_linge_power:
+    name: ENTITÉ - Puissance lave-linge (W)
+    icon: mdi:washing-machine
+    # ← capteur puissance lave-linge
+    initial: sensor.lave_linge_power
+
+  cumulus_entity_lave_vaisselle_power:
+    name: ENTITÉ - Puissance lave-vaisselle (W)
+    icon: mdi:dishwasher
+    # ← capteur puissance lave-vaisselle
+    initial: sensor.lave_vaisselle_power
+
 # ============================ AIDES / RÉGLAGES ============================ #
 input_number:
   cumulus_seuil_pv_on_w:
@@ -195,6 +207,15 @@ input_number:
     unit_of_measurement: L
     icon: mdi:water-boiler
     initial: 300
+
+  cumulus_seuil_appareil_actif_w:
+    name: Seuil appareil actif (W)
+    min: 5
+    max: 100
+    step: 5
+    unit_of_measurement: W
+    icon: mdi:flash-outline
+    initial: 10
 
 input_boolean:
   cumulus_interdit:
@@ -376,6 +397,33 @@ template:
   # --------------------------- BINARY SENSORS ----------------------------- #
   - binary_sensor:
 
+      - name: "cumulus_lave_linge_actif"
+        unique_id: cumulus_lave_linge_actif
+        device_class: running
+        icon: mdi:washing-machine
+        state: >-
+          {% set entity = states('input_text.cumulus_entity_lave_linge_power') %}
+          {% set power = states(entity) | float(0) %}
+          {% set seuil = states('input_number.cumulus_seuil_appareil_actif_w') | float(10) %}
+          {{ power > seuil }}
+
+      - name: "cumulus_lave_vaisselle_actif"
+        unique_id: cumulus_lave_vaisselle_actif
+        device_class: running
+        icon: mdi:dishwasher
+        state: >-
+          {% set entity = states('input_text.cumulus_entity_lave_vaisselle_power') %}
+          {% set power = states(entity) | float(0) %}
+          {% set seuil = states('input_number.cumulus_seuil_appareil_actif_w') | float(10) %}
+          {{ power > seuil }}
+
+      - name: "cumulus_appareil_en_cours"
+        unique_id: cumulus_appareil_en_cours
+        icon: mdi:home-lightning-bolt-outline
+        state: >-
+          {{ is_state('binary_sensor.cumulus_lave_linge_actif', 'on')
+             or is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') }}
+
       - name: "cumulus_fenetre_pv"
         unique_id: cumulus_fenetre_pv
         state: >-
@@ -507,6 +555,9 @@ automation:
                 state: "off"
               - condition: state
                 entity_id: input_boolean.cumulus_verrou_jour
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.cumulus_appareil_en_cours
                 state: "off"
               - condition: template
                 # SOC ≥ start - 0,5 pt
@@ -824,5 +875,80 @@ automation:
             Température : 58°C (estimée)
             Capacité disponible : {{ states('input_number.cumulus_capacite_litres') }}L
           notification_id: cumulus_chauffe_ok
+    mode: single
+
+  # 12) Arrêt cumulus si appareil démarre
+  - id: cumulus_arret_si_appareil_demarre
+    alias: Cumulus — Arrêt si appareil démarre
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_appareil_en_cours
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cumulus_chauffe_reelle
+        state: "on"
+    action:
+      - variables:
+          sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+          appareil_actif: >-
+            {% if is_state('binary_sensor.cumulus_lave_linge_actif', 'on') %}
+              Lave-linge
+            {% elif is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') %}
+              Lave-vaisselle
+            {% else %}
+              Un appareil
+            {% endif %}
+      - service: switch.turn_off
+        target:
+          entity_id: "{{ sw_id }}"
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.cumulus_verrou_jour
+      - service: persistent_notification.create
+        data:
+          title: "⚠️ Cumulus - Arrêt prioritaire"
+          message: >
+            {{ appareil_actif }} a démarré.
+            Le cumulus a été arrêté pour éviter la surcharge.
+          notification_id: cumulus_arret_appareil
+    mode: single
+
+  # 13) Redémarrage cumulus si appareil s'arrête
+  - id: cumulus_redemarrage_si_appareil_arrete
+    alias: Cumulus — Redémarrage si appareil s'arrête
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_appareil_en_cours
+        to: "off"
+        for:
+          seconds: 30
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_verrou_jour
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.temp_atteinte_aujourdhui
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_interdit
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_vacances
+        state: "off"
+      - condition: state
+        entity_id: binary_sensor.cumulus_fenetre_pv
+        state: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cumulus_verrou_jour
+      - service: persistent_notification.create
+        data:
+          title: "🔄 Cumulus - Verrou levé"
+          message: >
+            Les appareils se sont arrêtés.
+            Le verrou journalier a été levé, le cumulus peut redémarrer si les conditions PV sont réunies.
+          notification_id: cumulus_verrou_leve
     mode: single
 
