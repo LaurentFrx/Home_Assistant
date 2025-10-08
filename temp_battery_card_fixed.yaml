@@ -1,0 +1,226 @@
+type: horizontal-stack
+cards:
+  - type: custom:button-card
+    show_name: false
+    show_state: false
+    styles:
+      card:
+        - padding: 4px
+        - border-radius: 14px
+        - "--ring-max": 320px
+      grid:
+        - grid-template-areas: "\"title\" \"pie\""
+        - grid-template-rows: auto 1fr
+        - grid-template-columns: 1fr
+      custom_fields:
+        title:
+          - justify-self: start
+          - font-weight: 600
+          - font-size: 1rem
+          - padding: 0 2px 2px
+        pie:
+          - width: 100%
+          - max-width: var(--ring-max)
+          - aspect-ratio: 1 / 1
+          - margin: 0 auto
+          - justify-self: center
+    custom_fields:
+      title: Énergie d'aujourd'hui
+      pie: |
+        [[[
+          // Données
+          const idSolar='sensor.energie_autoconsommee_2';
+          const idEDF='sensor.import_edf_quotidien';
+          const idSurplus='sensor.export_daily_2';
+          const v=id=>Number(states[id]?.state)||0;
+          const solar=v(idSolar), edf=v(idEDF), surp=v(idSurplus);
+          const sum = solar+edf+surp;
+
+          // Couleurs
+          const cSolar='#ffd700', cEDF='#0074D9', cSurp='#ff4136';
+          const cGrey = getComputedStyle(document.documentElement).getPropertyValue('--disabled-color') || '#c8c8c8';
+
+          // Géométrie (viewBox fixe -> responsive via width:100%)
+          const S=200, cx=100, cy=100, r=76, stroke=32;   // Ø≈200, ép.=32
+          const C=2*Math.PI*r, gap=2;
+
+          const fmt = x => (x>=1 ? Math.round(x) : Math.round(x*10)/10).toLocaleString('fr-FR');
+
+          // Polices responsives
+          const sizePx = this.offsetWidth || 220;
+          const f=(min,k,max)=>Math.max(min,Math.min(max,sizePx*k));
+          const fsLine = f(12,.045,16);
+
+          const wrap = (svg) => `
+            <div style="position:relative;width:100%;height:100%;">
+              ${svg}
+              <div style="position:absolute;inset:0;display:grid;place-items:center;">
+                <div style="text-align:center;line-height:1;display:flex;flex-direction:column;gap:2px;font-size:${fsLine}px">
+                  <div style="white-space:nowrap;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${cSolar};margin-right:6px;"></span>Solaire <b>${fmt(solar)}</b> kWh</div>
+                  <div style="white-space:nowrap;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${cEDF};margin-right:6px;"></span>EDF <b>${fmt(edf)}</b> kWh</div>
+                  <div style="white-space:nowrap;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${cSurp};margin-right:6px;"></span>Surplus <b>${fmt(surp)}</b> kWh</div>
+                </div>
+              </div>
+            </div>`;
+
+          if (sum <= 0.00001) {
+            const svg = `
+              <svg viewBox="0 0 ${S} ${S}" width="100%" height="100%">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="${stroke}"></circle>
+                <g transform="rotate(-90 ${cx} ${cy})">
+                  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cGrey}" stroke-width="${stroke}"></circle>
+                </g>
+              </svg>`;
+            return wrap(svg);
+          }
+
+          const total=sum;
+          const len = val => Math.max(C*(val/total)-gap,0);
+          const Lsolar=len(solar), Ledf=len(edf), Lsurp=len(surp);
+          const offEDF  =  C*(solar/total);
+          const offSurp =  offEDF + C*(edf/total);
+
+          const svg = `
+            <svg viewBox="0 0 ${S} ${S}" width="100%" height="100%">
+              <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="${stroke}"></circle>
+              <g transform="rotate(-90 ${cx} ${cy})">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cSolar}" stroke-width="${stroke}"
+                        stroke-dasharray="${Lsolar} ${C}"></circle>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cEDF}" stroke-width="${stroke}"
+                        stroke-dasharray="${Ledf} ${C}" stroke-dashoffset="-${offEDF}"></circle>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${cSurp}" stroke-width="${stroke}"
+                        stroke-dasharray="${Lsurp} ${C}" stroke-dashoffset="-${offSurp}"></circle>
+              </g>
+            </svg>`;
+          return wrap(svg);
+        ]]]
+  - type: custom:button-card
+    show_name: false
+    show_state: false
+    styles:
+      card:
+        - padding: 4px
+        - border-radius: 14px
+        - "--ring-max": 320px
+      grid:
+        - grid-template-areas: "\"title\" \"ring\""
+        - grid-template-rows: auto 1fr
+        - grid-template-columns: 1fr
+      custom_fields:
+        title:
+          - justify-self: start
+          - font-weight: 600
+          - font-size: 1rem
+          - padding: 0 2px 2px
+        ring:
+          - width: 100%
+          - max-width: var(--ring-max)
+          - aspect-ratio: 1 / 1
+          - margin: 0 auto
+          - justify-self: center
+    custom_fields:
+      title: Batterie
+      ring: |
+        [[[
+          const soc = Math.round(Number(states['sensor.solarbank_3_e2700_pro_etat_de_charge']?.state) || 0);
+          const p   = Number(states['sensor.solarbank_3_e2700_pro_puissance_de_charge']?.state) || 0;
+
+          // Seuils
+          const dead = 20;
+          const full = soc >= 99;
+          const paused = full && Math.abs(p) <= dead;
+          const charging = p > dead, discharg = p < -dead;
+
+          // Couleurs pour icône/légende (logique originale)
+          const BLUE = 'var(--info-color, #3b82f6)';
+          const GREEN = 'var(--success-color, #16a34a)';
+          const RED   = 'var(--error-color, #ef4444)';
+          const GREY  = 'var(--secondary-text-color)';
+          const iconColor = paused ? BLUE : (charging ? GREEN : (discharg ? RED : GREY));
+
+          // Fonction de couleur de l'anneau: rouge (0-10% fixe) → orange → jaune → vert → bleu (100%)
+          const getRingColor = (soc) => {
+            const percent = Math.max(0, Math.min(100, soc));
+
+            // 0-10%: rouge fixe
+            if (percent <= 10) {
+              return 'rgb(239, 68, 68)';
+            }
+
+            // Définition des couleurs de référence
+            const colors = [
+              { percent: 10, r: 239, g: 68, b: 68 },     // Rouge
+              { percent: 30, r: 249, g: 115, b: 22 },    // Orange
+              { percent: 50, r: 250, g: 204, b: 21 },    // Jaune
+              { percent: 70, r: 34, g: 197, b: 94 },     // Vert
+              { percent: 100, r: 37, g: 99, b: 235 }     // Bleu
+            ];
+
+            // Trouver les deux couleurs entre lesquelles interpoler
+            let lowerColor = colors[0];
+            let upperColor = colors[1];
+
+            for (let i = 0; i < colors.length - 1; i++) {
+              if (percent >= colors[i].percent && percent <= colors[i + 1].percent) {
+                lowerColor = colors[i];
+                upperColor = colors[i + 1];
+                break;
+              }
+            }
+
+            // Calculer le ratio d'interpolation
+            const range = upperColor.percent - lowerColor.percent;
+            const ratio = (percent - lowerColor.percent) / range;
+
+            // Interpolation linéaire entre les deux couleurs
+            const r = Math.round(lowerColor.r + (upperColor.r - lowerColor.r) * ratio);
+            const g = Math.round(lowerColor.g + (upperColor.g - lowerColor.g) * ratio);
+            const b = Math.round(lowerColor.b + (upperColor.b - lowerColor.b) * ratio);
+
+            return `rgb(${r}, ${g}, ${b})`;
+          };
+
+          const ringColor = getRingColor(soc);
+
+          // Texte / icône
+          const sign  = charging ? '+' : (discharg ? '−' : '');
+          const legend = paused ? 'En pause'
+                                : (charging || discharg) ? `${sign}${Math.round(Math.abs(p))} W` : '0 W';
+          const icon  = paused ? 'mdi:pause-circle'
+                               : (charging ? 'mdi:battery-charging' : (discharg ? 'mdi:battery-arrow-down' : 'mdi:battery'));
+
+          // Géométrie identique au camembert
+          const S=200, cx=100, cy=100, r=76, stroke=32;
+          const C=2*Math.PI*r;
+          const Lcol = Math.max(C * (soc/100), 0);
+          const Lrem = Math.max(C - Lcol, 0);
+
+          // Polices + grandes
+          const sizePx = this.offsetWidth || 240;
+          const f=(min,k,max)=>Math.max(min,Math.min(max,sizePx*k));
+          const fsPct = f(16,.070,26);
+          const fsSub = f(14,.060,22);
+          const iconSz = f(20,.095,30);
+
+          return `
+            <div style="position:relative;width:100%;height:100%;">
+              <svg viewBox="0 0 ${S} ${S}" width="100%" height="100%">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="${stroke}"></circle>
+                <g transform="rotate(-90 ${cx} ${cy})">
+                  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${ringColor}" stroke-width="${stroke}"
+                          stroke-dasharray="${Lcol} ${C}"></circle>
+                  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+                          stroke="var(--disabled-color)" stroke-width="${stroke}"
+                          stroke-dasharray="${Lrem} ${C}" stroke-dashoffset="-${Lcol}"></circle>
+                </g>
+              </svg>
+              <div style="position:absolute;inset:0;display:grid;place-items:center;">
+                <div style="text-align:center;line-height:1;display:flex;flex-direction:column;gap:3px">
+                  <ha-icon icon="${icon}" style="width:${iconSz}px;height:${iconSz}px;color:${iconColor};"></ha-icon>
+                  <div style="font-weight:700;font-size:${fsPct}px;">${soc}%</div>
+                  <div style="font-size:${fsSub}px;color:${iconColor};">${legend}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        ]]]

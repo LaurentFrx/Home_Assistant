@@ -1,0 +1,115 @@
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Production Solaire et Prévisions
+  show_states: true
+  colorize_states: true
+span:
+  start: day
+  offset: +5h30m
+graph_span: 16h
+now:
+  show: true
+  color: "#60a5fa"
+apex_config:
+  chart:
+    toolbar:
+      show: false
+  stroke:
+    curve: smooth
+  fill:
+    opacity:
+      - 0.28
+      - 0
+      - 0
+  yaxis:
+    min: 0
+    forceNiceScale: true
+all_series_config:
+  stroke_width: 2
+  show:
+    legend_value: false
+series:
+  - name: Réel
+    entity: sensor.pv_total_entree_sb_aps_w
+    type: area
+    color: "#f97316"
+    unit: kWh
+    show:
+      in_header: true
+      in_chart: false
+    float_precision: 1
+    attribute: last_reset
+    transform: return hass.states['sensor.pv_total_day_kwh'].state;
+  - name: Réel (graphe)
+    entity: sensor.pv_total_entree_sb_aps_w
+    type: area
+    color: "#f97316"
+    extend_to: false
+    show:
+      in_header: false
+      in_legend: false
+    group_by:
+      duration: 5min
+      func: avg
+  - name: Solcast
+    entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+    color: "#2563eb"
+    unit: kWh
+    show:
+      in_header: true
+      in_chart: false
+    float_precision: 1
+    attribute: estimate
+  - name: Solcast (W)
+    entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+    type: line
+    color: "#2563eb"
+    extend_to: false
+    show:
+      in_header: false
+      in_legend: false
+    data_generator: >
+      const source = hass.states['sensor.solcast_pv_forecast_previsions_pour_aujourd_hui'];
+      if (!source || !source.attributes) return [];
+      const entries = source.attributes.detailedForecast || [];
+      return entries.map(point => {
+        const ts = Date.parse(point.period_start);
+        if (!Number.isFinite(ts)) return null;
+        const kWh = point.pv_estimate;
+        if (typeof kWh !== 'number') return null;
+        const watts = kWh * 1000;
+        return [ts, Math.round(watts)];
+      }).filter(Boolean);
+  - name: Demain
+    entity: sensor.solcast_pv_forecast_previsions_pour_demain
+    color: "#ef4444"
+    unit: kWh
+    show:
+      in_header: true
+      in_chart: false
+    float_precision: 1
+    attribute: estimate
+  - name: Solcast demain (W)
+    entity: sensor.solcast_pv_forecast_previsions_pour_demain
+    type: line
+    color: "#ef4444"
+    stroke_dash: 3
+    extend_to: false
+    show:
+      in_header: false
+      in_legend: false
+    data_generator: >
+      const source = hass.states['sensor.solcast_pv_forecast_previsions_pour_demain'];
+      if (!source || !source.attributes) return [];
+      const entries = source.attributes.detailedForecast || [];
+      const dayMs = 86400000;
+      return entries.map(point => {
+        const tsTomorrow = Date.parse(point.period_start);
+        if (!Number.isFinite(tsTomorrow)) return null;
+        const ts = tsTomorrow - dayMs;
+        const kWh = point.pv_estimate;
+        if (typeof kWh !== 'number') return null;
+        const watts = kWh * 1000;
+        return [ts, Math.round(watts)];
+      }).filter(Boolean);

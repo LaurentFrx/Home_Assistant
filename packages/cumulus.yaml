@@ -22,7 +22,7 @@ input_text:
   cumulus_entity_import_w:
     name: ENTITÉ - Import réseau (W)
     icon: mdi:transmission-tower-import
-    # ← remplace si besoin par l’ID réel du capteur d’import réseau
+    # ← remplace si besoin par l'ID réel du capteur d'import réseau
     initial: sensor.smart_meter_grid_import
 
   cumulus_entity_contacteur:
@@ -36,6 +36,18 @@ input_text:
     icon: mdi:battery
     # ← capteur SOC SB réel chez toi
     initial: sensor.system_sanguinet_etat_de_charge_du_sb
+
+  cumulus_entity_solcast_today:
+    name: ENTITÉ - Prévision Solcast aujourd'hui (kWh)
+    icon: mdi:weather-sunny-alert
+    # ← capteur prévision solaire du jour
+    initial: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+
+  cumulus_entity_solcast_tomorrow:
+    name: ENTITÉ - Prévision Solcast demain (kWh)
+    icon: mdi:weather-sunny
+    # ← capteur prévision solaire lendemain
+    initial: sensor.solcast_pv_forecast_previsions_pour_demain
 
 # ============================ AIDES / RÉGLAGES ============================ #
 input_number:
@@ -93,7 +105,7 @@ input_number:
     step: 10
     unit_of_measurement: W
     icon: mdi:flash-alert
-    initial: 1100
+    initial: 1800
 
   cumulus_marge_fin_import_w:
     name: Marge de fin (import) (W)
@@ -140,6 +152,50 @@ input_number:
     icon: mdi:battery-alert-variant-outline
     initial: 15
 
+  cumulus_puissance_w:
+    name: Puissance cumulus (W)
+    min: 0
+    max: 5000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:lightning-bolt
+    initial: 2950
+
+  cumulus_espacement_max_h:
+    name: Espacement maxi entre chauffes (h)
+    min: 24
+    max: 72
+    step: 1
+    unit_of_measurement: h
+    icon: mdi:timer-sand
+    initial: 50
+
+  cumulus_seuil_solcast_bon_kwh:
+    name: Seuil Solcast "bonne journée" (kWh)
+    min: 0
+    max: 50
+    step: 0.5
+    unit_of_measurement: kWh
+    icon: mdi:white-balance-sunny
+    initial: 8
+
+  cumulus_nb_personnes:
+    name: Nombre de personnes au foyer
+    min: 1
+    max: 10
+    step: 1
+    icon: mdi:account-multiple
+    initial: 2
+
+  cumulus_capacite_litres:
+    name: Capacité du ballon (L)
+    min: 50
+    max: 500
+    step: 10
+    unit_of_measurement: L
+    icon: mdi:water-boiler
+    initial: 300
+
 input_boolean:
   cumulus_interdit:
     name: Interdit (sécurité/maintenance)
@@ -158,8 +214,13 @@ input_boolean:
     icon: mdi:hand-pointing-up
 
   temp_atteinte_aujourdhui:
-    name: Température atteinte aujourd’hui
+    name: Température atteinte aujourd'hui
     icon: mdi:thermometer-check
+
+  cumulus_autoriser_hc:
+    name: Autoriser chauffes en heures creuses
+    icon: mdi:clock-time-eight
+    initial: true
 
 # Fenêtres horaires
 input_datetime:
@@ -185,10 +246,16 @@ input_datetime:
     has_time: true
     initial: "08:05:00"
 
+  cumulus_derniere_chauffe_complete:
+    name: Dernière chauffe complète
+    has_date: true
+    has_time: true
+    initial: "2025-01-01 00:00:00"
+
 timer:
   cumulus_deadband_ui:
     name: Temporisation UI (deadband)
-    duration: "0:01:40"  # 100 s par défaut
+    # Durée dynamique définie dans automations via input_number.cumulus_deadband_s
 
 # ================================ TEMPLATES ================================ #
 
@@ -250,17 +317,62 @@ template:
           {{ (states('sensor.cumulus_import_min_si_chauffe_w')|float(0))
              + (states('input_number.cumulus_marge_fin_import_w')|float(150)) }}
 
-      # Journal (timestamps) – maintenus pour compat
-      - name: "cumulus_last_full_heat_start"
-        unique_id: cumulus_last_full_heat_start
-        state: "{{ states('sensor.cumulus_last_full_heat_start') }}"
-      - name: "cumulus_last_full_heat_end"
-        unique_id: cumulus_last_full_heat_end
-        state: "{{ states('sensor.cumulus_last_full_heat_end') }}"
-      - name: "cumulus_last_full_heat_duration"
-        unique_id: cumulus_last_full_heat_duration
-        unit_of_measurement: "min"
-        state: "{{ states('sensor.cumulus_last_full_heat_duration') }}"
+      # Journal (timestamps) – supprimés (auto-référentiels = invalides)
+      # Ces sensors nécessiteraient une autre approche (ex: helpers via UI ou scripts)
+
+      - name: "cumulus_solcast_forecast_today"
+        unique_id: cumulus_solcast_forecast_today
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state: >-
+          {% set e = states('input_text.cumulus_entity_solcast_today') %}
+          {{ states(e) | float(0) }}
+
+      - name: "cumulus_solcast_forecast_tomorrow"
+        unique_id: cumulus_solcast_forecast_tomorrow
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state: >-
+          {% set e = states('input_text.cumulus_entity_solcast_tomorrow') %}
+          {{ states(e) | float(0) }}
+
+      - name: "cumulus_heures_depuis_derniere_chauffe"
+        unique_id: cumulus_heures_depuis_derniere_chauffe
+        unit_of_measurement: "h"
+        icon: mdi:clock-outline
+        state: >-
+          {% set last_ts = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+          {% if last_ts %}
+            {{ ((now().timestamp() - last_ts) / 3600) | round(1) }}
+          {% else %}
+            999
+          {% endif %}
+
+      - name: "cumulus_temperature_estimee"
+        unique_id: cumulus_temperature_estimee
+        unit_of_measurement: "°C"
+        device_class: temperature
+        icon: mdi:thermometer-water
+        # Modèle simple : 58°C après chauffe, perd ~0.3°C/h, mini 20°C
+        state: >-
+          {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+          {% if heures >= 999 %}
+            20
+          {% else %}
+            {% set temp = 58 - (heures * 0.3) %}
+            {{ [temp, 20] | max | round(1) }}
+          {% endif %}
+
+      - name: "cumulus_litres_disponibles_estimes"
+        unique_id: cumulus_litres_disponibles_estimes
+        unit_of_measurement: "L"
+        icon: mdi:water
+        # Proportion linéaire selon température (58°C = 100%, 20°C = 0%)
+        state: >-
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(20) %}
+          {% set capacite = states('input_number.cumulus_capacite_litres') | float(300) %}
+          {% set ratio = ((temp - 20) / 38) | float(0) %}
+          {{ (capacite * ratio) | round(0) }}
 
   # --------------------------- BINARY SENSORS ----------------------------- #
   - binary_sensor:
@@ -290,22 +402,30 @@ template:
         unique_id: cumulus_chauffe_reelle
         # "vrai" si import > seuil_fin + hystérésis ET contacteur ON
         state: >-
-          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
-          {% set sw = is_state(sw_id, 'on') %}
-          {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
-          {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
-          {% set HYS = 50 %}
-          {{ sw and (imp > (seuil + HYS)) }}
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') | string %}
+          {% if sw_id not in ['unknown', 'unavailable', ''] %}
+            {% set sw = is_state(sw_id, 'on') %}
+            {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
+            {% set HYS = 50 %}
+            {{ sw and (imp > (seuil + HYS)) }}
+          {% else %}
+            false
+          {% endif %}
 
       - name: "cumulus_fini_par_import"
         unique_id: cumulus_fini_par_import
         # fin détectée quand contacteur ON mais import <= seuil_fin
         state: >-
-          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
-          {% set sw = is_state(sw_id, 'on') %}
-          {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
-          {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
-          {{ sw and (imp <= seuil) }}
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') | string %}
+          {% if sw_id not in ['unknown', 'unavailable', ''] %}
+            {% set sw = is_state(sw_id, 'on') %}
+            {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
+            {{ sw and (imp <= seuil) }}
+          {% else %}
+            false
+          {% endif %}
 
       - name: "cumulus_on_hc_prevu"
         unique_id: cumulus_on_hc_prevu
@@ -315,6 +435,39 @@ template:
              and is_state('input_boolean.cumulus_interdit','off')
              and is_state('input_boolean.cumulus_vacances','off')
              and is_state('input_boolean.cumulus_verrou_jour','off') }}
+
+      - name: "cumulus_besoin_chauffe_urgente"
+        unique_id: cumulus_besoin_chauffe_urgente
+        # Besoin urgent si heures écoulées > espacement max
+        state: >-
+          {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% set max_h = states('input_number.cumulus_espacement_max_h') | float(50) %}
+          {{ heures >= max_h }}
+
+      - name: "cumulus_meteo_favorable_aujourdhui"
+        unique_id: cumulus_meteo_favorable_aujourdhui
+        state: >-
+          {% set today = states('sensor.cumulus_solcast_forecast_today') | float(0) %}
+          {% set seuil = states('input_number.cumulus_seuil_solcast_bon_kwh') | float(8) %}
+          {{ today >= seuil }}
+
+      - name: "cumulus_meteo_favorable_demain"
+        unique_id: cumulus_meteo_favorable_demain
+        state: >-
+          {% set tomorrow = states('sensor.cumulus_solcast_forecast_tomorrow') | float(0) %}
+          {% set seuil = states('input_number.cumulus_seuil_solcast_bon_kwh') | float(8) %}
+          {{ tomorrow >= seuil }}
+
+      - name: "cumulus_autoriser_chauffe_hc_intelligente"
+        unique_id: cumulus_autoriser_chauffe_hc_intelligente
+        # Autorise HC seulement si :
+        # - Autorisation manuelle HC active
+        # - ET (besoin urgent OU météo défavorable demain)
+        state: >-
+          {% set autoriser = is_state('input_boolean.cumulus_autoriser_hc', 'on') %}
+          {% set urgent = is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+          {% set mauvais_demain = is_state('binary_sensor.cumulus_meteo_favorable_demain', 'off') %}
+          {{ autoriser and (urgent or mauvais_demain) }}
 
 # ================================ AUTOMATIONS ============================== #
 automation:
@@ -333,27 +486,37 @@ automation:
           seconds: >-
             {{ states('input_number.cumulus_on_delay_s')|int(0) }}
     condition:
-      - condition: template
-        value_template: >-
-          {{ states('sensor.cumulus_pv_power_w')|float(0)
-             > states('input_number.cumulus_seuil_pv_on_w')|float(100) }}
-      - condition: state
-        entity_id: input_boolean.cumulus_interdit
-        state: "off"
-      - condition: state
-        entity_id: input_boolean.cumulus_vacances
-        state: "off"
-      - condition: state
-        entity_id: input_boolean.cumulus_verrou_jour
-        state: "off"
-      - condition: template
-        # SOC ≥ start - 0,5 pt
-        value_template: >-
-          {% set soc = states('sensor.cumulus_soc_solarbank_pct')|float(0) %}
-          {{
-            soc
-            >= (states('input_number.cumulus_soc_start_pct')|float(25) - 0.5)
-          }}
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: input_boolean.cumulus_override
+            state: "on"
+          - condition: and
+            conditions:
+              - condition: template
+                value_template: >-
+                  {{ states('sensor.cumulus_pv_power_w')|float(0)
+                     > states('input_number.cumulus_seuil_pv_on_w')|float(100) }}
+              - condition: state
+                entity_id: binary_sensor.cumulus_fenetre_pv
+                state: "on"
+              - condition: state
+                entity_id: input_boolean.cumulus_interdit
+                state: "off"
+              - condition: state
+                entity_id: input_boolean.cumulus_vacances
+                state: "off"
+              - condition: state
+                entity_id: input_boolean.cumulus_verrou_jour
+                state: "off"
+              - condition: template
+                # SOC ≥ start - 0,5 pt
+                value_template: >-
+                  {% set soc = states('sensor.cumulus_soc_solarbank_pct')|float(0) %}
+                  {{
+                    soc
+                    >= (states('input_number.cumulus_soc_start_pct')|float(25) - 0.5)
+                  }}
     action:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
@@ -398,16 +561,16 @@ automation:
   - id: cumulus_limiteur_import
     alias: Cumulus — Limiteur d'import
     trigger:
-      - platform: numeric_state
-        entity_id: sensor.cumulus_import_reseau_w
-        above: 0
-        for:
-          seconds: 8
-    condition:
-      - condition: template
+      - platform: template
         value_template: >-
           {{ states('sensor.cumulus_import_reseau_w')|float(0)
              > states('sensor.cumulus_seuil_import_limiteur_w')|float(0) }}
+        for:
+          seconds: 8
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cumulus_chauffe_reelle
+        state: "on"
       - condition: state
         entity_id: input_boolean.cumulus_interdit
         state: "off"
@@ -418,19 +581,15 @@ automation:
             {{ (states('input_number.cumulus_mini_deadband_no_delay_s')|int(5))
                if (states('input_number.cumulus_on_delay_s')|int(0)) <= 0
                else (states('input_number.cumulus_deadband_s')|int(100)) }}
-      - if:
-          - condition: template
-            value_template: "{{ is_state(sw_id, 'on') }}"
-        then:
-          - service: switch.turn_off
-            target:
-              entity_id: "{{ sw_id }}"
-          - service: timer.start
-            target:
-              entity_id: timer.cumulus_deadband_ui
-            data:
-              duration:
-                seconds: "{{ db_s|int }}"
+      - service: switch.turn_off
+        target:
+          entity_id: "{{ sw_id }}"
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_deadband_ui
+        data:
+          duration:
+            seconds: "{{ db_s|int }}"
     mode: restart
 
   # 3) Sécurité SOC bas : OFF si SOC < stop (%) pendant 10 s
@@ -493,25 +652,40 @@ automation:
       - service: input_boolean.turn_on
         target:
           entity_id: input_boolean.temp_atteinte_aujourdhui
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ now().isoformat() }}"
     mode: restart
 
-  # 5) ON au début des HC si prévu
+  # 5) ON au début des HC si prévu (LOGIQUE INTELLIGENTE)
   - id: cumulus_on_debut_hc_si_prevu
-    alias: Cumulus — ON début HC si prévu
+    alias: Cumulus — ON début HC si prévu (intelligent)
     trigger:
       - platform: state
         entity_id: binary_sensor.cumulus_en_hc
         to: "on"
     condition:
-      - condition: state
-        entity_id: input_boolean.cumulus_interdit
-        state: "off"
-      - condition: state
-        entity_id: input_boolean.cumulus_vacances
-        state: "off"
-      - condition: state
-        entity_id: input_boolean.cumulus_verrou_jour
-        state: "off"
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: input_boolean.cumulus_override
+            state: "on"
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: input_boolean.cumulus_interdit
+                state: "off"
+              - condition: state
+                entity_id: input_boolean.cumulus_vacances
+                state: "off"
+              - condition: state
+                entity_id: input_boolean.cumulus_verrou_jour
+                state: "off"
+              - condition: state
+                entity_id: binary_sensor.cumulus_autoriser_chauffe_hc_intelligente
+                state: "on"
     action:
       - variables:
           sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
@@ -558,5 +732,98 @@ automation:
       - service: input_boolean.turn_off
         target:
           entity_id: input_boolean.cumulus_verrou_jour
+    mode: single
+
+  # 8) Notification : Pas de chauffe depuis 48h
+  - id: cumulus_alerte_pas_chauffe_48h
+    alias: Cumulus — Alerte pas de chauffe 48h
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.cumulus_heures_depuis_derniere_chauffe
+        above: 48
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_vacances
+        state: "off"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "⚠️ Cumulus - Alerte"
+          message: >
+            Le cumulus n'a pas chauffé depuis {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h.
+            Température estimée : {{ states('sensor.cumulus_temperature_estimee') }}°C
+            Eau chaude disponible : {{ states('sensor.cumulus_litres_disponibles_estimes') }}L
+          notification_id: cumulus_alerte_48h
+    mode: single
+
+  # 9) Notification : Besoin chauffe urgente
+  - id: cumulus_alerte_besoin_urgent
+    alias: Cumulus — Alerte besoin urgent
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_besoin_chauffe_urgente
+        to: "on"
+        for:
+          hours: 1
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_vacances
+        state: "off"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "🔴 Cumulus - Chauffe urgente nécessaire"
+          message: >
+            Le délai maximum de {{ states('input_number.cumulus_espacement_max_h') }}h est dépassé.
+            Dernière chauffe : {{ states('input_datetime.cumulus_derniere_chauffe_complete') }}
+            Température estimée : {{ states('sensor.cumulus_temperature_estimee') }}°C
+
+            Action recommandée : activer l'override manuel si nécessaire.
+          notification_id: cumulus_alerte_urgent
+    mode: single
+
+  # 10) Notification : Import anormal pendant chauffe PV
+  - id: cumulus_alerte_import_anormal
+    alias: Cumulus — Alerte import anormal
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.cumulus_import_reseau_w
+        above: 1500
+        for:
+          minutes: 5
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cumulus_chauffe_reelle
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.cumulus_fenetre_pv
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "⚠️ Cumulus - Import élevé"
+          message: >
+            Import réseau élevé ({{ states('sensor.cumulus_import_reseau_w') }}W) pendant chauffe PV.
+            Production PV : {{ states('sensor.cumulus_pv_power_w') }}W
+            SOC batterie : {{ states('sensor.cumulus_soc_solarbank_pct') }}%
+          notification_id: cumulus_import_anormal
+    mode: single
+
+  # 11) Notification : Chauffe complète terminée
+  - id: cumulus_notification_chauffe_complete
+    alias: Cumulus — Notification chauffe complète
+    trigger:
+      - platform: state
+        entity_id: input_boolean.temp_atteinte_aujourdhui
+        to: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "✅ Cumulus - Chauffe terminée"
+          message: >
+            Chauffe complète terminée à {{ now().strftime('%H:%M') }}.
+            Température : 58°C (estimée)
+            Capacité disponible : {{ states('input_number.cumulus_capacite_litres') }}L
+          notification_id: cumulus_chauffe_ok
     mode: single
 

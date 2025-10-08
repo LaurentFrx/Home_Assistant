@@ -1,0 +1,457 @@
+###############################################################################
+# CARTE LOVELACE CUMULUS — Design moderne et complet
+# À intégrer dans votre dashboard Lovelace
+###############################################################################
+
+type: vertical-stack
+cards:
+  # ==================== EN-TÊTE PRINCIPAL ==================== #
+  - type: custom:mushroom-title-card
+    title: "💧 Gestion Intelligente du Cumulus"
+    subtitle: "Ballon {{ states('input_number.cumulus_capacite_litres') | int }}L • {{ states('input_number.cumulus_nb_personnes') | int }} personne(s)"
+
+  # ==================== STATUT EN TEMPS RÉEL ==================== #
+  - type: custom:mushroom-chips-card
+    chips:
+      - type: template
+        entity: binary_sensor.cumulus_chauffe_reelle
+        icon: mdi:fire
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        content: >
+          {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            🔥 Chauffe en cours
+          {% else %}
+            💤 Repos
+          {% endif %}
+
+      - type: template
+        entity: sensor.cumulus_temperature_estimee
+        icon: mdi:thermometer
+        icon_color: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(0) %}
+          {% if temp >= 50 %}
+            red
+          {% elif temp >= 35 %}
+            orange
+          {% else %}
+            blue
+          {% endif %}
+        content: "{{ states('sensor.cumulus_temperature_estimee') }}°C"
+
+      - type: template
+        entity: sensor.cumulus_litres_disponibles_estimes
+        icon: mdi:water
+        icon_color: >
+          {% set litres = states('sensor.cumulus_litres_disponibles_estimes') | float(0) %}
+          {% set capacite = states('input_number.cumulus_capacite_litres') | float(300) %}
+          {% set ratio = (litres / capacite * 100) | int %}
+          {% if ratio >= 70 %}
+            green
+          {% elif ratio >= 40 %}
+            orange
+          {% else %}
+            red
+          {% endif %}
+        content: "{{ states('sensor.cumulus_litres_disponibles_estimes') }}L"
+
+      - type: template
+        entity: sensor.cumulus_heures_depuis_derniere_chauffe
+        icon: mdi:clock-outline
+        icon_color: >
+          {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% if heures >= 50 %}
+            red
+          {% elif heures >= 36 %}
+            orange
+          {% else %}
+            green
+          {% endif %}
+        content: "{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h"
+
+  # ==================== JAUGE TEMPÉRATURE ==================== #
+  - type: gauge
+    entity: sensor.cumulus_temperature_estimee
+    name: Température estimée de l'eau
+    min: 20
+    max: 60
+    severity:
+      green: 50
+      yellow: 35
+      red: 20
+    needle: true
+
+  # ==================== GRAPHIQUE HISTORIQUE ==================== #
+  - type: custom:mini-graph-card
+    name: Historique température et production
+    hours_to_show: 48
+    points_per_hour: 2
+    line_width: 3
+    animate: true
+    entities:
+      - entity: sensor.cumulus_temperature_estimee
+        name: Température eau
+        color: "#FF5733"
+        show_state: true
+        show_indicator: true
+      - entity: sensor.cumulus_pv_power_w
+        name: Production PV
+        color: "#FFC300"
+        show_state: true
+        y_axis: secondary
+      - entity: sensor.cumulus_import_reseau_w
+        name: Import réseau
+        color: "#3498DB"
+        show_state: true
+        y_axis: secondary
+
+  # ==================== MÉTÉO & PRÉVISIONS ==================== #
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_solcast_forecast_today
+        name: Prévision Aujourd'hui
+        icon: mdi:weather-sunny
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_meteo_favorable_aujourdhui', 'on') %}
+            amber
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: state
+
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_solcast_forecast_tomorrow
+        name: Prévision Demain
+        icon: mdi:weather-sunny-alert
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_meteo_favorable_demain', 'on') %}
+            amber
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: state
+
+  # ==================== CONTRÔLES RAPIDES ==================== #
+  - type: custom:mushroom-title-card
+    title: "🎛️ Contrôles"
+    subtitle: ""
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_override
+        name: Override Manuel
+        icon: mdi:hand-pointing-up
+        tap_action:
+          action: toggle
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_interdit
+        name: Interdit
+        icon: mdi:cancel
+        tap_action:
+          action: toggle
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_vacances
+        name: Vacances
+        icon: mdi:beach
+        tap_action:
+          action: toggle
+        fill_container: false
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_autoriser_hc
+        name: Autoriser HC
+        icon: mdi:clock-time-eight
+        tap_action:
+          action: toggle
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_besoin_chauffe_urgente
+        name: Besoin urgent
+        icon: mdi:alert-circle
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.temp_atteinte_aujourdhui
+        name: Temp. atteinte
+        icon: mdi:thermometer-check
+        icon_color: >
+          {% if is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_verrou_jour
+        name: Verrou journalier
+        icon: mdi:calendar-remove
+        icon_color: >
+          {% if is_state('input_boolean.cumulus_verrou_jour', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_deadband_actif
+        name: Deadband
+        icon: mdi:timer-sand
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_deadband_actif', 'on') %}
+            orange
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+  # ==================== PLANNING JOURNALIER ==================== #
+  - type: custom:mushroom-title-card
+    title: "📅 Planning Journalier"
+    subtitle: "Plages horaires de chauffe et événements quotidiens"
+
+  - type: markdown
+    content: |
+      ### 🕐 Plages horaires actives
+
+      | Période | Horaire | Type | Conditions |
+      |---------|---------|------|------------|
+      | **🌙 Heures Creuses** | {{ states('input_datetime.cumulus_heures_creuses_debut') }} - {{ states('input_datetime.cumulus_heures_creuses_fin') }} | HC Réseau | Logique intelligente |
+      | **🔄 Reset quotidien** | 08:10 | Auto | Verrou + Temp. atteinte |
+      | **☀️ Fenêtre PV** | {{ states('input_datetime.cumulus_plage_pv_debut') }} - {{ states('input_datetime.cumulus_plage_pv_fin') }} | Surplus PV | Si PV > seuil |
+
+      ---
+
+      #### Logique HC intelligente active si :
+      - ✅ Autorisation HC activée **ET**
+      - 🔴 Besoin urgent (> {{ states('input_number.cumulus_espacement_max_h') }}h) **OU**
+      - 🌧️ Météo défavorable demain (< {{ states('input_number.cumulus_seuil_solcast_bon_kwh') }} kWh)
+
+      ---
+
+      #### État actuel :
+      {% if is_state('binary_sensor.cumulus_en_hc', 'on') %}
+      🌙 **EN HEURES CREUSES** ({{ states('input_datetime.cumulus_heures_creuses_debut') }} - {{ states('input_datetime.cumulus_heures_creuses_fin') }})
+      {% elif is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+      ☀️ **DANS FENÊTRE PV** ({{ states('input_datetime.cumulus_plage_pv_debut') }} - {{ states('input_datetime.cumulus_plage_pv_fin') }})
+      {% else %}
+      💤 **HORS PÉRIODE DE CHAUFFE**
+      {% endif %}
+
+  # ==================== TIMELINE 24H ==================== #
+  - type: markdown
+    content: |
+      ### ⏰ Timeline 24h
+
+      ```
+      00:00 ━━━━━━━━━┓
+                     ┃ 💤 Nuit
+      03:30 ━━━━━━━━━┫
+                     ┃ 🌙 HEURES CREUSES
+      08:05 ━━━━━━━━━┫    (si logique intelligente)
+                     ┃
+      08:10 ━━━━━━━━━╋━━ 🔄 RESET QUOTIDIEN
+                     ┃    (verrou + temp.atteinte)
+      10:20 ━━━━━━━━━┫
+                     ┃ ☀️ FENÊTRE PV
+                     ┃    (si PV > {{ states('input_number.cumulus_seuil_pv_on_w') | int }}W)
+      17:50 ━━━━━━━━━┫
+                     ┃ 💤 Soirée
+      00:00 ━━━━━━━━━┛
+      ```
+
+      **Légende** :
+      - 🌙 HC : chauffe réseau (conditions intelligentes)
+      - 🔄 Reset : réinitialisation verrou journalier
+      - ☀️ PV : chauffe sur surplus solaire
+      - 💤 : aucune chauffe possible
+
+  # ==================== DONNÉES TECHNIQUES ==================== #
+  - type: custom:mushroom-title-card
+    title: "📊 Données Techniques"
+    subtitle: ""
+
+  - type: entities
+    entities:
+      - entity: sensor.cumulus_import_reseau_w
+        name: Import réseau actuel
+        icon: mdi:transmission-tower-import
+      - entity: sensor.cumulus_pv_power_w
+        name: Production PV
+        icon: mdi:solar-power
+      - entity: sensor.cumulus_soc_solarbank_pct
+        name: Charge batterie
+        icon: mdi:battery
+      - entity: input_number.cumulus_puissance_w
+        name: Puissance cumulus
+        icon: mdi:lightning-bolt
+      - type: divider
+      - entity: sensor.cumulus_seuil_import_limiteur_w
+        name: Seuil limiteur import
+        icon: mdi:flash-alert
+      - entity: sensor.cumulus_seuil_fin_chauffe_w
+        name: Seuil fin de chauffe
+        icon: mdi:flash-triangle-outline
+      - type: divider
+      - entity: input_datetime.cumulus_derniere_chauffe_complete
+        name: Dernière chauffe complète
+        icon: mdi:calendar-clock
+
+  # ==================== CONFIGURATION ==================== #
+  - type: custom:mushroom-title-card
+    title: "⚙️ Configuration"
+    subtitle: ""
+
+  - type: entities
+    title: "🏠 Paramètres généraux"
+    entities:
+      - entity: input_number.cumulus_nb_personnes
+        name: Nombre de personnes
+        icon: mdi:account-multiple
+      - entity: input_number.cumulus_capacite_litres
+        name: Capacité du ballon
+        icon: mdi:water-boiler
+      - entity: input_number.cumulus_puissance_w
+        name: Puissance cumulus
+        icon: mdi:lightning-bolt
+      - entity: input_number.cumulus_espacement_max_h
+        name: Espacement maxi
+        icon: mdi:timer-sand
+
+  - type: entities
+    title: "⚡ Paramètres PV et démarrage"
+    entities:
+      - entity: input_number.cumulus_seuil_pv_on_w
+        name: Seuil PV démarrage
+        icon: mdi:white-balance-sunny
+      - entity: input_number.cumulus_on_delay_s
+        name: Délai confirmation ON
+        icon: mdi:timer-play
+      - entity: input_number.cumulus_deadband_s
+        name: Deadband global
+        icon: mdi:progress-clock
+      - entity: input_number.cumulus_mini_deadband_no_delay_s
+        name: Mini-deadband no_delay
+        icon: mdi:timer-outline
+      - entity: input_number.cumulus_seuil_solcast_bon_kwh
+        name: Seuil "bonne journée"
+        icon: mdi:weather-sunny
+
+  - type: entities
+    title: "🔋 Paramètres batterie (SOC)"
+    entities:
+      - entity: input_number.cumulus_soc_start_pct
+        name: SOC mini démarrage
+        icon: mdi:battery-70
+      - entity: input_number.cumulus_soc_stop_pct
+        name: SOC arrêt sécurité
+        icon: mdi:battery-alert
+      - entity: input_number.cumulus_solarbank_max_w
+        name: Puissance max Solarbank
+        icon: mdi:battery-charging-100
+      - entity: input_number.cumulus_aps_max_w
+        name: Puissance max APS
+        icon: mdi:solar-power
+
+  - type: entities
+    title: "📊 Paramètres import réseau"
+    entities:
+      - entity: input_number.cumulus_talon_maison_w
+        name: Talon maison
+        icon: mdi:home-lightning-bolt
+      - entity: input_number.cumulus_marge_import_w
+        name: Marge import (limiteur)
+        icon: mdi:flash-alert
+      - entity: input_number.cumulus_marge_fin_import_w
+        name: Marge fin import
+        icon: mdi:flash-triangle-outline
+
+  # ==================== FENÊTRES HORAIRES ==================== #
+  - type: custom:mushroom-title-card
+    title: "🕐 Fenêtres Horaires"
+    subtitle: ""
+
+  - type: entities
+    entities:
+      - entity: input_datetime.cumulus_plage_pv_debut
+        name: Fenêtre PV - Début
+        icon: mdi:weather-sunny
+      - entity: input_datetime.cumulus_plage_pv_fin
+        name: Fenêtre PV - Fin
+        icon: mdi:weather-sunset
+      - type: divider
+      - entity: input_datetime.cumulus_heures_creuses_debut
+        name: Heures creuses - Début
+        icon: mdi:clock-start
+      - entity: input_datetime.cumulus_heures_creuses_fin
+        name: Heures creuses - Fin
+        icon: mdi:clock-end
+      - type: divider
+      - entity: binary_sensor.cumulus_fenetre_pv
+        name: Dans fenêtre PV
+        icon: mdi:sun-clock
+      - entity: binary_sensor.cumulus_en_hc
+        name: En heures creuses
+        icon: mdi:clock-time-eight-outline
+
+  # ==================== INDICATEURS INTELLIGENTS ==================== #
+  - type: custom:mushroom-title-card
+    title: "🧠 Logique Intelligente"
+    subtitle: ""
+
+  - type: entities
+    entities:
+      - entity: binary_sensor.cumulus_meteo_favorable_aujourdhui
+        name: Météo favorable aujourd'hui
+        icon: mdi:weather-sunny
+      - entity: binary_sensor.cumulus_meteo_favorable_demain
+        name: Météo favorable demain
+        icon: mdi:calendar-today
+      - entity: binary_sensor.cumulus_besoin_chauffe_urgente
+        name: Besoin chauffe urgente
+        icon: mdi:alert-circle
+      - entity: binary_sensor.cumulus_autoriser_chauffe_hc_intelligente
+        name: HC autorisée (logique)
+        icon: mdi:brain
+      - type: divider
+      - entity: binary_sensor.cumulus_chauffe_reelle
+        name: Chauffe réelle détectée
+        icon: mdi:fire
+      - entity: binary_sensor.cumulus_fini_par_import
+        name: Fin détectée (import)
+        icon: mdi:check-circle
+      - entity: binary_sensor.cumulus_deadband_actif
+        name: Deadband actif
+        icon: mdi:timer-sand
