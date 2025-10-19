@@ -1,0 +1,6 @@
+title: Workspace Claude
+views:
+  - title: Cartes de test
+    path: test-cards
+    icon: mdi:view-dashboard
+    cards: []

@@ -28,6 +28,16 @@ script: !include_dir_merge_named scripts
 automation: !include_dir_merge_list automations
 template: !include_dir_merge_list templates
 
+# === Dashboards Lovelace ===
+lovelace:
+  dashboards:
+    lovelace-work:
+      mode: yaml
+      title: Workspace Claude
+      icon: mdi:robot
+      show_in_sidebar: true
+      filename: lovelace/work.yaml
+
 # === Journalisation ===
 logger:
   default: warning

@@ -24,19 +24,21 @@
     "files.encoding": "utf8",
     "editor.wordWrap": "on",
     "editor.renderWhitespace": "boundary",
-
     // ====== Fichiers exclus ======
     "files.exclude": {
         "**/.git": true,
         "**/__pycache__": true,
         "**/*.pyc": true
     },
-
     // ====== Configuration Claude Code ======
     // Approbations automatiques des outils fréquemment utilisés
     "claudeCode.toolApprovals": {
         "Read": {
-            "patterns": ["**/*.yaml", "**/*.json", "**/*.py"],
+            "patterns": [
+                "**/*.yaml",
+                "**/*.json",
+                "**/*.py"
+            ],
             "action": "allow"
         },
         "Glob": {
@@ -46,9 +48,9 @@
             "action": "allow"
         }
     },
-
     // ====== Git : un peu moins de frictions ======
     "git.autofetch": true,
     "git.confirmSync": false,
-    "git.ignoreUntracked": true
+    "git.ignoreUntracked": true,
+    "claude-code.useTerminal": false
 }
