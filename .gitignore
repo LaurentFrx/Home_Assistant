@@ -80,3 +80,5 @@ www/None
 [._]ha_run.lock
 [._]ha_run.lock
 *.diff
+nul
+.storage/
