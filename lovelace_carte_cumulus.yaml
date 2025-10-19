@@ -1,6 +1,7 @@
 ###############################################################################
 # CARTE LOVELACE CUMULUS — Design moderne et complet
 # À intégrer dans votre dashboard Lovelace
+# Version: 2025-10-10d — Ajout section diagnostic conditions bloquantes
 ###############################################################################
 
 type: vertical-stack
@@ -31,7 +32,7 @@ cards:
 
       - type: template
         entity: sensor.cumulus_temperature_estimee
-        icon: mdi:thermometer
+        icon: mdi:thermometer-water
         icon_color: >
           {% set temp = states('sensor.cumulus_temperature_estimee') | float(0) %}
           {% if temp >= 50 %}
@@ -73,6 +74,38 @@ cards:
           {% endif %}
         content: "{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h"
 
+      - type: template
+        entity: sensor.cumulus_temps_restant_fenetre_pv_h
+        icon: mdi:timer-sand
+        icon_color: >
+          {% set temps = states('sensor.cumulus_temps_restant_fenetre_pv_h') | float(0) %}
+          {% if temps > 3 %}
+            green
+          {% elif temps > 1 %}
+            orange
+          {% elif temps > 0 %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        content: "⏱️ {{ states('sensor.cumulus_temps_restant_fenetre_pv_h') }}h PV"
+
+      - type: template
+        entity: binary_sensor.cumulus_capacite_suffisante
+        icon: mdi:check-circle
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_capacite_suffisante', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+        content: >
+          {% if is_state('binary_sensor.cumulus_capacite_suffisante', 'on') %}
+            ✅ Suffisant
+          {% else %}
+            ⚠️ Insuffisant
+          {% endif %}
+
   # ==================== JAUGE TEMPÉRATURE ==================== #
   - type: gauge
     entity: sensor.cumulus_temperature_estimee
@@ -99,8 +132,13 @@ cards:
         show_state: true
         show_indicator: true
       - entity: sensor.cumulus_pv_power_w
-        name: Production PV
+        name: Production PV brute
         color: "#FFC300"
+        show_state: true
+        y_axis: secondary
+      - entity: sensor.cumulus_pv_effectif_w
+        name: Production PV effective
+        color: "#F39C12"
         show_state: true
         y_axis: secondary
       - entity: sensor.cumulus_import_reseau_w
@@ -237,6 +275,79 @@ cards:
           action: none
         fill_container: false
 
+  # ==================== APPAREILS PRIORITAIRES ==================== #
+  - type: custom:mushroom-title-card
+    title: "⚡ Appareils Prioritaires"
+    subtitle: "Détection automatique des appareils en cours"
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_lave_linge_actif
+        name: Lave-linge
+        icon: mdi:washing-machine
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_lave_linge_actif', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_lave_vaisselle_actif
+        name: Lave-vaisselle
+        icon: mdi:dishwasher
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_appareil_en_cours
+        name: Appareil actif
+        icon: mdi:home-lightning-bolt-outline
+        icon_color: >
+          {% if is_state('binary_sensor.cumulus_appareil_en_cours', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        tap_action:
+          action: none
+        fill_container: false
+
+  - type: markdown
+    content: |
+      ### 🔌 Gestion des priorités
+
+      Le cumulus **ne démarrera pas** ou **s'arrêtera automatiquement** si :
+      - 🔵 Lave-linge en cours (> {{ states('input_number.cumulus_seuil_appareil_actif_w') | int }}W)
+      - 🔵 Lave-vaisselle en cours (> {{ states('input_number.cumulus_seuil_appareil_actif_w') | int }}W)
+
+      {% if is_state('binary_sensor.cumulus_appareil_en_cours', 'on') %}
+      ⚠️ **APPAREIL ACTIF DÉTECTÉ** : Le cumulus est bloqué
+      {% else %}
+      ✅ **Aucun appareil actif** : Le cumulus peut fonctionner normalement
+      {% endif %}
+
+      ---
+
+      #### 🔄 Redémarrage automatique
+      Si un appareil s'arrête et que :
+      - ✅ Fenêtre PV active
+      - ✅ Température non atteinte
+      - ✅ Pas d'interdiction
+
+      → Le cumulus redémarrera **automatiquement après 30 secondes**
+
   # ==================== PLANNING JOURNALIER ==================== #
   - type: custom:mushroom-title-card
     title: "📅 Planning Journalier"
@@ -298,6 +409,60 @@ cards:
       - ☀️ PV : chauffe sur surplus solaire
       - 💤 : aucune chauffe possible
 
+  # ==================== SENSORS SUPPLÉMENTAIRES ==================== #
+  - type: custom:mushroom-title-card
+    title: "📈 Données Additionnelles"
+    subtitle: "Capteurs et indicateurs intelligents"
+
+  - type: entities
+    title: "💧 Eau & Besoins"
+    entities:
+      - entity: sensor.cumulus_litres_disponibles_estimes
+        name: Litres disponibles
+        icon: mdi:water
+      - entity: sensor.cumulus_besoin_journalier_litres
+        name: Besoin journalier
+        icon: mdi:account-water
+      - entity: binary_sensor.cumulus_capacite_suffisante
+        name: Capacité suffisante
+        icon: mdi:check-circle
+
+  - type: entities
+    title: "⚡ Production PV & Efficacité"
+    entities:
+      - entity: sensor.cumulus_pv_power_w
+        name: Production PV brute
+        icon: mdi:solar-power
+      - entity: sensor.cumulus_pv_effectif_w
+        name: Production PV effective
+        icon: mdi:solar-power-variant
+      - entity: sensor.cumulus_capacity_factor
+        name: Facteur de charge PV
+        icon: mdi:percent-outline
+      - entity: sensor.cumulus_sb_dispo_w
+        name: SolarBank disponible
+        icon: mdi:battery-arrow-up
+      - type: divider
+      - entity: input_number.cumulus_alpha_aps
+        name: Coefficient α APS
+        icon: mdi:alpha
+
+  - type: entities
+    title: "⏱️ Temps & Fenêtres"
+    entities:
+      - entity: sensor.cumulus_temps_restant_fenetre_pv_h
+        name: Temps restant fenêtre PV
+        icon: mdi:timer-sand
+      - entity: sensor.cumulus_seuil_pv_dynamique_w
+        name: Seuil PV dynamique
+        icon: mdi:solar-power-variant-outline
+      - entity: binary_sensor.cumulus_temps_suffisant_fenetre_pv
+        name: Temps suffisant pour chauffe
+        icon: mdi:clock-check-outline
+      - entity: sensor.cumulus_heures_depuis_derniere_chauffe
+        name: Heures depuis dernière chauffe
+        icon: mdi:clock-outline
+
   # ==================== DONNÉES TECHNIQUES ==================== #
   - type: custom:mushroom-title-card
     title: "📊 Données Techniques"
@@ -309,8 +474,11 @@ cards:
         name: Import réseau actuel
         icon: mdi:transmission-tower-import
       - entity: sensor.cumulus_pv_power_w
-        name: Production PV
+        name: Production PV brute
         icon: mdi:solar-power
+      - entity: sensor.cumulus_pv_effectif_w
+        name: Production PV effective
+        icon: mdi:solar-power-variant
       - entity: sensor.cumulus_soc_solarbank_pct
         name: Charge batterie
         icon: mdi:battery
@@ -318,6 +486,9 @@ cards:
         name: Puissance cumulus
         icon: mdi:lightning-bolt
       - type: divider
+      - entity: sensor.cumulus_seuil_pv_dynamique_w
+        name: Seuil PV dynamique
+        icon: mdi:solar-power-variant-outline
       - entity: sensor.cumulus_seuil_import_limiteur_w
         name: Seuil limiteur import
         icon: mdi:flash-alert
@@ -398,6 +569,20 @@ cards:
         name: Marge fin import
         icon: mdi:flash-triangle-outline
 
+  - type: entities
+    title: "🔌 Paramètres appareils prioritaires"
+    entities:
+      - entity: input_number.cumulus_seuil_appareil_actif_w
+        name: Seuil détection appareil
+        icon: mdi:flash-outline
+      - type: divider
+      - entity: input_text.cumulus_entity_lave_linge_power
+        name: Entité lave-linge
+        icon: mdi:washing-machine
+      - entity: input_text.cumulus_entity_lave_vaisselle_power
+        name: Entité lave-vaisselle
+        icon: mdi:dishwasher
+
   # ==================== FENÊTRES HORAIRES ==================== #
   - type: custom:mushroom-title-card
     title: "🕐 Fenêtres Horaires"
@@ -425,6 +610,211 @@ cards:
       - entity: binary_sensor.cumulus_en_hc
         name: En heures creuses
         icon: mdi:clock-time-eight-outline
+
+  # ==================== CONDITIONS BLOQUANTES ==================== #
+  - type: custom:mushroom-title-card
+    title: "🚦 Diagnostic Conditions Bloquantes"
+    subtitle: "Vue d'ensemble de toutes les conditions et blocages actifs"
+
+  - type: markdown
+    content: |
+      {% set interdit = is_state('input_boolean.cumulus_interdit', 'on') %}
+      {% set vacances = is_state('input_boolean.cumulus_vacances', 'on') %}
+      {% set verrou = is_state('input_boolean.cumulus_verrou_jour', 'on') %}
+      {% set temp_atteinte = is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}
+      {% set deadband = is_state('binary_sensor.cumulus_deadband_actif', 'on') %}
+      {% set appareil = is_state('binary_sensor.cumulus_appareil_en_cours', 'on') %}
+      {% set override = is_state('input_boolean.cumulus_override', 'on') %}
+      {% set cumulus_on = is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+      {% set lave_linge = is_state('binary_sensor.cumulus_lave_linge_actif', 'on') %}
+      {% set lave_vaisselle = is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') %}
+      {% set fenetre_pv = is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+      {% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') %}
+      {% set pv = states('sensor.cumulus_pv_effectif_w') | float(0) %}
+      {% set seuil_pv = states('sensor.cumulus_seuil_pv_dynamique_w') | float(100) %}
+      {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(0) %}
+      {% set seuil_soc = states('input_number.cumulus_soc_start_pct') | float(25) %}
+      {% set logique_hc = is_state('binary_sensor.cumulus_autoriser_chauffe_hc_intelligente', 'on') %}
+      {% set autoriser_hc = is_state('input_boolean.cumulus_autoriser_hc', 'on') %}
+
+      {% set nb_blocages = 0 %}
+      {% if interdit %}{% set nb_blocages = nb_blocages + 1 %}{% endif %}
+      {% if vacances %}{% set nb_blocages = nb_blocages + 1 %}{% endif %}
+      {% if verrou %}{% set nb_blocages = nb_blocages + 1 %}{% endif %}
+      {% if temp_atteinte %}{% set nb_blocages = nb_blocages + 1 %}{% endif %}
+      {% if deadband %}{% set nb_blocages = nb_blocages + 1 %}{% endif %}
+      {% if appareil %}{% set nb_blocages = nb_blocages + 1 %}{% endif %}
+
+      ### 📊 État Global
+
+      {% if cumulus_on %}
+      ## 🔥 **CUMULUS EN CHAUFFE**
+      Le cumulus fonctionne actuellement.
+      {% elif override %}
+      ## 🚀 **MODE OVERRIDE ACTIF**
+      Démarrage forcé - court-circuite les conditions normales.
+      {% elif nb_blocages > 0 %}
+      ## ❌ **{{ nb_blocages }} BLOCAGE(S) ACTIF(S)**
+      Le cumulus ne peut pas démarrer à cause des conditions ci-dessous.
+      {% else %}
+      ## 💤 **EN ATTENTE**
+      Aucun blocage mais conditions de démarrage non réunies.
+      {% endif %}
+
+      ---
+
+      ### 🚫 CONDITIONS BLOQUANTES CRITIQUES
+
+      {% if interdit %}
+      ### 🔒 **INTERDIT** ❌
+      - **État** : Mode maintenance/arrêt forcé **ACTIF**
+      - **Action** : Désactiver le mode "Interdit" dans les contrôles
+      - **Impact** : Empêche tout démarrage
+      {% else %}
+      ✅ **Interdit** : Désactivé (OK)
+      {% endif %}
+
+      {% if vacances %}
+      ### 🏖️ **VACANCES** ❌
+      - **État** : Mode vacances **ACTIF**
+      - **Action** : Désactiver le mode "Vacances" dans les contrôles
+      - **Impact** : Empêche tout démarrage
+      {% else %}
+      ✅ **Vacances** : Désactivé (OK)
+      {% endif %}
+
+      {% if verrou %}
+      ### 📅 **VERROU JOURNALIER** ❌
+      - **État** : Chauffe déjà effectuée aujourd'hui
+      - **Action** : Attendre le reset automatique à 08:10 demain
+      - **Impact** : Empêche une 2ème chauffe le même jour
+      {% else %}
+      ✅ **Verrou jour** : Pas de verrou (OK)
+      {% endif %}
+
+      {% if temp_atteinte %}
+      ### 🌡️ **TEMPÉRATURE ATTEINTE** ❌
+      - **État** : Température cible déjà atteinte aujourd'hui
+      - **Action** : La température se réinitialisera automatiquement
+      - **Impact** : Empêche une chauffe supplémentaire
+      {% else %}
+      ✅ **Température atteinte** : Non (OK - besoin de chauffer)
+      {% endif %}
+
+      {% if deadband %}
+      ### ⏱️ **DEADBAND** ⏳
+      - **État** : Temporisation de sécurité en cours
+      - **Action** : Attendre quelques secondes/minutes
+      - **Impact** : Retarde temporairement le prochain démarrage
+      {% else %}
+      ✅ **Deadband** : Inactif (OK)
+      {% endif %}
+
+      {% if appareil %}
+      ### ⚡ **APPAREIL PRIORITAIRE** ❌
+      - **État** : {% if lave_linge %}🔵 Lave-linge actif{% elif lave_vaisselle %}🔵 Lave-vaisselle actif{% else %}Appareil actif{% endif %}
+      - **Action** : Attendre la fin du cycle (redémarrage auto après 30s)
+      - **Impact** : Arrêt immédiat ou blocage du démarrage
+      - **Seuil détection** : > {{ states('input_number.cumulus_seuil_appareil_actif_w') | int }}W
+      {% else %}
+      ✅ **Appareils prioritaires** : Aucun actif (OK)
+      {% endif %}
+
+      ---
+
+      ### ☀️ CONDITIONS MODE PV
+
+      {% if not fenetre_pv %}
+      ⏰ **Fenêtre PV** : Hors fenêtre ({{ states('input_datetime.cumulus_plage_pv_debut') }}-{{ states('input_datetime.cumulus_plage_pv_fin') }})
+      {% else %}
+      ✅ **Fenêtre PV** : Dans la fenêtre ({{ states('input_datetime.cumulus_plage_pv_debut') }}-{{ states('input_datetime.cumulus_plage_pv_fin') }})
+      {% endif %}
+
+      {% if pv <= seuil_pv %}
+      ⚠️ **Puissance PV effective** : Insuffisante ({{ pv | int }}W < {{ seuil_pv | int }}W)
+      {% else %}
+      ✅ **Puissance PV effective** : Suffisante ({{ pv | int }}W > {{ seuil_pv | int }}W)
+      {% endif %}
+
+      **Détails PV :**
+      - PV brut : {{ states('sensor.cumulus_pv_power_w') }}W
+      - α APS : {{ states('input_number.cumulus_alpha_aps') }}
+      - Capacity factor : {{ (states('sensor.cumulus_capacity_factor') | float * 100) | round(0) }}%
+      - PV effectif : {{ pv | int }}W
+
+      {% if soc < (seuil_soc - 0.5) %}
+      ⚠️ **Batterie SOC** : Trop bas ({{ soc | int }}% < {{ seuil_soc | int }}%)
+      {% else %}
+      ✅ **Batterie SOC** : OK ({{ soc | int }}% ≥ {{ seuil_soc | int }}%)
+      {% endif %}
+
+      ---
+
+      ### 🌙 CONDITIONS MODE HEURES CREUSES
+
+      {% if not en_hc %}
+      ⏰ **Heures creuses** : Hors période HC ({{ states('input_datetime.cumulus_heures_creuses_debut') }}-{{ states('input_datetime.cumulus_heures_creuses_fin') }})
+      {% else %}
+      ✅ **Heures creuses** : Dans la période HC ({{ states('input_datetime.cumulus_heures_creuses_debut') }}-{{ states('input_datetime.cumulus_heures_creuses_fin') }})
+      {% endif %}
+
+      {% if not autoriser_hc %}
+      ❌ **Autorisation HC manuelle** : Désactivée
+      {% else %}
+      ✅ **Autorisation HC manuelle** : Activée
+      {% endif %}
+
+      {% if not logique_hc %}
+      ⚠️ **Logique HC intelligente** : Non validée (pas urgent ET météo OK demain)
+      {% else %}
+      ✅ **Logique HC intelligente** : Validée (urgent OU météo défavorable)
+      {% endif %}
+
+      ---
+
+      ### 🆘 MODE OVERRIDE
+
+      {% if override %}
+      ### 🚀 **OVERRIDE ACTIF** 🔥
+      - **État** : Démarrage forcé immédiat
+      - **Action** : Le cumulus devrait démarrer si contacteur disponible
+      - **Impact** : Court-circuite TOUTES les conditions (sauf interdit)
+      {% else %}
+      💤 **Override** : Inactif (fonctionnement normal)
+      {% endif %}
+
+      ---
+
+      ### 📋 RÉSUMÉ ACTIONS POSSIBLES
+
+      {% if cumulus_on %}
+      ✅ Le cumulus fonctionne - aucune action nécessaire
+      {% elif nb_blocages == 0 and not cumulus_on %}
+      💡 **Aucun blocage détecté** - Le cumulus attend :
+      - ☀️ Production PV suffisante dans la fenêtre PV
+      - 🌙 Heures creuses avec logique intelligente validée
+      - 🚀 Activation manuelle du mode Override
+      {% else %}
+      🔧 **Actions pour débloquer** :
+      {% if interdit %}
+      1. ❌ Désactiver "Mode Interdit"
+      {% endif %}
+      {% if vacances %}
+      2. ❌ Désactiver "Mode Vacances"
+      {% endif %}
+      {% if verrou %}
+      3. ⏰ Attendre le reset automatique à 08:10
+      {% endif %}
+      {% if temp_atteinte %}
+      4. ⏰ Attendre que la température baisse
+      {% endif %}
+      {% if appareil %}
+      5. ⏳ Attendre la fin du cycle de l'appareil
+      {% endif %}
+      {% if deadband %}
+      6. ⏳ Attendre la fin de la temporisation
+      {% endif %}
+      {% endif %}
 
   # ==================== INDICATEURS INTELLIGENTS ==================== #
   - type: custom:mushroom-title-card
