@@ -1,0 +1,522 @@
+###############################################################################
+# CARTE LOVELACE COMMANDES CUMULUS — Design Mushroom moderne
+# Version: 2025-10-16b — Carte de commandes avec style Mushroom
+###############################################################################
+
+type: custom:vertical-stack-in-card
+cards:
+  # ==================== EN-TÊTE PRINCIPAL ==================== #
+  - type: custom:mushroom-title-card
+    title: 🎛️ Commandes Cumulus
+    subtitle: Contrôle et gestion du chauffe-eau
+
+  # ==================== STATUT GLOBAL EN TEMPS RÉEL ==================== #
+  - type: custom:mushroom-entity-card
+    entity: binary_sensor.cumulus_chauffe_reelle
+    name: État Cumulus
+    icon: mdi:water-boiler
+    icon_color: |
+      {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+        red
+      {% else %}
+        blue
+      {% endif %}
+    tap_action:
+      action: more-info
+    secondary_info: |
+      {{ states('sensor.cumulus_temperature_physique_c') }}°C | {{ states('sensor.cumulus_eau_chaude_disponible_40c_litres') }}L | {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}{{ states('sensor.cumulus_consommation_reelle_w') }}W{% else %}{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h{% endif %}
+
+  # ==================== CONTRÔLE DIRECT SWITCH CUMULUS ==================== #
+  - type: custom:mushroom-entity-card
+    entity: switch.shellypro1_ece334ee1b64
+    name: Contacteur Cumulus
+    icon: mdi:flash
+    icon_color: |
+      {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+        green
+      {% else %}
+        grey
+      {% endif %}
+    tap_action:
+      action: toggle
+      confirmation:
+        text: Voulez-vous vraiment modifier l'état du contacteur cumulus ?
+    layout: horizontal
+    fill_container: false
+
+  # ==================== MODES DE FONCTIONNEMENT ==================== #
+  - type: custom:mushroom-title-card
+    title: 🎮 Modes de Fonctionnement
+    subtitle: null
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Override Manuel
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_override
+        name: Override
+        icon: mdi:hand-pointing-up
+        icon_color: |
+          {% if is_state('input_boolean.cumulus_override', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Activer le forçage manuel ? Cela démarrera le cumulus immédiatement.
+        layout: vertical
+
+      # Interdit Départ
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_interdit_depart
+        name: Interdit
+        icon: mdi:hand-back-right-off
+        icon_color: |
+          {% if is_state('input_boolean.cumulus_interdit_depart', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Mode Vacances
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_mode_vacances
+        name: Vacances
+        icon: mdi:beach
+        icon_color: |
+          {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+            orange
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Autoriser HC
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_autoriser_hc
+        name: Heures Creuses
+        icon: mdi:clock-time-eight
+        icon_color: |
+          {% if is_state('input_boolean.cumulus_autoriser_hc', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Verrou Jour
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_verrou_jour
+        name: Verrou Jour
+        icon: mdi:lock-check
+        icon_color: |
+          {% if is_state('input_boolean.cumulus_verrou_jour', 'on') %}
+            orange
+          {% else %}
+            green
+          {% endif %}
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Modifier le verrou journalier ?
+        layout: vertical
+
+      # Température Atteinte
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_temp_atteinte_aujourdhui
+        name: Temp. Max
+        icon: mdi:thermometer-check
+        icon_color: |
+          {% if is_state('input_boolean.cumulus_temp_atteinte_aujourdhui', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Modifier l'état de température atteinte ?
+        layout: vertical
+
+  # ==================== INDICATEURS D'ÉTAT ==================== #
+  - type: custom:mushroom-title-card
+    title: 📊 Indicateurs d'État
+    subtitle: null
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Fenêtre PV
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_fenetre_pv
+        name: Fenêtre PV
+        icon: mdi:sun-clock
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+            yellow
+          {% else %}
+            grey
+          {% endif %}
+        secondary_info: |
+          {{ states('input_datetime.cumulus_plage_pv_debut')[0:5] }} - {{ states('input_datetime.cumulus_plage_pv_fin')[0:5] }}
+        layout: vertical
+
+      # En Heures Creuses
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_en_hc
+        name: Heures Creuses
+        icon: mdi:clock-time-eight-outline
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_en_hc', 'on') %}
+            purple
+          {% else %}
+            grey
+          {% endif %}
+        secondary_info: |
+          {{ states('input_datetime.cumulus_heures_creuses_debut')[0:5] }} - {{ states('input_datetime.cumulus_heures_creuses_fin')[0:5] }}
+        layout: vertical
+
+      # Deadband
+      - type: custom:mushroom-entity-card
+        entity: timer.cumulus_deadband_ui
+        name: Deadband
+        icon: mdi:timer-sand
+        icon_color: |
+          {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+            pink
+          {% else %}
+            green
+          {% endif %}
+        secondary_info: |
+          {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+            Actif
+          {% else %}
+            Inactif
+          {% endif %}
+        layout: vertical
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Appareils Prioritaires
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_appareil_prioritaire_actif
+        name: Appareils
+        icon: mdi:home-lightning-bolt-outline
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        secondary_info: |
+          {% set ll = is_state('binary_sensor.cumulus_lave_linge_actif', 'on') %}
+          {% set lv = is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') %}
+          {% if ll and lv %}LL + LV{% elif ll %}Lave-linge{% elif lv %}Lave-vaiss.{% else %}Aucun{% endif %}
+        layout: vertical
+
+      # Besoin Urgent
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_besoin_chauffe_urgente
+        name: Besoin Urgent
+        icon: mdi:alert-circle
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        secondary_info: |
+          {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') | float | round(0) }}h / {{ states('input_number.cumulus_espacement_max_h') | float | round(0) }}h
+        layout: vertical
+
+      # Capacité Suffisante
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_capacite_suffisante
+        name: Capacité
+        icon: mdi:water-check
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_capacite_suffisante', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+        secondary_info: |
+          {{ states('sensor.cumulus_eau_chaude_disponible_40c_litres') | float | round(0) }}L / {{ states('sensor.cumulus_besoin_journalier_litres') | float | round(0) }}L
+        layout: vertical
+
+  # ==================== CONTRÔLE DES AUTOMATIONS ==================== #
+  - type: custom:mushroom-title-card
+    title: 🤖 Gestion des Automations
+    subtitle: null
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # ON PV
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_on_pv_automatique
+        name: ON PV
+        icon: mdi:solar-power
+        icon_color: |
+          {% if is_state('automation.cumulus_on_pv_automatique', 'on') %}
+            yellow
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Limiteur Import
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_limiteur_import
+        name: Limiteur
+        icon: mdi:flash-alert
+        icon_color: |
+          {% if is_state('automation.cumulus_limiteur_import', 'on') %}
+            pink
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Sécurité SOC
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_securite_soc_bas
+        name: SOC Bas
+        icon: mdi:battery-alert
+        icon_color: |
+          {% if is_state('automation.cumulus_securite_soc_bas', 'on') %}
+            orange
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Fin Chauffe Universelle
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_fin_chauffe_universelle
+        name: Fin Univ.
+        icon: mdi:check-circle
+        icon_color: |
+          {% if is_state('automation.cumulus_fin_chauffe_universelle', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Arrêt Appareil
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_arret_si_appareil_demarre
+        name: Arrêt App.
+        icon: mdi:stop-circle
+        icon_color: |
+          {% if is_state('automation.cumulus_arret_si_appareil_demarre', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Redémarrage
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_redemarrage_si_appareil_arrete
+        name: Redémarr.
+        icon: mdi:restart
+        icon_color: |
+          {% if is_state('automation.cumulus_redemarrage_si_appareil_arrete', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # ON HC
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_on_debut_hc_intelligent
+        name: ON HC
+        icon: mdi:clock-start
+        icon_color: |
+          {% if is_state('automation.cumulus_on_debut_hc_intelligent', 'on') %}
+            purple
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # OFF HC
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_off_fin_hc
+        name: OFF HC
+        icon: mdi:clock-end
+        icon_color: |
+          {% if is_state('automation.cumulus_off_fin_hc', 'on') %}
+            purple
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Reset Daily
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_reset_daily_et_override
+        name: Reset
+        icon: mdi:calendar-refresh
+        icon_color: |
+          {% if is_state('automation.cumulus_reset_daily_et_override', 'on') %}
+            cyan
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Détection Externe
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_detection_chauffe_externe
+        name: Dét. Ext.
+        icon: mdi:radar
+        icon_color: |
+          {% if is_state('automation.cumulus_detection_chauffe_externe', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Alerte Urgent
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_alerte_besoin_urgent
+        name: Alerte
+        icon: mdi:bell-alert
+        icon_color: |
+          {% if is_state('automation.cumulus_alerte_besoin_urgent', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Log Refus
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_log_refus_demarrage
+        name: Log Refus
+        icon: mdi:file-document
+        icon_color: |
+          {% if is_state('automation.cumulus_log_refus_demarrage', 'on') %}
+            yellow
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+  # ==================== ACTIONS RAPIDES ==================== #
+  - type: custom:mushroom-title-card
+    title: ⚡ Actions Rapides
+    subtitle: null
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Forcer Démarrage
+      - type: custom:mushroom-template-card
+        primary: Forcer ON
+        icon: mdi:power
+        icon_color: green
+        tap_action:
+          action: call-service
+          service: input_boolean.turn_on
+          service_data:
+            entity_id: input_boolean.cumulus_override
+          confirmation:
+            text: Forcer le démarrage immédiat du cumulus ?
+        layout: vertical
+
+      # Réinitialiser Verrous
+      - type: custom:mushroom-template-card
+        primary: Reset Verrous
+        icon: mdi:lock-open
+        icon_color: orange
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.cumulus_reset_verrous
+          confirmation:
+            text: Réinitialiser tous les verrous ?
+        layout: vertical
+
+      # Forcer Arrêt
+      - type: custom:mushroom-template-card
+        primary: Forcer OFF
+        icon: mdi:power-off
+        icon_color: red
+        tap_action:
+          action: call-service
+          service: switch.turn_off
+          service_data:
+            entity_id: switch.shellypro1_ece334ee1b64
+          confirmation:
+            text: Forcer l'arrêt immédiat du cumulus ?
+        layout: vertical
+
+  # ==================== FOOTER INFO ==================== #
+  - type: markdown
+    content: |
+      <div style="text-align: center; color: var(--secondary-text-color); font-size: 11px; padding: 10px;">
+      🎛️ Carte Commandes Cumulus v2025-10-16b | Style Mushroom
+      </div>
