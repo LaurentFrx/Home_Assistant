@@ -1,20 +1,46 @@
 ###############################################################################
-# CUMULUS — ROUTEUR SOLAIRE v2025-10-16a (PRODUCTION READY)
+# CUMULUS — ROUTEUR SOLAIRE v2025-10-24 (PRODUCTION READY + AMÉLIORATIONS)
 #
 # Package complet pour pilotage intelligent cumulus électrique
 # Maximise autoconsommation PV tout en garantissant eau chaude quotidienne
 #
-# CORRECTIFS v2025-10-16a :
-# - ✅ FIX CRITIQUE : Détection fin de chauffe UNIVERSELLE
-#   → Détecte fin de chauffe PV, HC ET manuelle (app Shelly)
-#   → Fonctionne même si switch éteint avant fin de chauffe
-#   → Durée minimale réduite à 60s (au lieu de 180s)
-# - ✅ FIX : Automation "OFF fin HC" simplifiée
-#   → Laisse l'automation universelle gérer la détection température max
-#   → Évite conflit entre automations
-# - ✅ NEW : Automation "Détection chauffe externe"
-#   → Notifie les démarrages manuels via app Shelly
-#   → Permet suivi des chauffes externes
+# AMÉLIORATIONS MAJEURES v2025-10-24 :
+#
+# 1️⃣ SÉCURITÉ & ROBUSTESSE
+# - ✅ Seuil détection thermostat augmenté de 70% à 85%
+# - ✅ Délai minimum chauffe augmenté de 60s à 120s
+# - ✅ Détection anomalie cohérence (switch ON mais conso < 100W pendant 30s)
+#
+# 2️⃣ GESTION ERREURS ENTITÉS
+# - ✅ binary_sensor.cumulus_entites_ok pour validation entités configurables
+# - ✅ Dépendance validation entités dans automations de démarrage
+# - ✅ Alerte si entité devient unavailable pendant chauffe
+#
+# 3️⃣ CONSOLIDATION DEADBAND
+# - ✅ Traçabilité raisons deadband (input_text.cumulus_raison_deadband)
+# - ✅ sensor.cumulus_etat_deadband avec attributs détaillés
+# - ✅ Toutes automations enregistrent la raison du deadband
+#
+# 4️⃣ OPTIMISATION DÉTECTION FIN CHAUFFE
+# - ✅ sensor.cumulus_duree_chauffe_actuelle (temps réel)
+# - ✅ Historique des 10 dernières chauffes (durée + % PV + statut)
+# - ✅ Affichage temps réel dans UI pendant chauffe
+#
+# 5️⃣ MONITORING PROACTIF
+# - ✅ sensor.cumulus_sante_systeme (score 0-100%) basé sur :
+#   * Entités valides (25 pts)
+#   * Cohérence mesures (25 pts)
+#   * Espacement chauffes (25 pts)
+#   * État fonctionnel (25 pts)
+# - ✅ Alerte si score < 70% avec diagnostic détaillé
+#
+# 6️⃣ DOCUMENTATION
+# - ✅ Attribut dernier_evenement sur tous les sensors principaux
+# - ✅ Explications en français avec émojis pour lecture rapide
+# - ✅ Diagnostic automatique de l'état du système
+#
+# FONCTIONNALITÉS DE BASE (v2025-10-16a) :
+# - ✅ Détection fin de chauffe UNIVERSELLE (PV, HC, manuelle)
 # - ✅ Production solaire totale = APS × 2
 # - ✅ Puissance disponible = 1200W (SB) + APS (si SOC ≥ 10%)
 # - ✅ SolarBank délivre 1200W fixes de 10% à 100% SOC
