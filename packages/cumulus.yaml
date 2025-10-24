@@ -368,6 +368,16 @@ template:
           {% else %}
             {{ states(e) | float(0) }}
           {% endif %}
+        attributes:
+          dernier_evenement: >-
+            {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% if import_w < 0 %}
+              Export {{ (-import_w) | round(0) }}W vers le réseau
+            {% elif import_w == 0 %}
+              Pas d'import ni d'export
+            {% else %}
+              Import {{ import_w | round(0) }}W depuis le réseau
+            {% endif %}
 
       - name: "cumulus_soc_solarbank_pct"
         unique_id: cumulus_soc_solarbank_pct
@@ -450,6 +460,19 @@ template:
           explication: >-
             Fonctionne avec toute répartition SB/APS.
             Gère automatiquement export (import négatif).
+          dernier_evenement: >-
+            {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+            {% set sw_on = sw_id not in ['', 'unknown', 'unavailable'] and is_state(sw_id, 'on') %}
+            {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+            {% if not sw_on %}
+              Contacteur OFF - Consommation nulle
+            {% elif conso > 2500 %}
+              Chauffe active - Consommation {{ conso | round(0) }}W (normale)
+            {% elif conso > 100 %}
+              Chauffe en cours - Consommation {{ conso | round(0) }}W (réduite)
+            {% else %}
+              ⚠️ Contacteur ON mais consommation {{ conso | round(0) }}W (anormale)
+            {% endif %}
 
       # ========== RÉPARTITION SOURCES TEMPS RÉEL ==========
       - name: "cumulus_repartition_sources"
@@ -502,6 +525,14 @@ template:
             {% else %}
               0
             {% endif %}
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'off') %}
+              Pas de chauffe en cours
+            {% else %}
+              {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+              {% set pv_pct = state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') | int(0) %}
+              Chauffe {{ conso | round(0) }}W - Autonomie PV {{ pv_pct }}%
+            {% endif %}
 
       # ========== SEUILS & CALCULS ==========
       - name: "cumulus_seuil_import_limiteur_w"
@@ -519,6 +550,14 @@ template:
           detail: >-
             Si import_max = 800W, seuil limiteur = 1100W.
             Le limiteur coupe si import > 1100W pendant 4 secondes.
+          dernier_evenement: >-
+            {% set seuil = states('sensor.cumulus_seuil_import_limiteur_w') | float(0) %}
+            {% set import_actuel = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% if import_actuel > seuil %}
+              ⚠️ Import {{ import_actuel | round(0) }}W > seuil {{ seuil | round(0) }}W - Risque coupure limiteur
+            {% else %}
+              ✅ Import {{ import_actuel | round(0) }}W < seuil {{ seuil | round(0) }}W - OK
+            {% endif %}
 
       - name: "cumulus_heures_depuis_derniere_chauffe"
         unique_id: cumulus_heures_depuis_derniere_chauffe
@@ -551,6 +590,20 @@ template:
             {% set temp = T_amb + (delta_T * exp_term) %}
             {{ [temp, T_amb] | max | round(1) }}
           {% endif %}
+        attributes:
+          dernier_evenement: >-
+            {% set temp = states('sensor.cumulus_temperature_physique_c') | float(20) %}
+            {% set T_max = states('input_number.cumulus_temperature_max_c') | float(65) %}
+            {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+            {% if temp >= T_max %}
+              ✅ Température maximale {{ temp | round(1) }}°C atteinte
+            {% elif temp >= (T_max * 0.8) %}
+              ✅ Température {{ temp | round(1) }}°C suffisante ({{ heures | round(1) }}h depuis chauffe)
+            {% elif temp >= 40 %}
+              ⚠️ Température {{ temp | round(1) }}°C moyenne ({{ heures | round(1) }}h depuis chauffe)
+            {% else %}
+              ❌ Température {{ temp | round(1) }}°C basse - Chauffe nécessaire ({{ heures | round(1) }}h)
+            {% endif %}
 
       - name: "cumulus_eau_chaude_disponible_40c_litres"
         unique_id: cumulus_eau_chaude_disponible_40c_litres
@@ -712,6 +765,15 @@ template:
           explication: >-
             SolarBank délivre 1200W fixes de 10% à 100% SOC.
             Batterie (1200W) + Production APS actuelle.
+          dernier_evenement: >-
+            {% set dispo = states('sensor.cumulus_puissance_disponible_w') | float(0) %}
+            {% set seuil = states('sensor.cumulus_seuil_pv_dynamique_w') | float(0) %}
+            {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(0) %}
+            {% if dispo > seuil %}
+              ✅ {{ dispo | round(0) }}W disponible > {{ seuil | round(0) }}W requis (SOC {{ soc | round(0) }}%) - Démarrage possible
+            {% else %}
+              ⚠️ {{ dispo | round(0) }}W disponible < {{ seuil | round(0) }}W requis (SOC {{ soc | round(0) }}%) - Puissance insuffisante
+            {% endif %}
 
       - name: "cumulus_seuil_pv_dynamique_w"
         unique_id: cumulus_seuil_pv_dynamique_w
