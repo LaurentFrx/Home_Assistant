@@ -224,6 +224,23 @@
             - service: switch.turn_off
               target:
                 entity_id: "{{ sw_id }}"
+            # === ENREGISTREMENT HISTORIQUE ===
+            - variables:
+                pv_pct: "{{ state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') | int(0) }}"
+                nouvelle_entree: "{{ now().strftime('%d/%m %H:%M') }} - {{ duree_chauffe_min }}min - {{ pv_pct }}% PV - Complète"
+                hist_actuel: "{{ states('input_text.cumulus_historique_chauffes') }}"
+            - service: input_text.set_value
+              target:
+                entity_id: input_text.cumulus_historique_chauffes
+              data:
+                value: >-
+                  {% if hist_actuel in ['[]', '', 'unknown', 'unavailable'] %}
+                    {{ nouvelle_entree }}
+                  {% else %}
+                    {% set chauffes = hist_actuel.split('|') %}
+                    {% set nouvelles_chauffes = (chauffes + [nouvelle_entree])[-10:] %}
+                    {{ nouvelles_chauffes | join('|') }}
+                  {% endif %}
             - service: logbook.log
               data:
                 name: "Cumulus Température Max"
@@ -248,6 +265,22 @@
                 notification_id: cumulus_temp_max
       default:
         # Chauffe interrompue (limiteur, appareil, fin HC, etc.) → pas de verrou
+        - variables:
+            pv_pct: "{{ state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') | int(0) }}"
+            nouvelle_entree: "{{ now().strftime('%d/%m %H:%M') }} - {{ duree_chauffe_min }}min - {{ pv_pct }}% PV - Interrompue"
+            hist_actuel: "{{ states('input_text.cumulus_historique_chauffes') }}"
+        - service: input_text.set_value
+          target:
+            entity_id: input_text.cumulus_historique_chauffes
+          data:
+            value: >-
+              {% if hist_actuel in ['[]', '', 'unknown', 'unavailable'] %}
+                {{ nouvelle_entree }}
+              {% else %}
+                {% set chauffes = hist_actuel.split('|') %}
+                {% set nouvelles_chauffes = (chauffes + [nouvelle_entree])[-10:] %}
+                {{ nouvelles_chauffes | join('|') }}
+              {% endif %}
         - service: logbook.log
           data:
             name: "Cumulus Fin Chauffe"
@@ -762,3 +795,24 @@
           Entité(s) unavailable pendant chauffe active.
           Détails: {{ entites_details }}
         entity_id: "{{ sw_id }}"
+
+# 17) Enregistrement début chauffe
+- id: cumulus_enregistrement_debut_chauffe
+  alias: "Cumulus — Enregistrement début chauffe"
+  description: "Enregistre l'heure de début de chauffe pour suivi temps réel"
+  mode: single
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.cumulus_chauffe_reelle
+      to: "on"
+  action:
+    - service: input_datetime.set_datetime
+      target:
+        entity_id: input_datetime.cumulus_debut_chauffe_actuelle
+      data:
+        datetime: "{{ now().replace(microsecond=0, tzinfo=None).isoformat() }}"
+    - service: logbook.log
+      data:
+        name: "Cumulus Début Chauffe"
+        message: "Début de chauffe enregistré à {{ now().strftime('%H:%M:%S') }}"
+        entity_id: binary_sensor.cumulus_chauffe_reelle

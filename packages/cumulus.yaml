@@ -328,12 +328,23 @@ input_datetime:
     has_date: true
     has_time: true
 
+  cumulus_debut_chauffe_actuelle:
+    name: "Début chauffe actuelle"
+    has_date: true
+    has_time: true
+
 input_text:
   cumulus_raison_deadband:
     name: "Raison du dernier deadband"
     icon: mdi:timer-alert-outline
     max: 255
     initial: "Aucun"
+
+  cumulus_historique_chauffes:
+    name: "Historique des 10 dernières chauffes"
+    icon: mdi:history
+    max: 255
+    initial: "[]"
 
 timer:
   cumulus_deadband_ui:
@@ -755,6 +766,83 @@ template:
               Deadband actif - Raison: {{ states('input_text.cumulus_raison_deadband') }}
             {% else %}
               Deadband inactif - Démarrage autorisé
+            {% endif %}
+
+      # ========== DURÉE CHAUFFE ACTUELLE ==========
+      - name: "cumulus_duree_chauffe_actuelle"
+        unique_id: cumulus_duree_chauffe_actuelle
+        unit_of_measurement: "min"
+        icon: mdi:timer-outline
+        state: >-
+          {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            {% set debut_ts = state_attr('input_datetime.cumulus_debut_chauffe_actuelle', 'timestamp') %}
+            {% if debut_ts is not none and debut_ts > 0 %}
+              {{ ((now().timestamp() - debut_ts) / 60) | round(0) }}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        attributes:
+          debut_chauffe: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+              {{ states('input_datetime.cumulus_debut_chauffe_actuelle') }}
+            {% else %}
+              -
+            {% endif %}
+          consommation_w: "{{ states('sensor.cumulus_consommation_reelle_w') }}"
+          autonomie_pv_pct: "{{ state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') }}"
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+              Chauffe en cours depuis {{ states('sensor.cumulus_duree_chauffe_actuelle') }} minutes
+            {% else %}
+              Aucune chauffe en cours
+            {% endif %}
+
+      # ========== HISTORIQUE CHAUFFES ==========
+      - name: "cumulus_historique_chauffes_display"
+        unique_id: cumulus_historique_chauffes_display
+        icon: mdi:chart-timeline
+        state: >-
+          {% set hist = states('input_text.cumulus_historique_chauffes') %}
+          {% if hist == '[]' or hist in ['unknown', 'unavailable', ''] %}
+            Aucun historique
+          {% else %}
+            {% set chauffes = hist.split('|') %}
+            {{ chauffes | length }} chauffes enregistrées
+          {% endif %}
+        attributes:
+          historique_complet: >-
+            {% set hist = states('input_text.cumulus_historique_chauffes') %}
+            {% if hist == '[]' or hist in ['unknown', 'unavailable', ''] %}
+              Aucune chauffe enregistrée
+            {% else %}
+              {% set chauffes = hist.split('|') %}
+              {% set result = [] %}
+              {% for chauffe in chauffes[-10:] %}
+                {% set result = result + [chauffe] %}
+              {% endfor %}
+              {{ result | join('\n') }}
+            {% endif %}
+          derniere_chauffe: >-
+            {% set hist = states('input_text.cumulus_historique_chauffes') %}
+            {% if hist != '[]' and hist not in ['unknown', 'unavailable', ''] %}
+              {% set chauffes = hist.split('|') %}
+              {% if chauffes | length > 0 %}
+                {{ chauffes[-1] }}
+              {% else %}
+                -
+              {% endif %}
+            {% else %}
+              -
+            {% endif %}
+          dernier_evenement: >-
+            {% set hist = states('input_text.cumulus_historique_chauffes') %}
+            {% if hist == '[]' or hist in ['unknown', 'unavailable', ''] %}
+              Aucune chauffe enregistrée dans l'historique
+            {% else %}
+              Dernière chauffe: {{ state_attr('sensor.cumulus_historique_chauffes_display', 'derniere_chauffe') }}
             {% endif %}
 
   # --------------------------- BINARY SENSORS ----------------------------- #
