@@ -816,3 +816,52 @@
         name: "Cumulus Début Chauffe"
         message: "Début de chauffe enregistré à {{ now().strftime('%H:%M:%S') }}"
         entity_id: binary_sensor.cumulus_chauffe_reelle
+
+# 18) Alerte santé système dégradée
+- id: cumulus_alerte_sante_systeme_degradee
+  alias: "Cumulus — Alerte santé système dégradée"
+  description: "Notifie si score santé système < 70%"
+  mode: single
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.cumulus_sante_systeme
+      below: 70
+      for:
+        minutes: 5
+  action:
+    - variables:
+        score: "{{ states('sensor.cumulus_sante_systeme') | float(0) }}"
+        niveau: "{{ state_attr('sensor.cumulus_sante_systeme', 'niveau_sante') }}"
+        eval_entites: "{{ state_attr('sensor.cumulus_sante_systeme', 'evaluation_entites') }}"
+        eval_coherence: "{{ state_attr('sensor.cumulus_sante_systeme', 'evaluation_coherence') }}"
+        eval_espacement: "{{ state_attr('sensor.cumulus_sante_systeme', 'evaluation_espacement') }}"
+        eval_fonctionnel: "{{ state_attr('sensor.cumulus_sante_systeme', 'evaluation_fonctionnel') }}"
+    - service: persistent_notification.create
+      data:
+        title: "⚠️ Cumulus - Santé Système Dégradée"
+        message: >
+          Le score de santé du système est dégradé : {{ score | round(0) }}% ({{ niveau }})
+
+          Évaluations détaillées :
+
+          📡 Entités :
+          {{ eval_entites }}
+
+          🔍 Cohérence mesures :
+          {{ eval_coherence }}
+
+          ⏱️ Espacement chauffes :
+          {{ eval_espacement }}
+
+          ⚙️ État fonctionnel :
+          {{ eval_fonctionnel }}
+
+          Action recommandée : Vérifier la configuration et l'état des capteurs.
+        notification_id: cumulus_sante_degradee
+    - service: logbook.log
+      data:
+        name: "⚠️ Cumulus Santé Dégradée"
+        message: >
+          Score santé {{ score | round(0) }}% < 70% ({{ niveau }}).
+          Entités: {{ eval_entites }}, Cohérence: {{ eval_coherence }}
+        entity_id: sensor.cumulus_sante_systeme

@@ -800,6 +800,124 @@ template:
               Aucune chauffe en cours
             {% endif %}
 
+      # ========== SANTÉ SYSTÈME (MONITORING PROACTIF) ==========
+      - name: "cumulus_sante_systeme"
+        unique_id: cumulus_sante_systeme
+        unit_of_measurement: "%"
+        icon: mdi:heart-pulse
+        state: >-
+          {% set score = namespace(value=100) %}
+
+          {# 1. ENTITÉS VALIDES (25 points) #}
+          {% set entites_ok = is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+          {% if not entites_ok %}
+            {% set score.value = score.value - 25 %}
+          {% endif %}
+
+          {# 2. COHÉRENCE MESURES (25 points) #}
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% if sw_id not in ['', 'unknown', 'unavailable'] %}
+            {% set sw_on = is_state(sw_id, 'on') %}
+            {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+            {% if sw_on and conso < 100 %}
+              {# Anomalie: switch ON mais conso faible #}
+              {% set score.value = score.value - 25 %}
+            {% elif not sw_on and conso > 500 %}
+              {# Anomalie: switch OFF mais conso élevée #}
+              {% set score.value = score.value - 25 %}
+            {% endif %}
+          {% endif %}
+
+          {# 3. ESPACEMENT CHAUFFES (25 points) #}
+          {% set heures_depuis = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+          {% set max_h = states('input_number.cumulus_espacement_max_h') | float(50) %}
+          {% if heures_depuis >= max_h %}
+            {# Besoin urgent - système en alerte #}
+            {% set score.value = score.value - 25 %}
+          {% elif heures_depuis >= (max_h * 0.8) %}
+            {# Approche du besoin urgent - pénalité partielle #}
+            {% set score.value = score.value - 10 %}
+          {% endif %}
+
+          {# 4. ÉTAT FONCTIONNEL (25 points) #}
+          {% if is_state('input_boolean.cumulus_interdit_depart', 'on') %}
+            {# Système désactivé manuellement #}
+            {% set score.value = score.value - 15 %}
+          {% endif %}
+          {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+            {# Mode vacances - fonctionnement limité #}
+            {% set score.value = score.value - 10 %}
+          {% endif %}
+
+          {{ [0, [score.value, 100] | min] | max | round(0) }}
+        attributes:
+          evaluation_entites: >-
+            {% if is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+              ✅ Toutes entités valides (25/25 pts)
+            {% else %}
+              ❌ Entités invalides (0/25 pts) - {{ state_attr('binary_sensor.cumulus_entites_ok', 'entites_critiques_valides') }}
+            {% endif %}
+          evaluation_coherence: >-
+            {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+            {% if sw_id not in ['', 'unknown', 'unavailable'] %}
+              {% set sw_on = is_state(sw_id, 'on') %}
+              {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+              {% if sw_on and conso < 100 %}
+                ❌ Anomalie cohérence (0/25 pts) - Switch ON mais conso {{ conso }}W < 100W
+              {% elif not sw_on and conso > 500 %}
+                ❌ Anomalie cohérence (0/25 pts) - Switch OFF mais conso {{ conso }}W > 500W
+              {% else %}
+                ✅ Mesures cohérentes (25/25 pts)
+              {% endif %}
+            {% else %}
+              ⚠️ Contacteur non configuré
+            {% endif %}
+          evaluation_espacement: >-
+            {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+            {% set max_h = states('input_number.cumulus_espacement_max_h') | float(50) %}
+            {% if heures >= max_h %}
+              ❌ Besoin urgent (0/25 pts) - {{ heures | round(1) }}h >= {{ max_h }}h
+            {% elif heures >= (max_h * 0.8) %}
+              ⚠️ Approche urgence (15/25 pts) - {{ heures | round(1) }}h / {{ max_h }}h
+            {% else %}
+              ✅ Espacement OK (25/25 pts) - {{ heures | round(1) }}h / {{ max_h }}h
+            {% endif %}
+          evaluation_fonctionnel: >-
+            {% set points = 25 %}
+            {% if is_state('input_boolean.cumulus_interdit_depart', 'on') %}
+              {% set points = points - 15 %}
+            {% endif %}
+            {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+              {% set points = points - 10 %}
+            {% endif %}
+            {% if points == 25 %}
+              ✅ Système opérationnel (25/25 pts)
+            {% else %}
+              ⚠️ Limitations actives ({{ points }}/25 pts)
+            {% endif %}
+          niveau_sante: >-
+            {% set score = states('sensor.cumulus_sante_systeme') | float(100) %}
+            {% if score >= 90 %}
+              Excellent
+            {% elif score >= 75 %}
+              Bon
+            {% elif score >= 50 %}
+              Moyen
+            {% elif score >= 25 %}
+              Dégradé
+            {% else %}
+              Critique
+            {% endif %}
+          dernier_evenement: >-
+            {% set score = states('sensor.cumulus_sante_systeme') | float(100) %}
+            {% if score >= 75 %}
+              Système en bonne santé ({{ score | round(0) }}%)
+            {% elif score >= 50 %}
+              Système fonctionnel avec alertes mineures ({{ score | round(0) }}%)
+            {% else %}
+              ⚠️ Système dégradé - Vérification recommandée ({{ score | round(0) }}%)
+            {% endif %}
+
       # ========== HISTORIQUE CHAUFFES ==========
       - name: "cumulus_historique_chauffes_display"
         unique_id: cumulus_historique_chauffes_display
