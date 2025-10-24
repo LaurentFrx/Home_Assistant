@@ -64,6 +64,11 @@
     - service: switch.turn_on
       target:
         entity_id: "{{ sw_id }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.cumulus_raison_deadband
+      data:
+        value: "Démarrage PV (anti-flapping)"
     - service: timer.start
       target:
         entity_id: timer.cumulus_deadband_ui
@@ -103,6 +108,11 @@
     - service: switch.turn_off
       target:
         entity_id: "{{ sw_id }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.cumulus_raison_deadband
+      data:
+        value: "Import réseau > {{ states('sensor.cumulus_seuil_import_limiteur_w') }}W"
     - service: timer.start
       target:
         entity_id: timer.cumulus_deadband_ui
@@ -140,6 +150,11 @@
     - service: switch.turn_off
       target:
         entity_id: "{{ sw_id }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.cumulus_raison_deadband
+      data:
+        value: "SOC {{ states('sensor.cumulus_soc_solarbank_pct') }}% < seuil {{ states('input_number.cumulus_soc_stop_pct') }}%"
     - service: timer.start
       target:
         entity_id: timer.cumulus_deadband_ui
@@ -309,6 +324,11 @@
     - service: switch.turn_off
       target:
         entity_id: "{{ sw_id }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.cumulus_raison_deadband
+      data:
+        value: "Consommation domestique élevée (Import {{ states('sensor.cumulus_import_reseau_w') }}W)"
     - service: timer.start
       target:
         entity_id: timer.cumulus_deadband_ui

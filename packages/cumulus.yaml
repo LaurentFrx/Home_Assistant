@@ -328,6 +328,13 @@ input_datetime:
     has_date: true
     has_time: true
 
+input_text:
+  cumulus_raison_deadband:
+    name: "Raison du dernier deadband"
+    icon: mdi:timer-alert-outline
+    max: 255
+    initial: "Aucun"
+
 timer:
   cumulus_deadband_ui:
     name: "Temporisation deadband"
@@ -722,6 +729,33 @@ template:
         state: >-
           {% set nb_pers = states('input_number.cumulus_nb_personnes') | int(2) %}
           {{ (nb_pers * 50) | round(0) }}
+
+      # ========== ÉTAT DEADBAND ==========
+      - name: "cumulus_etat_deadband"
+        unique_id: cumulus_etat_deadband
+        icon: mdi:timer-sand
+        state: >-
+          {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+            {% set remaining = state_attr('timer.cumulus_deadband_ui', 'remaining') %}
+            {% if remaining %}
+              Actif ({{ remaining }})
+            {% else %}
+              Actif
+            {% endif %}
+          {% else %}
+            Inactif
+          {% endif %}
+        attributes:
+          raison: "{{ states('input_text.cumulus_raison_deadband') }}"
+          timer_state: "{{ states('timer.cumulus_deadband_ui') }}"
+          temps_restant: "{{ state_attr('timer.cumulus_deadband_ui', 'remaining') }}"
+          fin_prevue: "{{ state_attr('timer.cumulus_deadband_ui', 'finishes_at') }}"
+          dernier_evenement: >-
+            {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+              Deadband actif - Raison: {{ states('input_text.cumulus_raison_deadband') }}
+            {% else %}
+              Deadband inactif - Démarrage autorisé
+            {% endif %}
 
   # --------------------------- BINARY SENSORS ----------------------------- #
   - binary_sensor:
