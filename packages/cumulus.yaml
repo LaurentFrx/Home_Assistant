@@ -1,20 +1,46 @@
 ###############################################################################
-# CUMULUS — ROUTEUR SOLAIRE v2025-10-16a (PRODUCTION READY)
+# CUMULUS — ROUTEUR SOLAIRE v2025-10-24 (PRODUCTION READY + AMÉLIORATIONS)
 #
 # Package complet pour pilotage intelligent cumulus électrique
 # Maximise autoconsommation PV tout en garantissant eau chaude quotidienne
 #
-# CORRECTIFS v2025-10-16a :
-# - ✅ FIX CRITIQUE : Détection fin de chauffe UNIVERSELLE
-#   → Détecte fin de chauffe PV, HC ET manuelle (app Shelly)
-#   → Fonctionne même si switch éteint avant fin de chauffe
-#   → Durée minimale réduite à 60s (au lieu de 180s)
-# - ✅ FIX : Automation "OFF fin HC" simplifiée
-#   → Laisse l'automation universelle gérer la détection température max
-#   → Évite conflit entre automations
-# - ✅ NEW : Automation "Détection chauffe externe"
-#   → Notifie les démarrages manuels via app Shelly
-#   → Permet suivi des chauffes externes
+# AMÉLIORATIONS MAJEURES v2025-10-24 :
+#
+# 1️⃣ SÉCURITÉ & ROBUSTESSE
+# - ✅ Seuil détection thermostat augmenté de 70% à 85%
+# - ✅ Délai minimum chauffe augmenté de 60s à 120s
+# - ✅ Détection anomalie cohérence (switch ON mais conso < 100W pendant 30s)
+#
+# 2️⃣ GESTION ERREURS ENTITÉS
+# - ✅ binary_sensor.cumulus_entites_ok pour validation entités configurables
+# - ✅ Dépendance validation entités dans automations de démarrage
+# - ✅ Alerte si entité devient unavailable pendant chauffe
+#
+# 3️⃣ CONSOLIDATION DEADBAND
+# - ✅ Traçabilité raisons deadband (input_text.cumulus_raison_deadband)
+# - ✅ sensor.cumulus_etat_deadband avec attributs détaillés
+# - ✅ Toutes automations enregistrent la raison du deadband
+#
+# 4️⃣ OPTIMISATION DÉTECTION FIN CHAUFFE
+# - ✅ sensor.cumulus_duree_chauffe_actuelle (temps réel)
+# - ✅ Historique des 10 dernières chauffes (durée + % PV + statut)
+# - ✅ Affichage temps réel dans UI pendant chauffe
+#
+# 5️⃣ MONITORING PROACTIF
+# - ✅ sensor.cumulus_sante_systeme (score 0-100%) basé sur :
+#   * Entités valides (25 pts)
+#   * Cohérence mesures (25 pts)
+#   * Espacement chauffes (25 pts)
+#   * État fonctionnel (25 pts)
+# - ✅ Alerte si score < 70% avec diagnostic détaillé
+#
+# 6️⃣ DOCUMENTATION
+# - ✅ Attribut dernier_evenement sur tous les sensors principaux
+# - ✅ Explications en français avec émojis pour lecture rapide
+# - ✅ Diagnostic automatique de l'état du système
+#
+# FONCTIONNALITÉS DE BASE (v2025-10-16a) :
+# - ✅ Détection fin de chauffe UNIVERSELLE (PV, HC, manuelle)
 # - ✅ Production solaire totale = APS × 2
 # - ✅ Puissance disponible = 1200W (SB) + APS (si SOC ≥ 10%)
 # - ✅ SolarBank délivre 1200W fixes de 10% à 100% SOC
@@ -328,6 +354,24 @@ input_datetime:
     has_date: true
     has_time: true
 
+  cumulus_debut_chauffe_actuelle:
+    name: "Début chauffe actuelle"
+    has_date: true
+    has_time: true
+
+input_text:
+  cumulus_raison_deadband:
+    name: "Raison du dernier deadband"
+    icon: mdi:timer-alert-outline
+    max: 255
+    initial: "Aucun"
+
+  cumulus_historique_chauffes:
+    name: "Historique des 10 dernières chauffes"
+    icon: mdi:history
+    max: 255
+    initial: "[]"
+
 timer:
   cumulus_deadband_ui:
     name: "Temporisation deadband"
@@ -350,6 +394,16 @@ template:
           {% else %}
             {{ states(e) | float(0) }}
           {% endif %}
+        attributes:
+          dernier_evenement: >-
+            {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% if import_w < 0 %}
+              Export {{ (-import_w) | round(0) }}W vers le réseau
+            {% elif import_w == 0 %}
+              Pas d'import ni d'export
+            {% else %}
+              Import {{ import_w | round(0) }}W depuis le réseau
+            {% endif %}
 
       - name: "cumulus_soc_solarbank_pct"
         unique_id: cumulus_soc_solarbank_pct
@@ -432,6 +486,19 @@ template:
           explication: >-
             Fonctionne avec toute répartition SB/APS.
             Gère automatiquement export (import négatif).
+          dernier_evenement: >-
+            {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+            {% set sw_on = sw_id not in ['', 'unknown', 'unavailable'] and is_state(sw_id, 'on') %}
+            {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+            {% if not sw_on %}
+              Contacteur OFF - Consommation nulle
+            {% elif conso > 2500 %}
+              Chauffe active - Consommation {{ conso | round(0) }}W (normale)
+            {% elif conso > 100 %}
+              Chauffe en cours - Consommation {{ conso | round(0) }}W (réduite)
+            {% else %}
+              ⚠️ Contacteur ON mais consommation {{ conso | round(0) }}W (anormale)
+            {% endif %}
 
       # ========== RÉPARTITION SOURCES TEMPS RÉEL ==========
       - name: "cumulus_repartition_sources"
@@ -484,6 +551,14 @@ template:
             {% else %}
               0
             {% endif %}
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'off') %}
+              Pas de chauffe en cours
+            {% else %}
+              {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+              {% set pv_pct = state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') | int(0) %}
+              Chauffe {{ conso | round(0) }}W - Autonomie PV {{ pv_pct }}%
+            {% endif %}
 
       # ========== SEUILS & CALCULS ==========
       - name: "cumulus_seuil_import_limiteur_w"
@@ -501,6 +576,14 @@ template:
           detail: >-
             Si import_max = 800W, seuil limiteur = 1100W.
             Le limiteur coupe si import > 1100W pendant 4 secondes.
+          dernier_evenement: >-
+            {% set seuil = states('sensor.cumulus_seuil_import_limiteur_w') | float(0) %}
+            {% set import_actuel = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% if import_actuel > seuil %}
+              ⚠️ Import {{ import_actuel | round(0) }}W > seuil {{ seuil | round(0) }}W - Risque coupure limiteur
+            {% else %}
+              ✅ Import {{ import_actuel | round(0) }}W < seuil {{ seuil | round(0) }}W - OK
+            {% endif %}
 
       - name: "cumulus_heures_depuis_derniere_chauffe"
         unique_id: cumulus_heures_depuis_derniere_chauffe
@@ -533,6 +616,20 @@ template:
             {% set temp = T_amb + (delta_T * exp_term) %}
             {{ [temp, T_amb] | max | round(1) }}
           {% endif %}
+        attributes:
+          dernier_evenement: >-
+            {% set temp = states('sensor.cumulus_temperature_physique_c') | float(20) %}
+            {% set T_max = states('input_number.cumulus_temperature_max_c') | float(65) %}
+            {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+            {% if temp >= T_max %}
+              ✅ Température maximale {{ temp | round(1) }}°C atteinte
+            {% elif temp >= (T_max * 0.8) %}
+              ✅ Température {{ temp | round(1) }}°C suffisante ({{ heures | round(1) }}h depuis chauffe)
+            {% elif temp >= 40 %}
+              ⚠️ Température {{ temp | round(1) }}°C moyenne ({{ heures | round(1) }}h depuis chauffe)
+            {% else %}
+              ❌ Température {{ temp | round(1) }}°C basse - Chauffe nécessaire ({{ heures | round(1) }}h)
+            {% endif %}
 
       - name: "cumulus_eau_chaude_disponible_40c_litres"
         unique_id: cumulus_eau_chaude_disponible_40c_litres
@@ -694,6 +791,15 @@ template:
           explication: >-
             SolarBank délivre 1200W fixes de 10% à 100% SOC.
             Batterie (1200W) + Production APS actuelle.
+          dernier_evenement: >-
+            {% set dispo = states('sensor.cumulus_puissance_disponible_w') | float(0) %}
+            {% set seuil = states('sensor.cumulus_seuil_pv_dynamique_w') | float(0) %}
+            {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(0) %}
+            {% if dispo > seuil %}
+              ✅ {{ dispo | round(0) }}W disponible > {{ seuil | round(0) }}W requis (SOC {{ soc | round(0) }}%) - Démarrage possible
+            {% else %}
+              ⚠️ {{ dispo | round(0) }}W disponible < {{ seuil | round(0) }}W requis (SOC {{ soc | round(0) }}%) - Puissance insuffisante
+            {% endif %}
 
       - name: "cumulus_seuil_pv_dynamique_w"
         unique_id: cumulus_seuil_pv_dynamique_w
@@ -722,6 +828,228 @@ template:
         state: >-
           {% set nb_pers = states('input_number.cumulus_nb_personnes') | int(2) %}
           {{ (nb_pers * 50) | round(0) }}
+
+      # ========== ÉTAT DEADBAND ==========
+      - name: "cumulus_etat_deadband"
+        unique_id: cumulus_etat_deadband
+        icon: mdi:timer-sand
+        state: >-
+          {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+            {% set remaining = state_attr('timer.cumulus_deadband_ui', 'remaining') %}
+            {% if remaining %}
+              Actif ({{ remaining }})
+            {% else %}
+              Actif
+            {% endif %}
+          {% else %}
+            Inactif
+          {% endif %}
+        attributes:
+          raison: "{{ states('input_text.cumulus_raison_deadband') }}"
+          timer_state: "{{ states('timer.cumulus_deadband_ui') }}"
+          temps_restant: "{{ state_attr('timer.cumulus_deadband_ui', 'remaining') }}"
+          fin_prevue: "{{ state_attr('timer.cumulus_deadband_ui', 'finishes_at') }}"
+          dernier_evenement: >-
+            {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+              Deadband actif - Raison: {{ states('input_text.cumulus_raison_deadband') }}
+            {% else %}
+              Deadband inactif - Démarrage autorisé
+            {% endif %}
+
+      # ========== DURÉE CHAUFFE ACTUELLE ==========
+      - name: "cumulus_duree_chauffe_actuelle"
+        unique_id: cumulus_duree_chauffe_actuelle
+        unit_of_measurement: "min"
+        icon: mdi:timer-outline
+        state: >-
+          {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            {% set debut_ts = state_attr('input_datetime.cumulus_debut_chauffe_actuelle', 'timestamp') %}
+            {% if debut_ts is not none and debut_ts > 0 %}
+              {{ ((now().timestamp() - debut_ts) / 60) | round(0) }}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        attributes:
+          debut_chauffe: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+              {{ states('input_datetime.cumulus_debut_chauffe_actuelle') }}
+            {% else %}
+              -
+            {% endif %}
+          consommation_w: "{{ states('sensor.cumulus_consommation_reelle_w') }}"
+          autonomie_pv_pct: "{{ state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') }}"
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+              Chauffe en cours depuis {{ states('sensor.cumulus_duree_chauffe_actuelle') }} minutes
+            {% else %}
+              Aucune chauffe en cours
+            {% endif %}
+
+      # ========== SANTÉ SYSTÈME (MONITORING PROACTIF) ==========
+      - name: "cumulus_sante_systeme"
+        unique_id: cumulus_sante_systeme
+        unit_of_measurement: "%"
+        icon: mdi:heart-pulse
+        state: >-
+          {% set score = namespace(value=100) %}
+
+          {# 1. ENTITÉS VALIDES (25 points) #}
+          {% set entites_ok = is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+          {% if not entites_ok %}
+            {% set score.value = score.value - 25 %}
+          {% endif %}
+
+          {# 2. COHÉRENCE MESURES (25 points) #}
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% if sw_id not in ['', 'unknown', 'unavailable'] %}
+            {% set sw_on = is_state(sw_id, 'on') %}
+            {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+            {% if sw_on and conso < 100 %}
+              {# Anomalie: switch ON mais conso faible #}
+              {% set score.value = score.value - 25 %}
+            {% elif not sw_on and conso > 500 %}
+              {# Anomalie: switch OFF mais conso élevée #}
+              {% set score.value = score.value - 25 %}
+            {% endif %}
+          {% endif %}
+
+          {# 3. ESPACEMENT CHAUFFES (25 points) #}
+          {% set heures_depuis = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+          {% set max_h = states('input_number.cumulus_espacement_max_h') | float(50) %}
+          {% if heures_depuis >= max_h %}
+            {# Besoin urgent - système en alerte #}
+            {% set score.value = score.value - 25 %}
+          {% elif heures_depuis >= (max_h * 0.8) %}
+            {# Approche du besoin urgent - pénalité partielle #}
+            {% set score.value = score.value - 10 %}
+          {% endif %}
+
+          {# 4. ÉTAT FONCTIONNEL (25 points) #}
+          {% if is_state('input_boolean.cumulus_interdit_depart', 'on') %}
+            {# Système désactivé manuellement #}
+            {% set score.value = score.value - 15 %}
+          {% endif %}
+          {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+            {# Mode vacances - fonctionnement limité #}
+            {% set score.value = score.value - 10 %}
+          {% endif %}
+
+          {{ [0, [score.value, 100] | min] | max | round(0) }}
+        attributes:
+          evaluation_entites: >-
+            {% if is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+              ✅ Toutes entités valides (25/25 pts)
+            {% else %}
+              ❌ Entités invalides (0/25 pts) - {{ state_attr('binary_sensor.cumulus_entites_ok', 'entites_critiques_valides') }}
+            {% endif %}
+          evaluation_coherence: >-
+            {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+            {% if sw_id not in ['', 'unknown', 'unavailable'] %}
+              {% set sw_on = is_state(sw_id, 'on') %}
+              {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+              {% if sw_on and conso < 100 %}
+                ❌ Anomalie cohérence (0/25 pts) - Switch ON mais conso {{ conso }}W < 100W
+              {% elif not sw_on and conso > 500 %}
+                ❌ Anomalie cohérence (0/25 pts) - Switch OFF mais conso {{ conso }}W > 500W
+              {% else %}
+                ✅ Mesures cohérentes (25/25 pts)
+              {% endif %}
+            {% else %}
+              ⚠️ Contacteur non configuré
+            {% endif %}
+          evaluation_espacement: >-
+            {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(999) %}
+            {% set max_h = states('input_number.cumulus_espacement_max_h') | float(50) %}
+            {% if heures >= max_h %}
+              ❌ Besoin urgent (0/25 pts) - {{ heures | round(1) }}h >= {{ max_h }}h
+            {% elif heures >= (max_h * 0.8) %}
+              ⚠️ Approche urgence (15/25 pts) - {{ heures | round(1) }}h / {{ max_h }}h
+            {% else %}
+              ✅ Espacement OK (25/25 pts) - {{ heures | round(1) }}h / {{ max_h }}h
+            {% endif %}
+          evaluation_fonctionnel: >-
+            {% set points = 25 %}
+            {% if is_state('input_boolean.cumulus_interdit_depart', 'on') %}
+              {% set points = points - 15 %}
+            {% endif %}
+            {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+              {% set points = points - 10 %}
+            {% endif %}
+            {% if points == 25 %}
+              ✅ Système opérationnel (25/25 pts)
+            {% else %}
+              ⚠️ Limitations actives ({{ points }}/25 pts)
+            {% endif %}
+          niveau_sante: >-
+            {% set score = states('sensor.cumulus_sante_systeme') | float(100) %}
+            {% if score >= 90 %}
+              Excellent
+            {% elif score >= 75 %}
+              Bon
+            {% elif score >= 50 %}
+              Moyen
+            {% elif score >= 25 %}
+              Dégradé
+            {% else %}
+              Critique
+            {% endif %}
+          dernier_evenement: >-
+            {% set score = states('sensor.cumulus_sante_systeme') | float(100) %}
+            {% if score >= 75 %}
+              Système en bonne santé ({{ score | round(0) }}%)
+            {% elif score >= 50 %}
+              Système fonctionnel avec alertes mineures ({{ score | round(0) }}%)
+            {% else %}
+              ⚠️ Système dégradé - Vérification recommandée ({{ score | round(0) }}%)
+            {% endif %}
+
+      # ========== HISTORIQUE CHAUFFES ==========
+      - name: "cumulus_historique_chauffes_display"
+        unique_id: cumulus_historique_chauffes_display
+        icon: mdi:chart-timeline
+        state: >-
+          {% set hist = states('input_text.cumulus_historique_chauffes') %}
+          {% if hist == '[]' or hist in ['unknown', 'unavailable', ''] %}
+            Aucun historique
+          {% else %}
+            {% set chauffes = hist.split('|') %}
+            {{ chauffes | length }} chauffes enregistrées
+          {% endif %}
+        attributes:
+          historique_complet: >-
+            {% set hist = states('input_text.cumulus_historique_chauffes') %}
+            {% if hist == '[]' or hist in ['unknown', 'unavailable', ''] %}
+              Aucune chauffe enregistrée
+            {% else %}
+              {% set chauffes = hist.split('|') %}
+              {% set result = [] %}
+              {% for chauffe in chauffes[-10:] %}
+                {% set result = result + [chauffe] %}
+              {% endfor %}
+              {{ result | join('\n') }}
+            {% endif %}
+          derniere_chauffe: >-
+            {% set hist = states('input_text.cumulus_historique_chauffes') %}
+            {% if hist != '[]' and hist not in ['unknown', 'unavailable', ''] %}
+              {% set chauffes = hist.split('|') %}
+              {% if chauffes | length > 0 %}
+                {{ chauffes[-1] }}
+              {% else %}
+                -
+              {% endif %}
+            {% else %}
+              -
+            {% endif %}
+          dernier_evenement: >-
+            {% set hist = states('input_text.cumulus_historique_chauffes') %}
+            {% if hist == '[]' or hist in ['unknown', 'unavailable', ''] %}
+              Aucune chauffe enregistrée dans l'historique
+            {% else %}
+              Dernière chauffe: {{ state_attr('sensor.cumulus_historique_chauffes_display', 'derniere_chauffe') }}
+            {% endif %}
 
   # --------------------------- BINARY SENSORS ----------------------------- #
   - binary_sensor:
@@ -817,15 +1145,21 @@ template:
             {% set sw = is_state(sw_id, 'on') %}
             {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
             {% set puissance_nominale = states('input_number.cumulus_puissance_w') | float(3000) %}
-            {% set seuil_chauffe = puissance_nominale * 0.70 %}
+            {% set seuil_chauffe = puissance_nominale * 0.85 %}
             {{ sw and (conso > seuil_chauffe) }}
           {% endif %}
         attributes:
           consommation_w: "{{ states('sensor.cumulus_consommation_reelle_w') }}"
-          seuil_detection_w: "{{ (states('input_number.cumulus_puissance_w') | float(3000) * 0.70) | round(0) }}"
+          seuil_detection_w: "{{ (states('input_number.cumulus_puissance_w') | float(3000) * 0.85) | round(0) }}"
           contacteur_state: >-
             {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
             {{ states(sw_id) if sw_id not in ['', 'unknown', 'unavailable'] else 'unknown' }}
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+              Chauffe en cours - Consommation {{ states('sensor.cumulus_consommation_reelle_w') }}W
+            {% else %}
+              Arrêt - {{ states('input_text.cumulus_entity_contacteur') }} = {{ states(states('input_text.cumulus_entity_contacteur')) }}
+            {% endif %}
 
       - name: "cumulus_besoin_chauffe_urgente"
         unique_id: cumulus_besoin_chauffe_urgente
@@ -871,6 +1205,86 @@ template:
           {% set temps_necessaire = states('sensor.cumulus_temps_chauffe_necessaire_h') | float(99) %}
           {% set temps_disponible = states('sensor.cumulus_fenetre_pv_restante_corrigee_h') | float(0) %}
           {{ temps_disponible >= (temps_necessaire * 1.1) }}
+
+      # ========== VALIDATION ENTITÉS CONFIGURABLES ==========
+      - name: "cumulus_entites_ok"
+        unique_id: cumulus_entites_ok
+        icon: mdi:check-network-outline
+        device_class: connectivity
+        state: >-
+          {% set entites_critiques = [
+            states('input_text.cumulus_entity_import_w'),
+            states('input_text.cumulus_entity_contacteur'),
+            states('input_text.cumulus_entity_soc_solarbank'),
+            states('input_text.cumulus_entity_pv_total')
+          ] %}
+          {% set entites_optionnelles = [
+            states('input_text.cumulus_entity_solcast_today'),
+            states('input_text.cumulus_entity_solcast_tomorrow'),
+            states('input_text.cumulus_entity_lave_linge_power'),
+            states('input_text.cumulus_entity_lave_vaisselle_power')
+          ] %}
+          {% set critiques_valides = namespace(count=0) %}
+          {% set critiques_total = namespace(count=0) %}
+          {% for entity_id in entites_critiques %}
+            {% if entity_id not in ['', 'unknown', 'unavailable'] %}
+              {% set critiques_total.count = critiques_total.count + 1 %}
+              {% set entity_state = states(entity_id) %}
+              {% if entity_state not in ['unknown', 'unavailable'] %}
+                {% set critiques_valides.count = critiques_valides.count + 1 %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ critiques_total.count == 4 and critiques_valides.count == 4 }}
+        attributes:
+          entites_critiques_valides: >-
+            {% set result = [] %}
+            {% set entites = [
+              ('Import réseau', states('input_text.cumulus_entity_import_w')),
+              ('Contacteur', states('input_text.cumulus_entity_contacteur')),
+              ('SOC Solarbank', states('input_text.cumulus_entity_soc_solarbank')),
+              ('PV total', states('input_text.cumulus_entity_pv_total'))
+            ] %}
+            {% for nom, entity_id in entites %}
+              {% if entity_id not in ['', 'unknown', 'unavailable'] %}
+                {% set entity_state = states(entity_id) %}
+                {% if entity_state not in ['unknown', 'unavailable'] %}
+                  {% set result = result + [nom ~ ': ✅ OK'] %}
+                {% else %}
+                  {% set result = result + [nom ~ ': ❌ ' ~ entity_state] %}
+                {% endif %}
+              {% else %}
+                {% set result = result + [nom ~ ': ❌ Non configuré'] %}
+              {% endif %}
+            {% endfor %}
+            {{ result | join(', ') }}
+          entites_optionnelles_valides: >-
+            {% set result = [] %}
+            {% set entites = [
+              ('Solcast today', states('input_text.cumulus_entity_solcast_today')),
+              ('Solcast tomorrow', states('input_text.cumulus_entity_solcast_tomorrow')),
+              ('Lave-linge', states('input_text.cumulus_entity_lave_linge_power')),
+              ('Lave-vaisselle', states('input_text.cumulus_entity_lave_vaisselle_power'))
+            ] %}
+            {% for nom, entity_id in entites %}
+              {% if entity_id not in ['', 'unknown', 'unavailable'] %}
+                {% set entity_state = states(entity_id) %}
+                {% if entity_state not in ['unknown', 'unavailable'] %}
+                  {% set result = result + [nom ~ ': ✅'] %}
+                {% else %}
+                  {% set result = result + [nom ~ ': ⚠️ ' ~ entity_state] %}
+                {% endif %}
+              {% else %}
+                {% set result = result + [nom ~ ': ⚠️ Non configuré'] %}
+              {% endif %}
+            {% endfor %}
+            {{ result | join(', ') }}
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+              Toutes les entités critiques sont valides
+            {% else %}
+              ❌ Une ou plusieurs entités critiques sont invalides - Vérifier la configuration
+            {% endif %}
 
       # ========== SOLEIL SUFFISANT ==========
       - name: "cumulus_soleil_suffisant"
