@@ -19,6 +19,10 @@
           state: "on"
         - condition: and
           conditions:
+            # ✅ VALIDATION ENTITÉS CRITIQUES
+            - condition: state
+              entity_id: binary_sensor.cumulus_entites_ok
+              state: "on"
             - condition: state
               entity_id: binary_sensor.cumulus_fenetre_pv
               state: "on"
@@ -386,6 +390,10 @@
           state: "on"
         - condition: and
           conditions:
+            # ✅ VALIDATION ENTITÉS CRITIQUES
+            - condition: state
+              entity_id: binary_sensor.cumulus_entites_ok
+              state: "on"
             - condition: state
               entity_id: input_boolean.cumulus_interdit_depart
               state: "off"
@@ -643,3 +651,94 @@
           Démarrage manuel détecté (source externe).
           Consommation : {{ states('sensor.cumulus_consommation_reelle_w') }}W
         entity_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+
+# 15) Détection anomalie cohérence (switch ON mais conso faible)
+- id: cumulus_detection_anomalie_coherence
+  alias: "Cumulus — Détection anomalie cohérence"
+  description: "Alerte si switch ON mais consommation < 100W pendant 30s (anomalie détection)"
+  mode: single
+  trigger:
+    - platform: template
+      value_template: >-
+        {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+        {% set sw_on = sw_id not in ['', 'unknown', 'unavailable'] and is_state(sw_id, 'on') %}
+        {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+        {{ sw_on and conso < 100 }}
+      for:
+        seconds: 30
+  condition:
+    - condition: state
+      entity_id: input_boolean.cumulus_interdit_depart
+      state: "off"
+  action:
+    - variables:
+        sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+        conso: "{{ states('sensor.cumulus_consommation_reelle_w') | float(0) }}"
+        import_w: "{{ states('sensor.cumulus_import_reseau_w') | float(0) }}"
+        pv_w: "{{ states('sensor.cumulus_pv_power_w') | float(0) }}"
+    - service: persistent_notification.create
+      data:
+        title: "⚠️ Cumulus - ANOMALIE Détection"
+        message: >
+          ANOMALIE DE COHÉRENCE DÉTECTÉE !
+
+          Le contacteur est ON mais consommation anormalement faible :
+          - Contacteur : {{ states(sw_id) }}
+          - Consommation mesurée : {{ conso }}W (< 100W)
+          - Import réseau : {{ import_w }}W
+          - Production PV : {{ pv_w }}W
+
+          Causes possibles :
+          - Défaillance contacteur ou relais
+          - Problème de mesure
+          - Thermostat coupé immédiatement
+          - Cumulus déjà à température max
+
+          Vérification manuelle recommandée.
+        notification_id: cumulus_anomalie_coherence
+    - service: logbook.log
+      data:
+        name: "⚠️ Cumulus ANOMALIE"
+        message: >
+          ANOMALIE: Switch ON mais conso {{ conso }}W < 100W pendant 30s.
+          Import={{ import_w }}W, PV={{ pv_w }}W
+        entity_id: "{{ sw_id }}"
+
+# 16) Alerte entité unavailable pendant chauffe
+- id: cumulus_alerte_entite_unavailable_chauffe
+  alias: "Cumulus — Alerte entité unavailable pendant chauffe"
+  description: "Notifie si une entité critique devient unavailable pendant une chauffe"
+  mode: single
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.cumulus_entites_ok
+      to: "off"
+      for:
+        seconds: 10
+  condition:
+    - condition: state
+      entity_id: binary_sensor.cumulus_chauffe_reelle
+      state: "on"
+  action:
+    - variables:
+        sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
+        entites_details: "{{ state_attr('binary_sensor.cumulus_entites_ok', 'entites_critiques_valides') }}"
+    - service: persistent_notification.create
+      data:
+        title: "⚠️ Cumulus - Entité Unavailable Pendant Chauffe"
+        message: >
+          Une ou plusieurs entités critiques sont devenues unavailable pendant la chauffe !
+
+          État des entités :
+          {{ entites_details }}
+
+          La chauffe continue mais la fiabilité des mesures est compromise.
+          Vérifiez la connectivité de vos capteurs.
+        notification_id: cumulus_entite_unavailable
+    - service: logbook.log
+      data:
+        name: "⚠️ Cumulus Entité Unavailable"
+        message: >
+          Entité(s) unavailable pendant chauffe active.
+          Détails: {{ entites_details }}
+        entity_id: "{{ sw_id }}"

@@ -878,6 +878,86 @@ template:
           {% set temps_disponible = states('sensor.cumulus_fenetre_pv_restante_corrigee_h') | float(0) %}
           {{ temps_disponible >= (temps_necessaire * 1.1) }}
 
+      # ========== VALIDATION ENTITÉS CONFIGURABLES ==========
+      - name: "cumulus_entites_ok"
+        unique_id: cumulus_entites_ok
+        icon: mdi:check-network-outline
+        device_class: connectivity
+        state: >-
+          {% set entites_critiques = [
+            states('input_text.cumulus_entity_import_w'),
+            states('input_text.cumulus_entity_contacteur'),
+            states('input_text.cumulus_entity_soc_solarbank'),
+            states('input_text.cumulus_entity_pv_total')
+          ] %}
+          {% set entites_optionnelles = [
+            states('input_text.cumulus_entity_solcast_today'),
+            states('input_text.cumulus_entity_solcast_tomorrow'),
+            states('input_text.cumulus_entity_lave_linge_power'),
+            states('input_text.cumulus_entity_lave_vaisselle_power')
+          ] %}
+          {% set critiques_valides = namespace(count=0) %}
+          {% set critiques_total = namespace(count=0) %}
+          {% for entity_id in entites_critiques %}
+            {% if entity_id not in ['', 'unknown', 'unavailable'] %}
+              {% set critiques_total.count = critiques_total.count + 1 %}
+              {% set entity_state = states(entity_id) %}
+              {% if entity_state not in ['unknown', 'unavailable'] %}
+                {% set critiques_valides.count = critiques_valides.count + 1 %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ critiques_total.count == 4 and critiques_valides.count == 4 }}
+        attributes:
+          entites_critiques_valides: >-
+            {% set result = [] %}
+            {% set entites = [
+              ('Import réseau', states('input_text.cumulus_entity_import_w')),
+              ('Contacteur', states('input_text.cumulus_entity_contacteur')),
+              ('SOC Solarbank', states('input_text.cumulus_entity_soc_solarbank')),
+              ('PV total', states('input_text.cumulus_entity_pv_total'))
+            ] %}
+            {% for nom, entity_id in entites %}
+              {% if entity_id not in ['', 'unknown', 'unavailable'] %}
+                {% set entity_state = states(entity_id) %}
+                {% if entity_state not in ['unknown', 'unavailable'] %}
+                  {% set result = result + [nom ~ ': ✅ OK'] %}
+                {% else %}
+                  {% set result = result + [nom ~ ': ❌ ' ~ entity_state] %}
+                {% endif %}
+              {% else %}
+                {% set result = result + [nom ~ ': ❌ Non configuré'] %}
+              {% endif %}
+            {% endfor %}
+            {{ result | join(', ') }}
+          entites_optionnelles_valides: >-
+            {% set result = [] %}
+            {% set entites = [
+              ('Solcast today', states('input_text.cumulus_entity_solcast_today')),
+              ('Solcast tomorrow', states('input_text.cumulus_entity_solcast_tomorrow')),
+              ('Lave-linge', states('input_text.cumulus_entity_lave_linge_power')),
+              ('Lave-vaisselle', states('input_text.cumulus_entity_lave_vaisselle_power'))
+            ] %}
+            {% for nom, entity_id in entites %}
+              {% if entity_id not in ['', 'unknown', 'unavailable'] %}
+                {% set entity_state = states(entity_id) %}
+                {% if entity_state not in ['unknown', 'unavailable'] %}
+                  {% set result = result + [nom ~ ': ✅'] %}
+                {% else %}
+                  {% set result = result + [nom ~ ': ⚠️ ' ~ entity_state] %}
+                {% endif %}
+              {% else %}
+                {% set result = result + [nom ~ ': ⚠️ Non configuré'] %}
+              {% endif %}
+            {% endfor %}
+            {{ result | join(', ') }}
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+              Toutes les entités critiques sont valides
+            {% else %}
+              ❌ Une ou plusieurs entités critiques sont invalides - Vérifier la configuration
+            {% endif %}
+
       # ========== SOLEIL SUFFISANT ==========
       - name: "cumulus_soleil_suffisant"
         unique_id: cumulus_soleil_suffisant
