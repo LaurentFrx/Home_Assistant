@@ -817,15 +817,21 @@ template:
             {% set sw = is_state(sw_id, 'on') %}
             {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
             {% set puissance_nominale = states('input_number.cumulus_puissance_w') | float(3000) %}
-            {% set seuil_chauffe = puissance_nominale * 0.70 %}
+            {% set seuil_chauffe = puissance_nominale * 0.85 %}
             {{ sw and (conso > seuil_chauffe) }}
           {% endif %}
         attributes:
           consommation_w: "{{ states('sensor.cumulus_consommation_reelle_w') }}"
-          seuil_detection_w: "{{ (states('input_number.cumulus_puissance_w') | float(3000) * 0.70) | round(0) }}"
+          seuil_detection_w: "{{ (states('input_number.cumulus_puissance_w') | float(3000) * 0.85) | round(0) }}"
           contacteur_state: >-
             {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
             {{ states(sw_id) if sw_id not in ['', 'unknown', 'unavailable'] else 'unknown' }}
+          dernier_evenement: >-
+            {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+              Chauffe en cours - Consommation {{ states('sensor.cumulus_consommation_reelle_w') }}W
+            {% else %}
+              Arrêt - {{ states('input_text.cumulus_entity_contacteur') }} = {{ states(states('input_text.cumulus_entity_contacteur')) }}
+            {% endif %}
 
       - name: "cumulus_besoin_chauffe_urgente"
         unique_id: cumulus_besoin_chauffe_urgente
