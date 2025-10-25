@@ -1,0 +1,279 @@
+###############################################################################
+# CUMULUS - CORRECTIFS AUTOMATISATION DATE
+# v2025-10-25-fix-date-auto
+#
+# PROBLÈME RÉSOLU :
+# Le sensor "besoin urgent" s'affichait en permanence car input_datetime
+# n'était jamais initialisé ou contenait une mauvaise année.
+#
+# SOLUTIONS AJOUTÉES :
+# 1. Auto-initialisation au démarrage de HA si jamais configuré
+# 2. Mise à jour automatique après chaque fin de chauffe complète
+# 3. Protection contre les dates invalides (année < 2025)
+# 4. Automation de maintenance hebdomadaire
+#
+# À INTÉGRER DANS VOTRE CONFIGURATION :
+# - Option A : Copier dans packages/cumulus_automations.yaml
+# - Option B : Copier dans automations.yaml avec prefix cumulus_
+# - Option C : Fusionner avec votre fichier cumulus.yaml existant
+###############################################################################
+
+automation:
+  # ========================================================================
+  # 1. INITIALISATION AUTOMATIQUE AU DÉMARRAGE
+  # ========================================================================
+  - id: cumulus_init_derniere_chauffe_au_demarrage
+    alias: "Cumulus — Init dernière chauffe au démarrage"
+    description: >-
+      Initialise automatiquement input_datetime.cumulus_derniere_chauffe_complete
+      au démarrage de Home Assistant s'il n'a jamais été configuré.
+      Évite l'affichage permanent de "besoin urgent" après installation.
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition:
+      # Seulement si le timestamp est invalide (none, 0, ou année < 2025)
+      - condition: template
+        value_template: >-
+          {% set last_ts = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+          {% if last_ts is none or last_ts == 0 %}
+            true
+          {% else %}
+            {% set last_year = (last_ts | timestamp_custom('%Y')) | int %}
+            {{ last_year < 2025 }}
+          {% endif %}
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: system_log.write
+        data:
+          message: "Cumulus : Initialisation automatique de derniere_chauffe_complete à {{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+          level: info
+
+  # ========================================================================
+  # 2. MISE À JOUR AUTOMATIQUE APRÈS FIN DE CHAUFFE COMPLÈTE
+  # ========================================================================
+  - id: cumulus_maj_derniere_chauffe_apres_fin
+    alias: "Cumulus — MAJ dernière chauffe après fin"
+    description: >-
+      Met à jour automatiquement la date de dernière chauffe complète
+      quand le système détecte qu'une chauffe s'est terminée avec
+      température max atteinte (thermostat coupé).
+    mode: restart
+    trigger:
+      # Trigger quand chauffe_reelle passe à OFF après avoir été ON
+      - platform: state
+        entity_id: binary_sensor.cumulus_chauffe_reelle
+        from: "on"
+        to: "off"
+        for:
+          seconds: 120
+    condition:
+      # Vérifier que la température a été atteinte (verrou jour activé)
+      - condition: state
+        entity_id: input_boolean.cumulus_verrou_jour
+        state: "on"
+    action:
+      # Enregistrer l'heure de fin de chauffe
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: system_log.write
+        data:
+          message: "Cumulus : Chauffe complète détectée, mise à jour de derniere_chauffe_complete"
+          level: info
+
+  # ========================================================================
+  # 3. PROTECTION CONTRE DATES INVALIDES
+  # ========================================================================
+  - id: cumulus_protection_date_invalide
+    alias: "Cumulus — Protection date invalide"
+    description: >-
+      Détecte et corrige automatiquement si la date de dernière chauffe
+      est dans le passé lointain (> 30 jours) ou dans le futur.
+      Évite les calculs aberrants du sensor heures_depuis_derniere_chauffe.
+    mode: single
+    trigger:
+      # Vérification toutes les heures
+      - platform: time_pattern
+        hours: "/1"
+    condition:
+      - condition: template
+        value_template: >-
+          {% set last_ts = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+          {% if last_ts is none or last_ts == 0 %}
+            true
+          {% else %}
+            {% set now_ts = now().timestamp() %}
+            {% set diff_hours = ((now_ts - last_ts) / 3600) %}
+            {# Date invalide si > 30 jours dans le passé OU dans le futur #}
+            {{ diff_hours > 720 or diff_hours < 0 }}
+          {% endif %}
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ (now() - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: persistent_notification.create
+        data:
+          title: "⚠️ Cumulus - Date corrigée"
+          message: >-
+            La date de dernière chauffe était invalide (> 30 jours).
+            Elle a été réinitialisée à hier ({{ (now() - timedelta(hours=24)).strftime('%d/%m/%Y %H:%M') }}).
+
+            Ancien timestamp : {{ state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') }}
+          notification_id: cumulus_date_invalide
+
+  # ========================================================================
+  # 4. MAINTENANCE HEBDOMADAIRE - VÉRIFICATION
+  # ========================================================================
+  - id: cumulus_maintenance_hebdomadaire_date
+    alias: "Cumulus — Maintenance hebdo date"
+    description: >-
+      Vérification hebdomadaire que la date de dernière chauffe est cohérente.
+      Notifie si aucune chauffe n'a eu lieu depuis 7 jours.
+    mode: single
+    trigger:
+      # Tous les dimanches à 12h
+      - platform: time
+        at: "12:00:00"
+    condition:
+      - condition: time
+        weekday:
+          - sun
+    action:
+      - service: system_log.write
+        data:
+          message: >-
+            Cumulus : Maintenance hebdomadaire -
+            Dernière chauffe : {{ states('input_datetime.cumulus_derniere_chauffe_complete') }},
+            Heures écoulées : {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h,
+            Besoin urgent : {{ states('binary_sensor.cumulus_besoin_chauffe_urgente') }}
+          level: info
+      # Notification si pas de chauffe depuis 7 jours
+      - condition: template
+        value_template: >-
+          {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) > 168 }}
+      - service: persistent_notification.create
+        data:
+          title: "ℹ️ Cumulus - Maintenance"
+          message: >-
+            Aucune chauffe complète depuis {{ (states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) / 24) | round(1) }} jours.
+
+            Dernière chauffe : {{ states('input_datetime.cumulus_derniere_chauffe_complete') }}
+
+            Vérifiez :
+            - Le cumulus fonctionne-t-il normalement ?
+            - Y a-t-il eu suffisamment de soleil ?
+            - Les heures creuses sont-elles activées si nécessaire ?
+          notification_id: cumulus_maintenance
+
+  # ========================================================================
+  # 5. CORRECTION AUTOMATIQUE SI "BESOIN URGENT" ANORMAL
+  # ========================================================================
+  - id: cumulus_correction_besoin_urgent_anormal
+    alias: "Cumulus — Correction besoin urgent anormal"
+    description: >-
+      Si "besoin urgent" reste actif pendant plus de 2 heures ET que
+      heures_depuis_derniere_chauffe > 1000h (= date invalide),
+      alors réinitialiser automatiquement la date.
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_besoin_chauffe_urgente
+        to: "on"
+        for:
+          hours: 2
+    condition:
+      # Seulement si les heures calculées sont aberrantes (> 1000h = 41 jours)
+      - condition: template
+        value_template: >-
+          {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) > 1000 }}
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ (now() - timedelta(hours=12)).strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: persistent_notification.create
+        data:
+          title: "🔧 Cumulus - Correction automatique"
+          message: >-
+            "Besoin urgent" était actif de manière anormale
+            ({{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h calculées).
+
+            La date de dernière chauffe a été automatiquement corrigée à :
+            {{ (now() - timedelta(hours=12)).strftime('%d/%m/%Y %H:%M') }}
+
+            Cela peut arriver après :
+            - Une restauration de sauvegarde
+            - Un changement d'année
+            - Une erreur d'horloge système
+          notification_id: cumulus_correction_auto
+      - service: system_log.write
+        data:
+          message: "Cumulus : Correction automatique de besoin urgent anormal ({{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h)"
+          level: warning
+
+###############################################################################
+# SCRIPT HELPER (OPTIONNEL)
+###############################################################################
+# Ce script peut être appelé manuellement pour forcer la mise à jour
+
+script:
+  cumulus_reset_derniere_chauffe:
+    alias: "Cumulus — Reset dernière chauffe"
+    description: "Réinitialise manuellement la date de dernière chauffe à maintenant"
+    mode: single
+    sequence:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: persistent_notification.create
+        data:
+          title: "✅ Cumulus - Date réinitialisée"
+          message: >-
+            La date de dernière chauffe a été réinitialisée à :
+            {{ now().strftime('%d/%m/%Y %H:%M:%S') }}
+
+            Le message "besoin urgent" devrait disparaître dans quelques secondes.
+          notification_id: cumulus_reset_ok
+
+###############################################################################
+# INSTRUCTIONS D'INSTALLATION
+###############################################################################
+#
+# ÉTAPE 1 : Choisir la méthode d'intégration
+#
+# Méthode A : Package séparé (RECOMMANDÉ)
+# - Copiez ce fichier dans : config/packages/cumulus_automations.yaml
+# - Redémarrez Home Assistant
+#
+# Méthode B : Intégration dans automations.yaml
+# - Copiez la section automation: dans votre automations.yaml
+# - Rechargez les automations (pas besoin de redémarrer)
+#
+# Méthode C : Fusion avec cumulus.yaml existant
+# - Ajoutez la section automation: à la fin de votre cumulus.yaml
+# - Rechargez le package
+#
+# ÉTAPE 2 : Tester l'initialisation
+# - Allez dans Developer Tools → Services
+# - Exécutez : script.cumulus_reset_derniere_chauffe
+# - Vérifiez que "besoin urgent" disparaît
+#
+# ÉTAPE 3 : Vérifier les automations
+# - Allez dans Paramètres → Automations et Scènes
+# - Cherchez "Cumulus"
+# - Vérifiez que les 5 automations sont présentes et activées
+#
+###############################################################################

@@ -1,0 +1,99 @@
+# ========================================================================
+# SCRIPT DE DIAGNOSTIC - Besoin urgent
+# ========================================================================
+# À exécuter dans Developer Tools → Template
+# Copiez-collez ce code dans l'éditeur de template pour diagnostiquer
+# ========================================================================
+
+## ÉTAPE 1 : Vérifier l'existence des sensors
+{{ "=== SENSORS EXISTANTS ===" }}
+sensor.cumulus_heures_depuis_derniere_chauffe existe : {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}
+binary_sensor.cumulus_besoin_chauffe_urgente existe : {{ states('binary_sensor.cumulus_besoin_chauffe_urgente') }}
+input_datetime.cumulus_derniere_chauffe_complete existe : {{ states('input_datetime.cumulus_derniere_chauffe_complete') }}
+
+## ÉTAPE 2 : Vérifier les valeurs actuelles
+{{ "=== VALEURS ACTUELLES ===" }}
+{% if states('sensor.cumulus_heures_depuis_derniere_chauffe') not in ['unavailable', 'unknown'] %}
+Heures depuis dernière chauffe : {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }} h
+{% else %}
+⚠️ sensor.cumulus_heures_depuis_derniere_chauffe = {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}
+{% endif %}
+
+{% if states('input_number.cumulus_espacement_max_h') not in ['unavailable', 'unknown'] %}
+Espacement max configuré : {{ states('input_number.cumulus_espacement_max_h') }} h
+{% else %}
+⚠️ input_number.cumulus_espacement_max_h = {{ states('input_number.cumulus_espacement_max_h') }}
+{% endif %}
+
+## ÉTAPE 3 : Vérifier le timestamp
+{{ "=== TIMESTAMP DERNIÈRE CHAUFFE ===" }}
+{% if states('input_datetime.cumulus_derniere_chauffe_complete') not in ['unavailable', 'unknown'] %}
+Date/heure : {{ states('input_datetime.cumulus_derniere_chauffe_complete') }}
+Timestamp : {{ state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') }}
+{% else %}
+⚠️ input_datetime.cumulus_derniere_chauffe_complete = {{ states('input_datetime.cumulus_derniere_chauffe_complete') }}
+{% endif %}
+
+## ÉTAPE 4 : Calculer manuellement
+{{ "=== CALCUL MANUEL ===" }}
+{% set last_ts = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+{% if last_ts is none or last_ts == 0 %}
+⚠️ PROBLÈME : timestamp = {{ last_ts }} (null ou 0)
+→ Le sensor retournera 999 heures
+{% else %}
+Timestamp valide : {{ last_ts }}
+Now timestamp : {{ now().timestamp() }}
+Différence : {{ ((now().timestamp() - last_ts) / 3600) | round(1) }} heures
+{% endif %}
+
+## ÉTAPE 5 : Vérifier le calcul besoin urgent
+{{ "=== BESOIN URGENT CALCULÉ ===" }}
+{% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+{% set max_h = states('input_number.cumulus_espacement_max_h') | float(50) %}
+Heures depuis chauffe : {{ heures }}
+Espacement max : {{ max_h }}
+Comparaison : {{ heures }} >= {{ max_h }} = {{ heures >= max_h }}
+{% if heures >= max_h %}
+→ BESOIN URGENT = ON ❌
+{% else %}
+→ BESOIN URGENT = OFF ✅
+{% endif %}
+
+## ÉTAPE 6 : État final
+{{ "=== ÉTAT FINAL ===" }}
+binary_sensor.cumulus_besoin_chauffe_urgente = {{ states('binary_sensor.cumulus_besoin_chauffe_urgente') }}
+
+{% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+🔴 BESOIN URGENT ACTIF
+{% elif is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'off') %}
+🟢 PAS DE BESOIN URGENT
+{% else %}
+⚠️ SENSOR UNAVAILABLE OU INCONNU
+{% endif %}
+
+## ÉTAPE 7 : Vérifier les autres sources possibles
+{{ "=== AUTRES SENSORS ===" }}
+binary_sensor.cumulus_etat_coherent : {{ states('binary_sensor.cumulus_etat_coherent') }}
+{% if states('binary_sensor.cumulus_etat_coherent') not in ['unavailable', 'unknown'] %}
+  Détails : {{ state_attr('binary_sensor.cumulus_etat_coherent', 'details') }}
+{% endif %}
+
+input_boolean.cumulus_verrou_jour : {{ states('input_boolean.cumulus_verrou_jour') }}
+input_boolean.temp_atteinte_aujourdhui : {{ states('input_boolean.temp_atteinte_aujourdhui') }}
+
+## ÉTAPE 8 : Chercher tous les sensors avec "urgent" dans le nom
+{{ "=== RECHERCHE SENSORS 'URGENT' ===" }}
+{% for state in states.sensor %}
+  {% if 'urgent' in state.entity_id.lower() or 'urgent' in state.name.lower() %}
+{{ state.entity_id }} = {{ state.state }}
+  {% endif %}
+{% endfor %}
+{% for state in states.binary_sensor %}
+  {% if 'urgent' in state.entity_id.lower() or 'urgent' in state.name.lower() %}
+{{ state.entity_id }} = {{ state.state }}
+  {% endif %}
+{% endfor %}
+
+## ========================================================================
+## FIN DU DIAGNOSTIC
+## ========================================================================

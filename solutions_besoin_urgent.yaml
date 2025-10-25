@@ -1,0 +1,173 @@
+# ========================================================================
+# SOLUTIONS POUR RÉSOUDRE "BESOIN URGENT"
+# ========================================================================
+
+## SOLUTION 1 : Initialiser avec une date/heure complète
+# Dans Developer Tools → Services
+service: input_datetime.set_datetime
+target:
+  entity_id: input_datetime.cumulus_derniere_chauffe_complete
+data:
+  date: "2024-10-25"
+  time: "03:30:00"
+
+---
+
+## SOLUTION 2 : Forcer la recharge des templates
+# Dans Developer Tools → YAML
+# Cliquez sur ces boutons dans l'ordre :
+1. Reload Template Entities
+2. Attendez 5 secondes
+3. Reload Automations
+4. Vérifiez l'état à nouveau
+
+---
+
+## SOLUTION 3 : Vérifier et corriger l'espacement max
+# Si le sensor calcule correctement mais besoin urgent reste actif
+service: input_number.set_value
+target:
+  entity_id: input_number.cumulus_espacement_max_h
+data:
+  value: 168  # 7 jours = 168 heures (augmente le seuil)
+
+---
+
+## SOLUTION 4 : Désactiver temporairement le sensor besoin urgent
+# Si vous voulez désactiver complètement cette fonctionnalité
+# Ajoutez cette customization dans configuration.yaml :
+
+homeassistant:
+  customize:
+    binary_sensor.cumulus_besoin_chauffe_urgente:
+      hidden: true
+
+---
+
+## SOLUTION 5 : Forcer l'état à OFF via automation
+# Créez cette automation temporaire pour forcer l'état
+automation:
+  - id: cumulus_force_besoin_urgent_off
+    alias: "Cumulus — TEMP forcer besoin urgent OFF"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_besoin_chauffe_urgente
+        to: "on"
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.cumulus_derniere_chauffe_complete
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - delay:
+          seconds: 2
+      - service: homeassistant.update_entity
+        target:
+          entity_id:
+            - sensor.cumulus_heures_depuis_derniere_chauffe
+            - binary_sensor.cumulus_besoin_chauffe_urgente
+
+---
+
+## SOLUTION 6 : Vérifier les attributs du sensor
+# Dans Developer Tools → States, cherchez :
+# binary_sensor.cumulus_besoin_chauffe_urgente
+# Et regardez ALL ATTRIBUTES
+
+---
+
+## SOLUTION 7 : Chercher d'autres affichages "besoin urgent"
+# Le message pourrait venir d'une carte Lovelace, pas du sensor
+# Vérifiez dans votre dashboard si une carte conditional affiche :
+# - Un badge
+# - Une notification
+# - Un chip
+# - Un message texte
+
+# Exemple de carte à chercher dans votre dashboard YAML :
+type: conditional
+conditions:
+  - entity: binary_sensor.cumulus_besoin_chauffe_urgente
+    state: "on"
+card:
+  type: markdown
+  content: "⚠️ Besoin urgent"
+
+---
+
+## SOLUTION 8 : Vérifier les notifications persistantes
+# Dans Developer Tools → Services
+service: persistent_notification.dismiss
+data:
+  notification_id: cumulus_incoherence
+
+# Ou supprimer TOUTES les notifications
+service: persistent_notification.dismiss_all
+
+---
+
+## SOLUTION 9 : DEBUG - Logger toutes les valeurs
+# Ajoutez ceci dans configuration.yaml pour voir les logs
+
+logger:
+  default: info
+  logs:
+    homeassistant.components.template.binary_sensor: debug
+    homeassistant.components.template.sensor: debug
+
+# Puis redémarrez HA et regardez les logs
+
+---
+
+## SOLUTION 10 : RESET COMPLET du sensor
+# 1. Supprimer l'entité
+service: input_datetime.reload
+
+# 2. Attendre 5 secondes
+
+# 3. Recharger les templates
+# Developer Tools → YAML → Reload Template Entities
+
+# 4. Réinitialiser
+service: input_datetime.set_datetime
+target:
+  entity_id: input_datetime.cumulus_derniere_chauffe_complete
+data:
+  datetime: "2024-10-24 22:00:00"
+
+# 5. Forcer la mise à jour
+service: homeassistant.update_entity
+target:
+  entity_id:
+    - sensor.cumulus_heures_depuis_derniere_chauffe
+    - binary_sensor.cumulus_besoin_chauffe_urgente
+
+---
+
+## VÉRIFICATION FINALE
+# Après chaque solution, vérifiez dans Developer Tools → States :
+
+sensor.cumulus_heures_depuis_derniere_chauffe
+  # Devrait afficher < 50 heures
+
+binary_sensor.cumulus_besoin_chauffe_urgente
+  state: off  # Devrait être OFF
+
+# Si le sensor reste ON malgré heures < 50, il y a un problème de template
+# Dans ce cas, le sensor doit être corrigé dans le fichier cumulus.yaml
+
+---
+
+## SI RIEN NE FONCTIONNE
+# Le message "besoin urgent" pourrait venir :
+# 1. D'une carte Lovelace
+# 2. D'une automation qui envoie une notification
+# 3. D'un autre sensor/template
+# 4. D'une intégration tierce
+
+# Cherchez dans votre configuration :
+# - lovelace/*.yaml
+# - automations.yaml
+# - scripts.yaml
+# - ui-lovelace.yaml
