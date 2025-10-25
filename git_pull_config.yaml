@@ -1,0 +1,24 @@
+# Configuration pour l'add-on "Git Pull"
+# À copier-coller dans : Paramètres → Modules complémentaires → Git Pull → Configuration
+
+repository: https://github.com/LaurentFrx/Home_Assistant.git
+auto_restart: false
+repeat:
+  active: true
+  interval: 300
+deployment_key: []
+deployment_key_protocol: rsa
+
+# EXPLICATIONS :
+#
+# repository : URL de votre repository GitHub
+# auto_restart : false = Ne redémarre pas HA automatiquement après chaque pull
+#                (vous pourrez redémarrer manuellement quand vous voulez)
+# repeat.active : true = Active la synchronisation automatique
+# repeat.interval : 300 = Synchronise toutes les 5 minutes (300 secondes)
+#                   Vous pouvez ajuster :
+#                   - 60 = toutes les 1 minute
+#                   - 600 = toutes les 10 minutes
+#                   - 3600 = toutes les heures
+# deployment_key : [] = Pas de clé SSH (repository public)
+#                  Si repository privé, voir doc CONFIGURATION_GIT_AUTO.md
