@@ -1,0 +1,32 @@
+=== VERIFICATION DES ENTITES CLES ===
+
+[OK] switch.shellypro1_ece334ee1b64
+     Platform: shelly
+     Nom: None
+     Disabled: Non
+
+[OK] sensor.smart_meter_grid_import
+     Platform: anker_solix
+     Nom: Achat sur le réseau
+     Disabled: Non
+
+[OK] sensor.cumulus_pv_power_w
+     Platform: template
+     Nom: cumulus_pv_power_w
+     Disabled: Non
+
+[OK] input_number.cumulus_talon_maison_w
+     Platform: input_number
+     Nom: Talon maison (W)
+     Disabled: Non
+
+[OK] binary_sensor.cumulus_besoin_chauffe_urgente
+     Platform: template
+     Nom: cumulus_besoin_chauffe_urgente
+     Disabled: Non
+
+[OK] binary_sensor.cumulus_chauffe_reelle
+     Platform: template
+     Nom: cumulus_chauffe_reelle
+     Disabled: Non
+

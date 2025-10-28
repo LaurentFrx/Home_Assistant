@@ -31,14 +31,6 @@ template: !include_dir_merge_list templates
 # === Dashboards Lovelace ===
 lovelace:
   dashboards:
-    # Dashboard de travail Claude
-    lovelace-work:
-      mode: yaml
-      title: Workspace Claude
-      icon: mdi:robot
-      show_in_sidebar: true
-      filename: lovelace/work.yaml
-    
     # Dashboard Cumulus unifié - Toutes les variantes en un seul dashboard
     lovelace-cumulus:
       mode: yaml

@@ -1,0 +1,1226 @@
+{
+  "type": "custom:horizontal-layout",
+  "path": "cumu",
+  "title": "Cumulus",
+  "cards": [
+    {
+      "type": "vertical-stack",
+      "cards": [
+        {
+          "type": "horizontal-stack",
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "💧 Cumulus Intelligent",
+              "subtitle": "Ballon {{ states('input_number.cumulus_capacite_litres') | int }}L • {{ states('input_number.cumulus_nb_personnes') | int }} personne(s)",
+              "card_mod": {
+                "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.10), rgba(6,182,212,.05)) !important;\n  box-shadow: 0 1px 6px rgba(0,0,0,.10) !important;\n  padding: 8px !important;\n}\n"
+              }
+            },
+            {
+              "type": "custom:mushroom-chips-card",
+              "alignment": "end",
+              "chips": [
+                {
+                  "type": "template",
+                  "entity": "switch.shellypro1_ece334ee1b64",
+                  "icon": "mdi:power",
+                  "icon_color": "{% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}\n  red\n{% else %}\n  grey\n{% endif %}",
+                  "content": "{% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}\n  ON\n{% else %}\n  OFF\n{% endif %}",
+                  "tap_action": {
+                    "action": "toggle"
+                  }
+                },
+                {
+                  "type": "template",
+                  "entity": "switch.shellypro1_ece334ee1b64",
+                  "icon": "mdi:water-boiler",
+                  "icon_color": "{% set switch_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %} {% if not switch_on %}\n  grey\n{% else %}\n  {% set switch_last_changed = as_timestamp(states.switch.shellypro1_ece334ee1b64.last_changed) %}\n  {% set now = as_timestamp(now()) %}\n  {% set seconds_since_on = now - switch_last_changed %}\n  {% if seconds_since_on < 10 %}\n    red\n  {% else %}\n    {% set import_w = states('sensor.smart_meter_grid_import') | float(0) %}\n    {% set pv_w = states('sensor.cumulus_pv_power_w') | float(0) %}\n    {% set talon = states('input_number.cumulus_talon_maison_w') | float(300) %}\n    {% set conso_estimee = (import_w + pv_w) - talon %}\n    {% if conso_estimee >= 2000 %}\n      red\n    {% else %}\n      green\n    {% endif %}\n  {% endif %}\n{% endif %}",
+                  "content": "{% set switch_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %} {% if not switch_on %}\n  OFF\n{% else %}\n  {% set switch_last_changed = as_timestamp(states.switch.shellypro1_ece334ee1b64.last_changed) %}\n  {% set now = as_timestamp(now()) %}\n  {% set seconds_since_on = now - switch_last_changed %}\n  {% if seconds_since_on < 10 %}\n    CHAUFFE\n  {% else %}\n    {% set import_w = states('sensor.smart_meter_grid_import') | float(0) %}\n    {% set pv_w = states('sensor.cumulus_pv_power_w') | float(0) %}\n    {% set talon = states('input_number.cumulus_talon_maison_w') | float(300) %}\n    {% set conso_estimee = (import_w + pv_w) - talon %}\n    {% if conso_estimee >= 2000 %}\n      CHAUFFE\n    {% else %}\n      STANDBY\n    {% endif %}\n  {% endif %}\n{% endif %}",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "homeassistant.update_entity",
+                    "service_data": {
+                      "entity_id": "sensor.smart_meter_grid_import"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  }
+                }
+              ],
+              "card_mod": {
+                "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.08), rgba(6,182,212,.04)) !important;\n  box-shadow: 0 1px 5px rgba(0,0,0,.10) !important;\n}\n"
+              }
+            }
+          ]
+        },
+        {
+          "type": "custom:button-card",
+          "entity": "binary_sensor.cumulus_besoin_chauffe_urgente",
+          "name": "Besoin urgent",
+          "show_state": false,
+          "show_icon": true,
+          "icon": "mdi:alert-circle",
+          "custom_fields": {
+            "info": "[[[\n  return entity.state === 'on'\n    ? '<span>⚠️ Urgent</span>'\n    : '<span>✅ Normal</span>';\n]]]\n"
+          },
+          "styles": {
+            "card": [
+              {
+                "min-height": "80px"
+              },
+              {
+                "border-radius": "12px"
+              },
+              {
+                "padding": "8px"
+              },
+              {
+                "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(239,68,68,.12), rgba(6,182,212,.06))'\n    : 'linear-gradient(135deg, rgba(34,197,94,.12), rgba(6,182,212,.06))';\n]]]\n"
+              },
+              {
+                "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+              }
+            ],
+            "grid": [
+              {
+                "grid-template-areas": "\"i\" \"n\" \"info\""
+              },
+              {
+                "grid-template-columns": "1fr"
+              },
+              {
+                "grid-template-rows": "auto auto auto"
+              },
+              {
+                "row-gap": "4px"
+              }
+            ],
+            "name": [
+              {
+                "font-weight": 600
+              },
+              {
+                "font-size": "0.90rem"
+              },
+              {
+                "color": "var(--primary-text-color)"
+              }
+            ],
+            "icon": [
+              {
+                "width": "24px"
+              },
+              {
+                "color": "[[[\n  return entity.state === 'on' ? '#ef4444' : '#22c55e';\n]]]\n"
+              }
+            ],
+            "custom_fields": {
+              "info": [
+                {
+                  "font-size": "0.85rem"
+                },
+                {
+                  "color": "var(--secondary-text-color)"
+                }
+              ]
+            }
+          },
+          "tap_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "custom:layout-card",
+          "layout_type": "grid",
+          "layout": {
+            "grid-template-columns": "1fr 1fr",
+            "column-gap": "8px"
+          },
+          "cards": [
+            {
+              "type": "custom:button-card",
+              "entity": "sensor.cumulus_pv_power_w",
+              "name": "Production PV",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:solar-power-variant",
+              "custom_fields": {
+                "info": "[[[\n  const pv = parseFloat(entity.state) || 0;\n  return `<span>${Math.round(pv)} W</span>`;\n]]]\n"
+              },
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "linear-gradient(135deg, rgba(251,191,36,.10), rgba(6,182,212,.05))"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\" \"info\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto auto"
+                  },
+                  {
+                    "row-gap": "4px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "#fbbf24"
+                  }
+                ],
+                "custom_fields": {
+                  "info": [
+                    {
+                      "font-size": "0.85rem"
+                    },
+                    {
+                      "color": "var(--secondary-text-color)"
+                    }
+                  ]
+                }
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "sensor.cumulus_temps_restant_fenetre_pv_h",
+              "name": "Temps restant PV",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:timer-sand",
+              "custom_fields": {
+                "info": "[[[\n  const temps = parseFloat(entity.state) || 0;\n  return `<span>${temps.toFixed(1)} h</span>`;\n]]]\n"
+              },
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  const temps = parseFloat(entity.state) || 0;\n  if (temps > 3) return 'linear-gradient(135deg, rgba(34,197,94,.12), rgba(6,182,212,.06))';\n  if (temps > 1) return 'linear-gradient(135deg, rgba(251,191,36,.12), rgba(6,182,212,.06))';\n  if (temps > 0) return 'linear-gradient(135deg, rgba(239,68,68,.12), rgba(6,182,212,.06))';\n  return 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\" \"info\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto auto"
+                  },
+                  {
+                    "row-gap": "4px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  const temps = parseFloat(entity.state) || 0;\n  if (temps > 3) return '#22c55e';\n  if (temps > 1) return '#fbbf24';\n  if (temps > 0) return '#ef4444';\n  return '#94a3b8';\n]]]\n"
+                  }
+                ],
+                "custom_fields": {
+                  "info": [
+                    {
+                      "font-size": "0.85rem"
+                    },
+                    {
+                      "color": "var(--secondary-text-color)"
+                    }
+                  ]
+                }
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            }
+          ]
+        },
+        {
+          "type": "custom:mushroom-title-card",
+          "title": "🎛️ Contrôles",
+          "subtitle": null,
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.08), rgba(6,182,212,.04)) !important;\n  box-shadow: 0 1px 5px rgba(0,0,0,.10) !important;\n  padding: 6px !important;\n}\n"
+          }
+        },
+        {
+          "type": "custom:layout-card",
+          "layout_type": "grid",
+          "layout": {
+            "grid-template-columns": "1fr 1fr 1fr",
+            "column-gap": "8px",
+            "row-gap": "8px"
+          },
+          "cards": [
+            {
+              "type": "custom:button-card",
+              "entity": "input_boolean.cumulus_override",
+              "name": "Forcer",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:hand-pointing-up",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#ef4444' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "toggle",
+                "confirmation": {
+                  "text": "Forcer la chauffe immédiate ?"
+                }
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "input_boolean.cumulus_interdit",
+              "name": "Interdit",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:cancel",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#ef4444' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "toggle"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "input_boolean.cumulus_vacances",
+              "name": "Vacances",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:beach",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(251,191,36,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#fbbf24' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "toggle"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "input_boolean.cumulus_autoriser_hc",
+              "name": "HC autorisées",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:clock-time-eight",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(59,130,246,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#3b82f6' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "toggle"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "input_boolean.cumulus_verrou_jour",
+              "name": "Verrou jour",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:lock-check",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(251,191,36,.12), rgba(6,182,212,.06))'\n    : 'linear-gradient(135deg, rgba(34,197,94,.12), rgba(6,182,212,.06))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#fbbf24' : '#22c55e';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "input_boolean.temp_atteinte_aujourdhui",
+              "name": "Temp. OK",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:thermometer-check",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#22c55e' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            }
+          ]
+        },
+        {
+          "type": "custom:mushroom-title-card",
+          "title": "🚦 Diagnostic",
+          "subtitle": null,
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.08), rgba(6,182,212,.04)) !important;\n  box-shadow: 0 1px 5px rgba(0,0,0,.10) !important;\n  padding: 6px !important;\n}\n"
+          }
+        },
+        {
+          "type": "markdown",
+          "content": "{% set interdit = is_state('input_boolean.cumulus_interdit', 'on') %}\n{% set vacances = is_state('input_boolean.cumulus_vacances', 'on') %}\n{% set verrou = is_state('input_boolean.cumulus_verrou_jour', 'on') %}\n{% set temp_ok = is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}\n{% set deadband = is_state('binary_sensor.cumulus_deadband_actif', 'on') %}\n{% set appareil = is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}\n{% set override = is_state('input_boolean.cumulus_override', 'on') %}\n{% set cumulus_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}\n{% set fenetre_pv = is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}\n{% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') %}\n{% set pv = states('sensor.cumulus_pv_power_w') | float(0) %}\n{% set seuil_pv = states('sensor.cumulus_seuil_pv_dynamique_w') | float(100) %}\n{% set besoin_urgent = is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}\n{% set import_w = states('sensor.smart_meter_grid_import') | float(0) %}\n{% set pv_w = states('sensor.cumulus_pv_power_w') | float(0) %}\n{% set talon = states('input_number.cumulus_talon_maison_w') | float(300) %}\n{% set conso = (import_w + pv_w) - talon %}\n\n### État actuel\n{% if cumulus_on and conso >= 2000 %}\n## 🔥 **EN CHAUFFE**\nRésistances actives ({{ conso | int }} W)\n{% elif cumulus_on %}\n## 🟢 **ALIMENTÉ - STANDBY**\nTempérature maintenue\n{% elif override %}\n## 🚀 **OVERRIDE ACTIF**\nDémarrage forcé en attente\n{% else %}\n## 💤 **AU REPOS**\nEn attente des conditions\n{% endif %}\n\n---\n\n### Blocages actifs\n{% if interdit %}❌ **Interdit** : Mode maintenance actif{% endif %}\n{% if vacances %}🏖️ **Vacances** : Mode économie activé{% endif %}\n{% if verrou %}📅 **Verrou journalier** : Déjà chauffé aujourd'hui{% endif %}\n{% if temp_ok %}🌡️ **Température OK** : Objectif atteint{% endif %}\n{% if deadband %}⏱️ **Deadband** : Temporisation sécurité{% endif %}\n{% if appareil %}⚡ **Appareil prioritaire** : Lave-linge/vaisselle en cours{% endif %}\n\n{% if not interdit and not vacances and not verrou and not temp_ok and not deadband and not appareil %}\n✅ **Aucun blocage** — Prêt à démarrer\n{% endif %}\n\n---\n\n### Conditions de démarrage\n\n**Mode Solaire (PV)**\n{% if fenetre_pv %}✅ Dans fenêtre PV{% else %}⏰ Hors fenêtre PV{% endif %}\n{% if pv >= seuil_pv %}✅ PV suffisant ({{ pv | int }}W){% else %}⚠️ PV insuffisant ({{ pv | int }}W < {{ seuil_pv | int }}W){% endif %}\n\n**Mode Heures Creuses**\n{% if en_hc %}✅ En heures creuses{% else %}⏰ Hors heures creuses{% endif %}\n{% if besoin_urgent %}🔴 Besoin urgent détecté{% else %}✅ Pas d'urgence{% endif %}\n\n---\n\n### Prochaine action prévue\n{% if temp_ok %}\n☀️ **Demain** — Chauffe solaire si météo favorable\n{% elif fenetre_pv and not verrou %}\n☀️ **Aujourd'hui** — Attente production solaire suffisante\n{% elif is_state('binary_sensor.cumulus_meteo_favorable_demain', 'on') %}\n☀️ **Demain** — Météo favorable prévue ({{ states('sensor.cumulus_solcast_forecast_tomorrow') }} kWh)\n{% else %}\n🌙 **Cette nuit** — Heures creuses ({{ states('input_datetime.cumulus_heures_creuses_debut')[0:5] }}-{{ states('input_datetime.cumulus_heures_creuses_fin')[0:5] }})\n{% endif %}\n",
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.08), rgba(6,182,212,.04)) !important;\n  box-shadow: 0 1px 6px rgba(0,0,0,.10) !important;\n  padding: 12px !important;\n}\n"
+          }
+        },
+        {
+          "type": "custom:mushroom-title-card",
+          "title": "☀️ Prévisions solaires",
+          "subtitle": null,
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(251,191,36,.08), rgba(6,182,212,.04)) !important;\n  box-shadow: 0 1px 5px rgba(0,0,0,.10) !important;\n  padding: 6px !important;\n}\n"
+          }
+        },
+        {
+          "type": "custom:layout-card",
+          "layout_type": "grid",
+          "layout": {
+            "grid-template-columns": "1fr 1fr",
+            "column-gap": "8px"
+          },
+          "cards": [
+            {
+              "type": "custom:button-card",
+              "entity": "sensor.cumulus_solcast_forecast_today",
+              "name": "Aujourd'hui",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:weather-sunny",
+              "custom_fields": {
+                "info": "[[[\n  return `<span>${entity.state} kWh</span>`;\n]]]\n"
+              },
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return states['binary_sensor.cumulus_meteo_favorable_aujourdhui'].state === 'on'\n    ? 'linear-gradient(135deg, rgba(251,191,36,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\" \"info\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto auto"
+                  },
+                  {
+                    "row-gap": "4px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return states['binary_sensor.cumulus_meteo_favorable_aujourdhui'].state === 'on'\n    ? '#fbbf24' : '#94a3b8';\n]]]\n"
+                  }
+                ],
+                "custom_fields": {
+                  "info": [
+                    {
+                      "font-size": "0.85rem"
+                    },
+                    {
+                      "color": "var(--secondary-text-color)"
+                    }
+                  ]
+                }
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "sensor.cumulus_solcast_forecast_tomorrow",
+              "name": "Demain",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:weather-sunny-alert",
+              "custom_fields": {
+                "info": "[[[\n  return `<span>${entity.state} kWh</span>`;\n]]]\n"
+              },
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return states['binary_sensor.cumulus_meteo_favorable_demain'].state === 'on'\n    ? 'linear-gradient(135deg, rgba(251,191,36,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\" \"info\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto auto"
+                  },
+                  {
+                    "row-gap": "4px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return states['binary_sensor.cumulus_meteo_favorable_demain'].state === 'on'\n    ? '#fbbf24' : '#94a3b8';\n]]]\n"
+                  }
+                ],
+                "custom_fields": {
+                  "info": [
+                    {
+                      "font-size": "0.85rem"
+                    },
+                    {
+                      "color": "var(--secondary-text-color)"
+                    }
+                  ]
+                }
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            }
+          ]
+        },
+        {
+          "type": "custom:mushroom-title-card",
+          "title": "⚡ Appareils prioritaires",
+          "subtitle": "Détection automatique",
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(6,182,212,.04)) !important;\n  box-shadow: 0 1px 5px rgba(0,0,0,.10) !important;\n  padding: 6px !important;\n}\n"
+          }
+        },
+        {
+          "type": "custom:layout-card",
+          "layout_type": "grid",
+          "layout": {
+            "grid-template-columns": "1fr 1fr 1fr",
+            "column-gap": "8px"
+          },
+          "cards": [
+            {
+              "type": "custom:button-card",
+              "entity": "binary_sensor.cumulus_lave_linge_actif",
+              "name": "Lave-linge",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:washing-machine",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(59,130,246,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#3b82f6' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "binary_sensor.cumulus_lave_vaisselle_actif",
+              "name": "Lave-vaisselle",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:dishwasher",
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(59,130,246,.14), rgba(6,182,212,.08))'\n    : 'linear-gradient(135deg, rgba(148,163,184,.10), rgba(6,182,212,.05))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto"
+                  },
+                  {
+                    "row-gap": "6px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#3b82f6' : '#94a3b8';\n]]]\n"
+                  }
+                ]
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            },
+            {
+              "type": "custom:button-card",
+              "entity": "binary_sensor.cumulus_appareil_prioritaire_actif",
+              "name": "Statut",
+              "show_state": false,
+              "show_icon": true,
+              "icon": "mdi:home-lightning-bolt-outline",
+              "custom_fields": {
+                "info": "[[[\n  return entity.state === 'on'\n    ? '<span>Cumulus bloqué</span>'\n    : '<span>Aucun actif</span>';\n]]]\n"
+              },
+              "styles": {
+                "card": [
+                  {
+                    "min-height": "70px"
+                  },
+                  {
+                    "border-radius": "12px"
+                  },
+                  {
+                    "padding": "8px"
+                  },
+                  {
+                    "background": "[[[\n  return entity.state === 'on'\n    ? 'linear-gradient(135deg, rgba(239,68,68,.12), rgba(6,182,212,.06))'\n    : 'linear-gradient(135deg, rgba(34,197,94,.12), rgba(6,182,212,.06))';\n]]]\n"
+                  },
+                  {
+                    "box-shadow": "0 1px 6px rgba(0,0,0,.10)"
+                  }
+                ],
+                "grid": [
+                  {
+                    "grid-template-areas": "\"i\" \"n\" \"info\""
+                  },
+                  {
+                    "grid-template-columns": "1fr"
+                  },
+                  {
+                    "grid-template-rows": "auto auto auto"
+                  },
+                  {
+                    "row-gap": "4px"
+                  }
+                ],
+                "name": [
+                  {
+                    "font-weight": 600
+                  },
+                  {
+                    "font-size": "0.90rem"
+                  },
+                  {
+                    "color": "var(--primary-text-color)"
+                  }
+                ],
+                "icon": [
+                  {
+                    "width": "24px"
+                  },
+                  {
+                    "color": "[[[\n  return entity.state === 'on' ? '#ef4444' : '#22c55e';\n]]]\n"
+                  }
+                ],
+                "custom_fields": {
+                  "info": [
+                    {
+                      "font-size": "0.85rem"
+                    },
+                    {
+                      "color": "var(--secondary-text-color)"
+                    }
+                  ]
+                }
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "📊 Données techniques",
+          "show_header_toggle": false,
+          "state_color": true,
+          "entities": [
+            {
+              "entity": "sensor.cumulus_temperature_physique_c",
+              "name": "Température estimée",
+              "icon": "mdi:thermometer"
+            },
+            {
+              "entity": "sensor.cumulus_eau_chaude_disponible_40c_litres",
+              "name": "Litres disponibles (40°C)",
+              "icon": "mdi:water"
+            },
+            {
+              "entity": "sensor.cumulus_besoin_journalier_litres",
+              "name": "Besoin journalier",
+              "icon": "mdi:account-water"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "entity": "sensor.cumulus_pv_power_w",
+              "name": "Production PV",
+              "icon": "mdi:solar-power"
+            },
+            {
+              "entity": "sensor.cumulus_capacity_factor",
+              "name": "Facteur de charge",
+              "icon": "mdi:percent-outline"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "entity": "sensor.cumulus_seuil_pv_dynamique_w",
+              "name": "Seuil PV dynamique",
+              "icon": "mdi:solar-power-variant-outline"
+            },
+            {
+              "entity": "sensor.cumulus_import_reseau_w",
+              "name": "Import réseau",
+              "icon": "mdi:transmission-tower-import"
+            },
+            {
+              "entity": "sensor.cumulus_soc_solarbank_pct",
+              "name": "Charge batterie",
+              "icon": "mdi:battery"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "entity": "sensor.cumulus_heures_depuis_derniere_chauffe",
+              "name": "Heures depuis dernière chauffe",
+              "icon": "mdi:clock-outline"
+            },
+            {
+              "entity": "input_datetime.cumulus_derniere_chauffe_complete",
+              "name": "Dernière chauffe complète",
+              "icon": "mdi:calendar-clock"
+            }
+          ],
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.06), rgba(6,182,212,.03)) !important;\n  box-shadow: 0 1px 6px rgba(0,0,0,.10) !important;\n}\n"
+          }
+        },
+        {
+          "type": "entities",
+          "title": "🕐 Fenêtres horaires",
+          "show_header_toggle": false,
+          "state_color": true,
+          "entities": [
+            {
+              "entity": "input_datetime.cumulus_plage_pv_debut",
+              "name": "Fenêtre PV - Début",
+              "icon": "mdi:weather-sunny"
+            },
+            {
+              "entity": "input_datetime.cumulus_plage_pv_fin",
+              "name": "Fenêtre PV - Fin",
+              "icon": "mdi:weather-sunset"
+            },
+            {
+              "entity": "binary_sensor.cumulus_fenetre_pv",
+              "name": "Dans fenêtre PV",
+              "icon": "mdi:sun-clock"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "entity": "input_datetime.cumulus_heures_creuses_debut",
+              "name": "HC - Début",
+              "icon": "mdi:clock-start"
+            },
+            {
+              "entity": "input_datetime.cumulus_heures_creuses_fin",
+              "name": "HC - Fin",
+              "icon": "mdi:clock-end"
+            },
+            {
+              "entity": "binary_sensor.cumulus_en_hc",
+              "name": "En heures creuses",
+              "icon": "mdi:clock-time-eight-outline"
+            }
+          ],
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.06), rgba(6,182,212,.03)) !important;\n  box-shadow: 0 1px 6px rgba(0,0,0,.10) !important;\n}\n"
+          }
+        },
+        {
+          "type": "markdown",
+          "content": "<div style=\"text-align: center; color: var(--secondary-text-color); font-size: 10px; padding: 8px;\">\n💧 Carte Cumulus Styled v2025-10-22 | Styles appliqués individuellement\n</div>\n",
+          "card_mod": {
+            "style": "ha-card {\n  border-radius: 12px !important;\n  background: linear-gradient(135deg, rgba(6,182,212,.06), rgba(6,182,212,.03)) !important;\n  box-shadow: 0 1px 4px rgba(0,0,0,.08) !important;\n}\n"
+          }
+        }
+      ]
+    }
+  ],
+  "icon": "mdi:water-boiler"
+}
