@@ -30,6 +30,25 @@ views:
                 entity: binary_sensor.cumulus_meteo_favorable_demain
                 name: Météo demain
           
+          - type: custom:mushroom-title-card
+            title: Prévisions Solaires
+            subtitle: Solcast PV Forecast
+          
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+                name: Prévision aujourd hui
+                icon: mdi:solar-power
+              - type: custom:mushroom-entity-card
+                entity: sensor.solcast_pv_forecast_previsions_pour_demain
+                name: Prévision demain
+                icon: mdi:solar-power-variant
+          
+          - type: custom:mushroom-title-card
+            title: Mesures
+            subtitle: Consommation et puissance
+          
           - type: horizontal-stack
             cards:
               - type: custom:mushroom-entity-card

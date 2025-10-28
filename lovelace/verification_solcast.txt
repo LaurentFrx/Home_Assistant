@@ -1,0 +1,69 @@
+=== VERIFICATION SENSORS SOLCAST ===
+
+[OK] sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+     Nom: Prévisions pour aujourd'hui
+     Platform: solcast_solar
+
+[OK] sensor.solcast_pv_forecast_previsions_pour_demain
+     Nom: Prévisions pour demain
+     Platform: solcast_solar
+
+[OK] sensor.cumulus_solcast_forecast_today
+     Nom: cumulus_solcast_forecast_today
+     Platform: template
+
+[OK] sensor.cumulus_solcast_forecast_tomorrow
+     Nom: cumulus_solcast_forecast_tomorrow
+     Platform: template
+
+
+=== TOUS LES SENSORS SOLCAST ===
+
+[OK] binary_sensor.cumulus_garde_prevision_solcast_insuffisante -> Cumulus Garde Prevision
+[OK] input_boolean.cumulus_solcast_override -> Ignorer la règle Solcast ce soir
+[OK] input_number.cumulus_seuil_solcast_bon_kwh -> Seuil Solcast bonne journée (kWh)
+[OK] input_number.cumulus_solcast_seuil_kwh -> Seuil kWh P90 (fenêtre PV) pour sauter HC
+[OK] input_number.solcast_proxy_factor -> Facteur proxy Solcast (APS → site)
+[OK] input_text.cumulus_entity_solcast_today -> ENTITÉ - Prévision Solcast aujourd'hui (kWh)
+[OK] input_text.cumulus_entity_solcast_tomorrow -> ENTITÉ - Prévision Solcast demain (kWh)
+[OK] input_text.solcast_entity_detailed -> ENTITÉ - Solcast (detailed avec attribut "detailed")
+[OK] input_text.solcast_entity_tomorrow_p90_day -> ENTITÉ - Solcast P90 demain (jour)
+[OK] select.solcast_pv_forecast_utiliser_le_champ_de_prevision -> Utiliser le champ de prévision
+[OK] sensor.cumulus_solcast_forecast_today -> cumulus_solcast_forecast_today
+[OK] sensor.cumulus_solcast_forecast_tomorrow -> cumulus_solcast_forecast_tomorrow
+[OK] sensor.cumulus_solcast_pic_jour_w -> Cumulus Solcast Pic Jour W
+[OK] sensor.cumulus_solcast_prochaine_heure_w -> Cumulus Solcast Prochaine Heure W
+[OK] sensor.cumulus_solcast_reste_jour_kwh -> Cumulus Solcast Reste Jour kWh
+[OK] sensor.solcast_detailed_len_48h -> solcast_detailed_len_48h
+[DISABLED] sensor.solcast_pv_forecast_amortissement -> Amortissement
+[OK] sensor.solcast_pv_forecast_api_utilisee -> API utilisée
+[OK] sensor.solcast_pv_forecast_derniere_interrogation_de_l_api -> Dernière interrogation de l'API
+[OK] sensor.solcast_pv_forecast_ensemble_de_limites_strictes -> Ensemble de limites strictes
+[OK] sensor.solcast_pv_forecast_heure_du_pic_aujourd_hui -> Heure du pic aujourd'hui
+[OK] sensor.solcast_pv_forecast_heure_du_pic_demain -> Heure du pic demain
+[OK] sensor.solcast_pv_forecast_limite_api -> Limite API
+[DISABLED] sensor.solcast_pv_forecast_prevision_jour_3 -> Prévision jour 3
+[DISABLED] sensor.solcast_pv_forecast_prevision_jour_4 -> Prévision jour 4
+[DISABLED] sensor.solcast_pv_forecast_prevision_jour_5 -> Prévision jour 5
+[DISABLED] sensor.solcast_pv_forecast_prevision_jour_6 -> Prévision jour 6
+[DISABLED] sensor.solcast_pv_forecast_prevision_jour_7 -> Prévision jour 7
+[OK] sensor.solcast_pv_forecast_previsions_de_production_restantes_aujourd_hui -> Prévisions de production  restantes aujourd'hui
+[OK] sensor.solcast_pv_forecast_previsions_du_pic_aujourd_hui -> Prévisions du pic aujourd'hui
+[OK] sensor.solcast_pv_forecast_previsions_du_pic_pour_demain -> Prévisions du pic pour demain
+[OK] sensor.solcast_pv_forecast_previsions_heure_actuel -> Prévisions heure actuel
+[OK] sensor.solcast_pv_forecast_previsions_pour_aujourd_hui -> Prévisions pour aujourd'hui
+[OK] sensor.solcast_pv_forecast_previsions_pour_demain -> Prévisions pour demain
+[OK] sensor.solcast_pv_forecast_previsions_pour_la_prochaine_heure -> Prévisions pour la prochaine heure
+[DISABLED] sensor.solcast_pv_forecast_previsions_pour_les_x_prochaines_heures -> Prévisions pour les X prochaines heures
+[OK] sensor.solcast_pv_forecast_puissance_en_1_heure -> Puissance en 1 heure
+[OK] sensor.solcast_pv_forecast_puissance_en_30_minutes -> Puissance en 30 minutes
+[OK] sensor.solcast_pv_forecast_puissance_maintenant -> Puissance maintenant
+[OK] sensor.solcast_today_len_detailed -> solcast_today_len_detailed
+[OK] sensor.solcast_today_len_forecasts -> solcast_today_len_forecasts
+[OK] sensor.solcast_today_len_timeseries -> solcast_today_len_timeseries
+[OK] sensor.solcast_today_series_w -> solcast_today_series_w
+[OK] sensor.solcast_tomorrow_as_today_series_w -> solcast_tomorrow_as_today_series_w
+[OK] sensor.solcast_tomorrow_kwh_p90_day -> solcast_tomorrow_kwh_p90_day
+[OK] sensor.solcast_tomorrow_kwh_p90_window -> solcast_tomorrow_kwh_p90_window
+[DISABLED] switch.solcast_pv_forecast_pre_release -> Pre-release
+[OK] update.solcast_pv_forecast_update -> Solcast PV Forecast update
