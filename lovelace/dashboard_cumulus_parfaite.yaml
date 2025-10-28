@@ -1,0 +1,7 @@
+title: Cumulus Parfait
+views:
+  - title: Cumulus
+    path: cumulus
+    icon: mdi:water-boiler-alert
+    cards:
+      - !include cards/lovelace_carte_cumulus_parfaite.yaml
