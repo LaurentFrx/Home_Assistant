@@ -1,0 +1,802 @@
+title: Cumulus Intelligent
+# ==================== DASHBOARD CUMULUS v2025-10-21a ==================== #
+# Corrigé et optimisé pour iPad Pro M2
+# Toutes les entités vérifiées et mises à jour
+
+# ==================== TEMPLATES DE STYLE ==================== #
+button_card_templates:
+  modern_card_base:
+    styles:
+      card:
+        - border-radius: 12px
+        - box-shadow: 0 2px 8px rgba(0,0,0,.12)
+        - padding: 12px
+        - transition: all 0.3s ease
+      name:
+        - font-weight: 600
+        - font-size: 0.95rem
+        - color: var(--primary-text-color)
+      icon:
+        - width: 28px
+        - height: 28px
+      custom_fields:
+        info:
+          - font-size: 0.85rem
+          - color: var(--secondary-text-color)
+          - margin-top: 4px
+
+  modern_card_state:
+    template: modern_card_base
+    styles:
+      card:
+        - min-height: 90px
+        - background: >
+            [[[
+              return entity.state === 'on'
+                ? 'linear-gradient(135deg, rgba(34,197,94,.15), rgba(34,197,94,.08))'
+                : 'linear-gradient(135deg, rgba(148,163,184,.12), rgba(148,163,184,.06))';
+            ]]]
+      grid:
+        - grid-template-areas: '"i" "n" "info"'
+        - grid-template-columns: 1fr
+        - grid-template-rows: auto auto auto
+        - row-gap: 6px
+
+  status_badge:
+    styles:
+      card:
+        - border-radius: 20px
+        - padding: 8px 16px
+        - font-weight: 600
+        - font-size: 0.85rem
+        - text-align: center
+        - box-shadow: 0 2px 4px rgba(0,0,0,.1)
+
+views:
+  # ==================== VUE PRINCIPALE ==================== #
+  - title: Vue Principale
+    path: cumulus-main
+    icon: mdi:water-boiler
+    type: custom:vertical-layout
+    badges: []
+    cards:
+      # ========== EN-TÊTE ÉTAT GÉNÉRAL ========== #
+      - type: custom:mushroom-title-card
+        title: 💧 Cumulus Intelligent
+        subtitle: Ballon 300L • 2 personne(s)
+
+      # ========== ÉTAT CRITIQUE - VUE RAPIDE ========== #
+      - type: horizontal-stack
+        cards:
+          # Contacteur
+          - type: custom:button-card
+            entity: switch.shellypro1_ece334ee1b64
+            name: Contacteur
+            show_state: true
+            template: modern_card_state
+            custom_fields:
+              info: >
+                [[[
+                  return entity.state === 'on' ? '🟢 ACTIF' : '⚫ ARRÊTÉ';
+                ]]]
+            styles:
+              card:
+                - background: >
+                    [[[
+                      return entity.state === 'on'
+                        ? 'linear-gradient(135deg, rgba(34,197,94,.2), rgba(34,197,94,.1))'
+                        : 'linear-gradient(135deg, rgba(239,68,68,.15), rgba(239,68,68,.08))';
+                    ]]]
+              icon:
+                - color: >
+                    [[[
+                      return entity.state === 'on' ? '#22c55e' : '#ef4444';
+                    ]]]
+
+          # État Chauffe
+          - type: custom:button-card
+            entity: binary_sensor.cumulus_chauffe_reelle
+            name: Chauffe
+            show_state: false
+            template: modern_card_state
+            custom_fields:
+              info: >
+                [[[
+                  if (entity.state === 'on') {
+                    const conso = states['sensor.cumulus_consommation_reelle_w'];
+                    return conso ? `⚡ ${Math.round(conso.state)}W` : '⚡ EN COURS';
+                  }
+                  return '💤 AU REPOS';
+                ]]]
+            styles:
+              icon:
+                - color: >
+                    [[[
+                      return entity.state === 'on' ? '#f59e0b' : '#94a3b8';
+                    ]]]
+
+      # ========== BESOIN URGENT ========== #
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.cumulus_besoin_chauffe_urgente
+            state: 'on'
+        card:
+          type: custom:mushroom-template-card
+          primary: ⚠️ BESOIN URGENT DE CHAUFFER
+          secondary: Eau chaude insuffisante pour aujourd'hui
+          icon: mdi:alert
+          icon_color: red
+          card_mod:
+            style: |
+              ha-card {
+                background: linear-gradient(135deg, rgba(239,68,68,.2), rgba(239,68,68,.1));
+                border-left: 4px solid #ef4444;
+              }
+
+      # ========== PRODUCTION & TEMPS ========== #
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          # Production PV
+          - type: custom:mushroom-entity-card
+            entity: sensor.cumulus_pv_power_w
+            name: Production PV
+            icon: mdi:solar-power
+            icon_color: amber
+            primary_info: name
+            secondary_info: state
+            tap_action:
+              action: more-info
+
+          # Temps restant PV
+          - type: custom:mushroom-template-card
+            primary: Fenêtre PV
+            secondary: >
+              {% set temps = states('sensor.cumulus_temps_restant_fenetre_pv_h') | float(0) %}
+              {% if temps > 0 %}
+                {{ temps | round(1) }}h restantes
+              {% else %}
+                Fermée
+              {% endif %}
+            icon: mdi:timer-sand
+            icon_color: >
+              {% set temps = states('sensor.cumulus_temps_restant_fenetre_pv_h') | float(0) %}
+              {% if temps > 2 %}
+                green
+              {% elif temps > 0 %}
+                orange
+              {% else %}
+                red
+              {% endif %}
+
+      # ========== IMPORT & SOC ========== #
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          # Import réseau
+          - type: custom:mushroom-entity-card
+            entity: sensor.cumulus_import_reseau_w
+            name: Import réseau
+            icon: mdi:transmission-tower-import
+            icon_color: >
+              {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+              {% if imp < 500 %}
+                green
+              {% elif imp < 1000 %}
+                orange
+              {% else %}
+                red
+              {% endif %}
+            primary_info: name
+            secondary_info: state
+
+          # SOC Solarbank
+          - type: custom:mushroom-entity-card
+            entity: sensor.cumulus_soc_solarbank_pct
+            name: Batterie SB
+            icon: mdi:battery
+            icon_color: >
+              {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(0) %}
+              {% if soc > 60 %}
+                green
+              {% elif soc > 30 %}
+                orange
+              {% else %}
+                red
+              {% endif %}
+            primary_info: name
+            secondary_info: state
+
+      # ========== VERROUS & FLAGS ========== #
+      - type: custom:mushroom-title-card
+        title: 🚦 État du système
+        subtitle: Verrous et autorisations
+
+      - type: grid
+        columns: 3
+        square: false
+        cards:
+          # Forcer chauffe
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_override
+            name: Forcer
+            icon: mdi:power
+            icon_color: red
+            tap_action:
+              action: toggle
+            layout: vertical
+
+          # Interdit départ
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_interdit_depart
+            name: Interdit
+            icon: mdi:cancel
+            icon_color: red
+            tap_action:
+              action: toggle
+            layout: vertical
+
+          # Mode vacances
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_mode_vacances
+            name: Vacances
+            icon: mdi:beach
+            icon_color: blue
+            tap_action:
+              action: toggle
+            layout: vertical
+
+      - type: grid
+        columns: 3
+        square: false
+        cards:
+          # HC autorisées
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.cumulus_autoriser_chauffe_hc_intelligente
+            name: HC autorisées
+            icon: mdi:moon-waning-crescent
+            icon_color: >
+              {% if is_state('binary_sensor.cumulus_autoriser_chauffe_hc_intelligente', 'on') %}
+                blue
+              {% else %}
+                grey
+              {% endif %}
+            tap_action:
+              action: none
+            layout: vertical
+
+          # Verrou jour
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_temp_atteinte_aujourdhui
+            name: Verrou jour
+            icon: mdi:lock
+            icon_color: >
+              {% if is_state('input_boolean.cumulus_temp_atteinte_aujourdhui', 'on') %}
+                green
+              {% else %}
+                grey
+              {% endif %}
+            tap_action:
+              action: none
+            layout: vertical
+
+          # Température OK
+          - type: custom:mushroom-template-card
+            primary: Temp. OK
+            icon: mdi:thermometer-check
+            icon_color: >
+              {% set temp = states('sensor.cumulus_temperature_ballon_c') | float(0) %}
+              {% set cible = states('input_number.cumulus_temperature_cible_c') | float(60) %}
+              {% if temp >= cible %}
+                green
+              {% elif temp >= cible - 5 %}
+                orange
+              {% else %}
+                red
+              {% endif %}
+            tap_action:
+              action: none
+            layout: vertical
+
+      # ========== SECTION DIAGNOSTIC ========== #
+      - type: custom:mushroom-title-card
+        title: 🔍 Diagnostic
+        subtitle: État détaillé du système
+
+      # État actuel en gros
+      - type: markdown
+        content: |
+          <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, rgba(6,182,212,.12), rgba(6,182,212,.06)); border-radius: 12px; margin: 8px 0;">
+            <div style="font-size: 3rem; margin-bottom: 8px;">
+              {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+                ⚡
+              {% elif is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+                🔄
+              {% else %}
+                💤
+              {% endif %}
+            </div>
+            <div style="font-size: 1.4rem; font-weight: 600; color: var(--primary-text-color); margin-bottom: 4px;">
+              {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+                EN CHAUFFE
+              {% elif is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+                STANDBY
+              {% else %}
+                AU REPOS
+              {% endif %}
+            </div>
+            <div style="font-size: 0.9rem; color: var(--secondary-text-color);">
+              {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+                Consommation: {{ states('sensor.cumulus_consommation_reelle_w') }}W
+              {% elif is_state('input_boolean.cumulus_temp_atteinte_aujourdhui', 'on') %}
+                Température cible atteinte
+              {% else %}
+                En attente de conditions favorables
+              {% endif %}
+            </div>
+          </div>
+
+      # Conditions de démarrage
+      - type: custom:mushroom-title-card
+        title: ✅ Conditions de démarrage PV
+        subtitle: null
+
+      - type: markdown
+        content: |
+          <div style="padding: 12px; background: var(--card-background-color); border-radius: 8px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr style="border-bottom: 1px solid var(--divider-color);">
+                <td style="padding: 8px; font-weight: 500;">🌞 Fenêtre PV ouverte</td>
+                <td style="padding: 8px; text-align: right;">
+                  {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+                    <span style="color: #22c55e;">✅ OUI</span>
+                  {% else %}
+                    <span style="color: #ef4444;">❌ NON</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--divider-color);">
+                <td style="padding: 8px; font-weight: 500;">⚡ Puissance PV suffisante</td>
+                <td style="padding: 8px; text-align: right;">
+                  {% set dispo = states('sensor.cumulus_puissance_disponible_w') | float(0) %}
+                  {% set seuil = states('sensor.cumulus_seuil_pv_dynamique_w') | float(0) %}
+                  {% if dispo >= seuil %}
+                    <span style="color: #22c55e;">✅ {{ dispo | round(0) }}W ≥ {{ seuil | round(0) }}W</span>
+                  {% else %}
+                    <span style="color: #ef4444;">❌ {{ dispo | round(0) }}W < {{ seuil | round(0) }}W</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--divider-color);">
+                <td style="padding: 8px; font-weight: 500;">📥 Import acceptable</td>
+                <td style="padding: 8px; text-align: right;">
+                  {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+                  {% set max_imp = states('input_number.cumulus_import_demarrage_max_w') | float(800) %}
+                  {% if imp < max_imp %}
+                    <span style="color: #22c55e;">✅ {{ imp | round(0) }}W < {{ max_imp | round(0) }}W</span>
+                  {% else %}
+                    <span style="color: #ef4444;">❌ {{ imp | round(0) }}W ≥ {{ max_imp | round(0) }}W</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--divider-color);">
+                <td style="padding: 8px; font-weight: 500;">🔋 SOC Solarbank OK</td>
+                <td style="padding: 8px; text-align: right;">
+                  {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(0) %}
+                  {% set min_soc = states('input_number.cumulus_soc_mini_pct') | float(30) %}
+                  {% if soc >= min_soc %}
+                    <span style="color: #22c55e;">✅ {{ soc | round(0) }}% ≥ {{ min_soc | round(0) }}%</span>
+                  {% else %}
+                    <span style="color: #ef4444;">❌ {{ soc | round(0) }}% < {{ min_soc | round(0) }}%</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--divider-color);">
+                <td style="padding: 8px; font-weight: 500;">🚫 Pas d'interdiction</td>
+                <td style="padding: 8px; text-align: right;">
+                  {% if is_state('input_boolean.cumulus_interdit_depart', 'off') %}
+                    <span style="color: #22c55e;">✅ Autorisé</span>
+                  {% else %}
+                    <span style="color: #ef4444;">❌ Interdit</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; font-weight: 500;">🏖️ Pas de vacances</td>
+                <td style="padding: 8px; text-align: right;">
+                  {% if is_state('input_boolean.cumulus_mode_vacances', 'off') %}
+                    <span style="color: #22c55e;">✅ Mode normal</span>
+                  {% else %}
+                    <span style="color: #ef4444;">❌ Vacances</span>
+                  {% endif %}
+                </td>
+              </tr>
+            </table>
+          </div>
+
+      # Seuils et paramètres
+      - type: custom:mushroom-title-card
+        title: 🎯 Seuils actifs
+        subtitle: null
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.cumulus_seuil_pv_dynamique_w
+            name: Seuil PV
+            icon: mdi:solar-power-variant
+            icon_color: amber
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_import_demarrage_max_w
+            name: Import max démarrage
+            icon: mdi:arrow-down-bold
+            icon_color: blue
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_talon_w
+            name: Talon maison
+            icon: mdi:home-lightning-bolt
+            icon_color: green
+
+          - type: custom:mushroom-entity-card
+            entity: sensor.cumulus_seuil_fin_chauffe_w
+            name: Seuil fin chauffe
+            icon: mdi:speedometer
+            icon_color: red
+
+      # Température et capacité
+      - type: custom:mushroom-title-card
+        title: 🌡️ Température & Capacité
+        subtitle: null
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: gauge
+            entity: sensor.cumulus_temperature_ballon_c
+            name: Température ballon
+            min: 0
+            max: 75
+            severity:
+              green: 55
+              yellow: 40
+              red: 0
+            needle: true
+
+          - type: gauge
+            entity: sensor.cumulus_litres_disponibles_estimes
+            name: Eau chaude disponible
+            min: 0
+            max: 300
+            severity:
+              green: 150
+              yellow: 80
+              red: 0
+            needle: true
+            unit: L
+
+      # Dernière chauffe
+      - type: custom:mushroom-template-card
+        primary: Dernière chauffe complète
+        secondary: >
+          {% set ts = states('input_datetime.cumulus_derniere_chauffe_complete') %}
+          {% if ts not in ['unknown', 'unavailable', ''] %}
+            {{ as_timestamp(ts) | timestamp_custom('%d/%m/%Y à %H:%M', true) }}
+            (il y a {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h)
+          {% else %}
+            Aucune chauffe enregistrée
+          {% endif %}
+        icon: mdi:history
+        icon_color: >
+          {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% if heures > 48 %}
+            red
+          {% elif heures > 24 %}
+            orange
+          {% else %}
+            green
+          {% endif %}
+
+      # Graphique historique
+      - type: custom:mushroom-title-card
+        title: 📊 Historique 24h
+        subtitle: null
+
+      - type: history-graph
+        entities:
+          - entity: sensor.cumulus_consommation_reelle_w
+            name: Consommation
+          - entity: sensor.cumulus_import_reseau_w
+            name: Import réseau
+          - entity: sensor.cumulus_pv_power_w
+            name: Production PV
+          - entity: sensor.cumulus_temperature_ballon_c
+            name: Température
+        hours_to_show: 24
+        refresh_interval: 30
+
+  # ==================== VUE RÉGLAGES ==================== #
+  - title: Réglages
+    path: cumulus-settings
+    icon: mdi:cog
+    cards:
+      - type: custom:mushroom-title-card
+        title: ⚙️ Paramètres Cumulus
+        subtitle: Réglages et ajustements
+
+      # Paramètres temporels
+      - type: custom:mushroom-title-card
+        title: 🕐 Paramètres temporels
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          # Dernière chauffe complète
+          - type: custom:mushroom-entity-card
+            entity: input_datetime.cumulus_derniere_chauffe_complete
+            name: Dernière chauffe
+            icon: mdi:calendar-clock
+            icon_color: blue
+            primary_info: name
+            secondary_info: state
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          # Heures depuis dernière chauffe
+          - type: custom:mushroom-entity-card
+            entity: sensor.cumulus_heures_depuis_derniere_chauffe
+            name: Heures écoulées
+            icon: mdi:clock-outline
+            icon_color: >-
+              {% set heures = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+              {% if heures > 48 %}
+                red
+              {% elif heures > 24 %}
+                orange
+              {% else %}
+                green
+              {% endif %}
+            primary_info: name
+            secondary_info: state
+            tap_action:
+              action: none
+            layout: vertical
+
+      # Fenêtres horaires PV
+      - type: custom:mushroom-title-card
+        title: ☀️ Fenêtre solaire
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_datetime.cumulus_plage_pv_debut
+            name: Début fenêtre PV
+            icon: mdi:weather-sunny
+            icon_color: amber
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_datetime.cumulus_plage_pv_fin
+            name: Fin fenêtre PV
+            icon: mdi:weather-sunset
+            icon_color: orange
+            tap_action:
+              action: more-info
+            layout: vertical
+
+      # Heures creuses
+      - type: custom:mushroom-title-card
+        title: 🌙 Heures creuses
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_datetime.cumulus_heures_creuses_debut
+            name: Début HC
+            icon: mdi:clock-start
+            icon_color: blue
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_datetime.cumulus_heures_creuses_fin
+            name: Fin HC
+            icon: mdi:clock-end
+            icon_color: blue
+            tap_action:
+              action: more-info
+            layout: vertical
+
+      # Paramètres capacité
+      - type: custom:mushroom-title-card
+        title: 💧 Paramètres capacité
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_capacite_litres
+            name: Capacité ballon
+            icon: mdi:water-boiler
+            icon_color: blue
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_nb_personnes
+            name: Nombre personnes
+            icon: mdi:account-group
+            icon_color: green
+            tap_action:
+              action: more-info
+            layout: vertical
+
+      # Paramètres thermiques
+      - type: custom:mushroom-title-card
+        title: 🌡️ Paramètres thermiques
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_temperature_cible_c
+            name: Température cible
+            icon: mdi:thermometer
+            icon_color: red
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_puissance_w
+            name: Puissance cumulus
+            icon: mdi:lightning-bolt
+            icon_color: amber
+            tap_action:
+              action: more-info
+            layout: vertical
+
+      # Paramètres PV
+      - type: custom:mushroom-title-card
+        title: ☀️ Paramètres solaires
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_solarbank_max_w
+            name: Max Solarbank
+            icon: mdi:battery-charging
+            icon_color: green
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_soc_mini_pct
+            name: SOC minimum
+            icon: mdi:battery-alert
+            icon_color: orange
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_soc_stop_pct
+            name: SOC arrêt
+            icon: mdi:battery-off
+            icon_color: red
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_prevision_mini_kwh
+            name: Prévision minimum
+            icon: mdi:weather-sunny-alert
+            icon_color: amber
+            tap_action:
+              action: more-info
+            layout: vertical
+
+      # Paramètres import
+      - type: custom:mushroom-title-card
+        title: 📥 Paramètres import réseau
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_import_demarrage_max_w
+            name: Import max démarrage
+            icon: mdi:arrow-down-bold
+            icon_color: blue
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_talon_w
+            name: Talon maison
+            icon: mdi:home-lightning-bolt
+            icon_color: green
+            tap_action:
+              action: more-info
+            layout: vertical
+
+          - type: custom:mushroom-entity-card
+            entity: input_number.cumulus_marge_import_w
+            name: Marge import
+            icon: mdi:delta
+            icon_color: orange
+            tap_action:
+              action: more-info
+            layout: vertical
+
+      # Actions rapides
+      - type: custom:mushroom-title-card
+        title: 🎮 Actions rapides
+        subtitle: null
+
+      - type: grid
+        square: false
+        columns: 2
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_override
+            name: Forcer chauffe immédiate
+            icon: mdi:power
+            icon_color: red
+            tap_action:
+              action: toggle
+
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_interdit_depart
+            name: Interdire démarrage
+            icon: mdi:cancel
+            icon_color: red
+            tap_action:
+              action: toggle
+
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_mode_vacances
+            name: Mode vacances
+            icon: mdi:beach
+            icon_color: blue
+            tap_action:
+              action: toggle
+
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.cumulus_temp_atteinte_aujourdhui
+            name: Réinitialiser verrou
+            icon: mdi:lock-reset
+            icon_color: amber
+            tap_action:
+              action: toggle

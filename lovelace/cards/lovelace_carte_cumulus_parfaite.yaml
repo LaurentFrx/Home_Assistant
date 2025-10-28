@@ -1,0 +1,525 @@
+###############################################################################
+# CARTE CUMULUS PARFAITE — Design optimal et lisible
+# Compile les meilleurs éléments de toutes les cartes cumulus
+# Version: 2025-10-19 — Créée par Claude Code
+###############################################################################
+
+type: vertical-stack
+cards:
+  # ==================== EN-TÊTE AVEC STATUT PRINCIPAL ==================== #
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-title-card
+        title: 💧 Cumulus Intelligent
+        subtitle: >-
+          Ballon {{ states('input_number.cumulus_capacite_litres') | int }}L •
+          {{ states('input_number.cumulus_nb_personnes') | int }} personne(s)
+
+      # INDICATEURS PRINCIPAUX À DROITE
+      - type: custom:mushroom-chips-card
+        alignment: end
+        chips:
+          # VOYANT INTERRUPTEUR SHELLY (ON/OFF)
+          - type: template
+            entity: switch.shellypro1_ece334ee1b64
+            icon: mdi:power
+            icon_color: >-
+              {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+                red
+              {% else %}
+                grey
+              {% endif %}
+            content: >-
+              {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+                ON
+              {% else %}
+                OFF
+              {% endif %}
+            tap_action:
+              action: toggle
+
+          # VOYANT CUMULUS (Gris/Vert/Rouge basé sur consommation)
+          - type: template
+            entity: sensor.cumulus_consommation_reelle_w
+            content: >-
+              {% set switch_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+              {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+              {% set temp = states('sensor.cumulus_temperature_physique_c') | float(0) %}
+              {% if not switch_on %}
+                ⚪️
+              {% elif conso > 2200 %}
+                🔴
+              {% else %}
+                🟢
+              {% endif %}
+            tap_action:
+              action: more-info
+
+  # ==================== INDICATEURS CLÉS EN UN COUP D'ŒIL ==================== #
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Mode actuel (basé sur contacteur + fenêtre PV)
+      - type: custom:mushroom-template-card
+        entity: switch.shellypro1_ece334ee1b64
+        primary: Mode actuel
+        secondary: >-
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+              ☀️ Solaire
+            {% else %}
+              ⚡ Réseau
+            {% endif %}
+          {% else %}
+            💤 Repos
+          {% endif %}
+        icon: >-
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+              mdi:white-balance-sunny
+            {% else %}
+              mdi:flash
+            {% endif %}
+          {% else %}
+            mdi:pause-circle-outline
+          {% endif %}
+        icon_color: >-
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+              amber
+            {% else %}
+              red
+            {% endif %}
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        layout: vertical
+
+      # Capacité suffisante
+      - type: custom:mushroom-template-card
+        entity: sensor.cumulus_eau_chaude_disponible_40c_litres
+        primary: Eau disponible
+        secondary: >-
+          {{ states('sensor.cumulus_eau_chaude_disponible_40c_litres') | round(0) }}L / {{ states('sensor.cumulus_besoin_journalier_litres') | round(0) }}L
+        icon: mdi:water-check
+        icon_color: blue
+        tap_action:
+          action: none
+        layout: vertical
+
+      # Besoin urgent
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_besoin_chauffe_urgente
+        name: Besoin urgent
+        icon: mdi:alert-circle
+        icon_color: >-
+          {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        primary_info: name
+        secondary_info: >-
+          {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+            ⚠️ Urgent
+          {% else %}
+            ✅ Normal
+          {% endif %}
+        tap_action:
+          action: more-info
+        layout: vertical
+
+  # ==================== INFORMATIONS COMPLÉMENTAIRES ==================== #
+  - type: grid
+    square: false
+    columns: 2
+    cards:
+      # Production solaire
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_pv_power_w
+        name: Production PV
+        icon: mdi:solar-power-variant
+        icon_color: >-
+          {% set pv_state = states('sensor.cumulus_pv_power_w') %}
+          {% set pv = 0 if pv_state in ['unavailable', 'unknown'] else pv_state | float(0) %}
+          {% if pv >= 1500 %}
+            amber
+          {% elif pv >= 500 %}
+            orange
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: >-
+          {% set pv_state = states('sensor.cumulus_pv_power_w') %}
+          {% if pv_state in ['unavailable', 'unknown'] %}
+            0 W
+          {% else %}
+            {{ pv_state }} W
+          {% endif %}
+        tap_action:
+          action: more-info
+        layout: vertical
+
+      # Fenêtre de temps
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_temps_restant_fenetre_pv_h
+        name: Temps restant PV
+        icon: mdi:timer-sand
+        icon_color: >-
+          {% set temps = states('sensor.cumulus_temps_restant_fenetre_pv_h') | float(0) %}
+          {% if temps > 3 %}
+            green
+          {% elif temps > 1 %}
+            orange
+          {% elif temps > 0 %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: state
+        tap_action:
+          action: more-info
+        layout: vertical
+
+  # ==================== CONTRÔLES RAPIDES ==================== #
+  - type: custom:mushroom-title-card
+    title: 🎛️ Contrôles
+    subtitle: null
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Override
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_override
+        name: Forcer
+        icon: mdi:hand-pointing-up
+        icon_color: >-
+          {% if is_state('input_boolean.cumulus_override', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Forcer la chauffe immédiate ?
+        layout: vertical
+
+      # Interdit
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_interdit
+        name: Interdit
+        icon: mdi:cancel
+        icon_color: >-
+          {% if is_state('input_boolean.cumulus_interdit', 'on') %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Vacances
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_vacances
+        name: Vacances
+        icon: mdi:beach
+        icon_color: >-
+          {% if is_state('input_boolean.cumulus_vacances', 'on') %}
+            orange
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Heures creuses
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_autoriser_hc
+        name: HC autorisées
+        icon: mdi:clock-time-eight
+        icon_color: >-
+          {% if is_state('input_boolean.cumulus_autoriser_hc', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: toggle
+        layout: vertical
+
+      # Verrou jour
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_verrou_jour
+        name: Verrou jour
+        icon: mdi:lock-check
+        icon_color: >-
+          {% if is_state('input_boolean.cumulus_verrou_jour', 'on') %}
+            orange
+          {% else %}
+            green
+          {% endif %}
+        tap_action:
+          action: none
+        layout: vertical
+
+      # Temp atteinte
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.temp_atteinte_aujourdhui
+        name: Temp. OK
+        icon: mdi:thermometer-check
+        icon_color: >-
+          {% if is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        layout: vertical
+
+  # ==================== DIAGNOSTIC INTELLIGENT ==================== #
+  - type: custom:mushroom-title-card
+    title: 🚦 Diagnostic
+    subtitle: null
+
+  - type: markdown
+    content: |
+      {% set interdit = is_state('input_boolean.cumulus_interdit', 'on') %}
+      {% set vacances = is_state('input_boolean.cumulus_vacances', 'on') %}
+      {% set verrou = is_state('input_boolean.cumulus_verrou_jour', 'on') %}
+      {% set temp_ok = is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}
+      {% set deadband = is_state('binary_sensor.cumulus_deadband_actif', 'on') %}
+      {% set appareil = is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+      {% set override = is_state('input_boolean.cumulus_override', 'on') %}
+      {% set cumulus_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+      {% set fenetre_pv = is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+      {% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') %}
+      {% set pv = states('sensor.cumulus_pv_power_w') | float(0) %}
+      {% set seuil_pv = states('sensor.cumulus_seuil_pv_dynamique_w') | float(100) %}
+      {% set besoin_urgent = is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+
+      ### État actuel
+      {% if cumulus_on %}
+      ## 🔥 **EN CHAUFFE**
+      {% if fenetre_pv %}Mode solaire actif{% else %}Mode réseau actif{% endif %}
+      {% elif override %}
+      ## 🚀 **OVERRIDE ACTIF**
+      Démarrage forcé
+      {% else %}
+      ## 💤 **AU REPOS**
+      En attente des conditions
+      {% endif %}
+
+      ---
+
+      ### Blocages actifs
+      {% if interdit %}❌ **Interdit** : Mode maintenance actif{% endif %}
+      {% if vacances %}🏖️ **Vacances** : Mode économie activé{% endif %}
+      {% if verrou %}📅 **Verrou journalier** : Déjà chauffé aujourd'hui{% endif %}
+      {% if temp_ok %}🌡️ **Température OK** : Objectif atteint{% endif %}
+      {% if deadband %}⏱️ **Deadband** : Temporisation sécurité{% endif %}
+      {% if appareil %}⚡ **Appareil prioritaire** : Lave-linge/vaisselle en cours{% endif %}
+
+      {% if not interdit and not vacances and not verrou and not temp_ok and not deadband and not appareil %}
+      ✅ **Aucun blocage** — Prêt à démarrer
+      {% endif %}
+
+      ---
+
+      ### Conditions de démarrage
+
+      **Mode Solaire (PV)**
+      {% if fenetre_pv %}✅ Dans fenêtre PV{% else %}⏰ Hors fenêtre PV{% endif %}
+      {% if pv >= seuil_pv %}✅ PV suffisant ({{ pv | int }}W){% else %}⚠️ PV insuffisant ({{ pv | int }}W < {{ seuil_pv | int }}W){% endif %}
+
+      **Mode Heures Creuses**
+      {% if en_hc %}✅ En heures creuses{% else %}⏰ Hors heures creuses{% endif %}
+      {% if besoin_urgent %}🔴 Besoin urgent détecté{% else %}✅ Pas d'urgence{% endif %}
+
+      ---
+
+      ### Prochaine action prévue
+      {% if temp_ok %}
+      ☀️ **Demain** — Chauffe solaire si météo favorable
+      {% elif fenetre_pv and not verrou %}
+      ☀️ **Aujourd'hui** — Attente production solaire suffisante
+      {% elif is_state('binary_sensor.cumulus_meteo_favorable_demain', 'on') %}
+      ☀️ **Demain** — Météo favorable prévue ({{ states('sensor.cumulus_solcast_forecast_tomorrow') }} kWh)
+      {% else %}
+      🌙 **Cette nuit** — Heures creuses ({{ states('input_datetime.cumulus_heures_creuses_debut')[0:5] }}-{{ states('input_datetime.cumulus_heures_creuses_fin')[0:5] }})
+      {% endif %}
+
+  # ==================== MÉTÉO ET PRÉVISIONS ==================== #
+  - type: custom:mushroom-title-card
+    title: ☀️ Prévisions solaires
+    subtitle: null
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_solcast_forecast_today
+        name: Aujourd'hui
+        icon: mdi:weather-sunny
+        icon_color: >-
+          {% if is_state('binary_sensor.cumulus_meteo_favorable_aujourdhui', 'on') %}
+            amber
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: state
+        tap_action:
+          action: more-info
+
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_solcast_forecast_tomorrow
+        name: Demain
+        icon: mdi:weather-sunny-alert
+        icon_color: >-
+          {% if is_state('binary_sensor.cumulus_meteo_favorable_demain', 'on') %}
+            amber
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: state
+        tap_action:
+          action: more-info
+
+  # ==================== APPAREILS PRIORITAIRES ==================== #
+  - type: custom:mushroom-title-card
+    title: ⚡ Appareils prioritaires
+    subtitle: Détection automatique
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_lave_linge_actif
+        name: Lave-linge
+        icon: mdi:washing-machine
+        icon_color: >-
+          {% if is_state('binary_sensor.cumulus_lave_linge_actif', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        layout: vertical
+
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_lave_vaisselle_actif
+        name: Lave-vaisselle
+        icon: mdi:dishwasher
+        icon_color: >-
+          {% if is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') %}
+            blue
+          {% else %}
+            grey
+          {% endif %}
+        tap_action:
+          action: none
+        layout: vertical
+
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_appareil_prioritaire_actif
+        name: Statut
+        icon: mdi:home-lightning-bolt-outline
+        icon_color: >-
+          {% if is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+            red
+          {% else %}
+            green
+          {% endif %}
+        secondary_info: >-
+          {% if is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+            Cumulus bloqué
+          {% else %}
+            Aucun actif
+          {% endif %}
+        tap_action:
+          action: none
+        layout: vertical
+
+  # ==================== DONNÉES TECHNIQUES (PLIABLE) ==================== #
+  - type: entities
+    title: 📊 Données techniques
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.cumulus_temperature_physique_c
+        name: Température estimée
+        icon: mdi:thermometer
+      - entity: sensor.cumulus_eau_chaude_disponible_40c_litres
+        name: Litres disponibles (40°C)
+        icon: mdi:water
+      - entity: sensor.cumulus_besoin_journalier_litres
+        name: Besoin journalier
+        icon: mdi:account-water
+      - type: divider
+      - entity: sensor.cumulus_pv_power_w
+        name: Production PV
+        icon: mdi:solar-power
+      - entity: sensor.cumulus_capacity_factor
+        name: Facteur de charge
+        icon: mdi:percent-outline
+      - type: divider
+      - entity: sensor.cumulus_seuil_pv_dynamique_w
+        name: Seuil PV dynamique
+        icon: mdi:solar-power-variant-outline
+      - entity: sensor.cumulus_import_reseau_w
+        name: Import réseau
+        icon: mdi:transmission-tower-import
+      - entity: sensor.cumulus_soc_solarbank_pct
+        name: Charge batterie
+        icon: mdi:battery
+      - type: divider
+      - entity: sensor.cumulus_heures_depuis_derniere_chauffe
+        name: Heures depuis dernière chauffe
+        icon: mdi:clock-outline
+      - entity: input_datetime.cumulus_derniere_chauffe_complete
+        name: Dernière chauffe complète
+        icon: mdi:calendar-clock
+
+  # ==================== FENÊTRES HORAIRES ==================== #
+  - type: entities
+    title: 🕐 Fenêtres horaires
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: input_datetime.cumulus_plage_pv_debut
+        name: Fenêtre PV - Début
+        icon: mdi:weather-sunny
+      - entity: input_datetime.cumulus_plage_pv_fin
+        name: Fenêtre PV - Fin
+        icon: mdi:weather-sunset
+      - entity: binary_sensor.cumulus_fenetre_pv
+        name: Dans fenêtre PV
+        icon: mdi:sun-clock
+      - type: divider
+      - entity: input_datetime.cumulus_heures_creuses_debut
+        name: HC - Début
+        icon: mdi:clock-start
+      - entity: input_datetime.cumulus_heures_creuses_fin
+        name: HC - Fin
+        icon: mdi:clock-end
+      - entity: binary_sensor.cumulus_en_hc
+        name: En heures creuses
+        icon: mdi:clock-time-eight-outline
+
+  # ==================== FOOTER ==================== #
+  - type: markdown
+    content: |
+      <div style="text-align: center; color: var(--secondary-text-color); font-size: 10px; padding: 8px;">
+      💧 Carte Cumulus Parfaite v2025-10-19 | Créée par Claude Code
+      </div>

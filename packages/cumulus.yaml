@@ -357,7 +357,7 @@ template:
       # CORRECTION 2024-11-08 : Détection basée sur consommation réelle
       # Seuil : 85% de la puissance nominale (robuste et fiable)
       - name: "cumulus_chauffe_reelle"
-        unique_id: cumulus_chauffe_reelle
+        unique_id: cumulus_chauffe_reelle_v2
         device_class: running
         icon: mdi:water-boiler-alert
         state: >-
