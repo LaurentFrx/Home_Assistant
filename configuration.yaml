@@ -31,30 +31,29 @@ template: !include_dir_merge_list templates
 # === Dashboards Lovelace ===
 lovelace:
   dashboards:
+    # Dashboard de travail Claude
     lovelace-work:
       mode: yaml
       title: Workspace Claude
       icon: mdi:robot
       show_in_sidebar: true
       filename: lovelace/work.yaml
-    lovelace-cumulus-corrige:
+    
+    # Dashboard Cumulus unifié - Toutes les variantes en un seul dashboard
+    lovelace-cumulus:
       mode: yaml
-      title: Cumulus Corrigé
+      title: Cumulus Intelligent
       icon: mdi:water-boiler
       show_in_sidebar: true
-      filename: lovelace/cards/dashboard_cumulus_corrige.yaml
-    lovelace-cumulus-parfaite:
+      filename: lovelace/dashboard_cumulus_complet.yaml
+    
+    # Dashboard Cumulus Corrigé - Version optimisée avec templates avancés
+    lovelace-cumulus-corrige:
       mode: yaml
-      title: Cumulus Parfait
+      title: Cumulus Corrigé (Avancé)
       icon: mdi:water-boiler-alert
       show_in_sidebar: true
-      filename: lovelace/dashboard_cumulus_parfaite.yaml
-    lovelace-cumulus-styled:
-      mode: yaml
-      title: Cumulus Styled
-      icon: mdi:water-boiler-auto
-      show_in_sidebar: true
-      filename: lovelace/dashboard_cumulus_styled.yaml
+      filename: lovelace/cards/dashboard_cumulus_corrige.yaml
 
 # === Journalisation ===
 logger:
