@@ -31,21 +31,14 @@ template: !include_dir_merge_list templates
 # === Dashboards Lovelace ===
 lovelace:
   dashboards:
-    # Dashboard Cumulus unifié - Toutes les variantes en un seul dashboard
-    lovelace-cumulus:
+    # Dashboard Cumulus Avancé - Informations NON présentes dans LAU/cumu
+    # 2 vues : Monitoring + Configuration
+    lovelace-cumulus-avance:
       mode: yaml
-      title: Cumulus Intelligent
-      icon: mdi:water-boiler
+      title: Cumulus Avancé
+      icon: mdi:water-boiler-auto
       show_in_sidebar: true
-      filename: lovelace/dashboard_cumulus_complet.yaml
-    
-    # Dashboard Cumulus Corrigé - Version optimisée avec templates avancés
-    lovelace-cumulus-corrige:
-      mode: yaml
-      title: Cumulus Corrigé (Avancé)
-      icon: mdi:water-boiler-alert
-      show_in_sidebar: true
-      filename: lovelace/cards/dashboard_cumulus_corrige.yaml
+      filename: lovelace/dashboard_cumulus_avance.yaml
 
 # === Journalisation ===
 logger:

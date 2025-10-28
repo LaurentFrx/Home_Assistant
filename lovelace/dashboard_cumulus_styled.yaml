@@ -1,7 +1,0 @@
-title: Cumulus Styled
-views:
-  - title: Cumulus
-    path: cumulus
-    icon: mdi:water-boiler-auto
-    cards:
-      - !include cards/lovelace_carte_cumulus_styled.yaml

@@ -1,0 +1,76 @@
+title: Cumulus Avancé
+icon: mdi:water-boiler-auto
+
+views:
+  - title: Monitoring
+    path: monitoring
+    icon: mdi:chart-line
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: custom:mushroom-title-card
+            title: Monitoring Temps Réel
+            subtitle: Informations NON présentes dans dashboard-lau/cumu
+          
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.cumulus_chauffe_reelle
+                name: Chauffe réelle
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.cumulus_capacite_suffisante
+                name: Capacité OK
+          
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.cumulus_meteo_favorable_aujourdhui
+                name: Météo aujourd hui
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.cumulus_meteo_favorable_demain
+                name: Météo demain
+          
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.cumulus_consommation_reelle_w
+                name: Consommation
+              - type: custom:mushroom-entity-card
+                entity: sensor.cumulus_pv_effectif_w
+                name: PV effectif
+          
+          - type: horizontal-stack
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.cumulus_temperature_estimee
+                name: Temp estimée
+              - type: custom:mushroom-entity-card
+                entity: sensor.cumulus_litres_disponibles_estimes
+                name: Litres dispos
+
+  - title: Configuration
+    path: configuration
+    icon: mdi:cog
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: custom:mushroom-title-card
+            title: Réglages de Base
+          
+          - type: entities
+            entities:
+              - input_number.cumulus_capacite_litres
+              - input_number.cumulus_nb_personnes
+              - input_number.cumulus_puissance_w
+              - input_number.cumulus_temperature_cible_c
+              - input_number.cumulus_talon_maison_w
+          
+          - type: custom:mushroom-title-card
+            title: Config PV & Solarbank
+          
+          - type: entities
+            entities:
+              - input_number.cumulus_seuil_pv_on_w
+              - input_number.cumulus_soc_start_pct
+              - input_number.cumulus_soc_stop_pct
+              - input_number.cumulus_solarbank_max_w
