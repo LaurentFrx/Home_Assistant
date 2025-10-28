@@ -37,6 +37,24 @@ lovelace:
       icon: mdi:robot
       show_in_sidebar: true
       filename: lovelace/work.yaml
+    lovelace-cumulus-corrige:
+      mode: yaml
+      title: Cumulus Corrigé
+      icon: mdi:water-boiler
+      show_in_sidebar: true
+      filename: lovelace/cards/dashboard_cumulus_corrige.yaml
+    lovelace-cumulus-parfaite:
+      mode: yaml
+      title: Cumulus Parfait
+      icon: mdi:water-boiler-alert
+      show_in_sidebar: true
+      filename: lovelace/cards/lovelace_carte_cumulus_parfaite.yaml
+    lovelace-cumulus-styled:
+      mode: yaml
+      title: Cumulus Styled
+      icon: mdi:water-boiler-auto
+      show_in_sidebar: true
+      filename: lovelace/cards/lovelace_carte_cumulus_styled.yaml
 
 # === Journalisation ===
 logger:
