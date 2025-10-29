@@ -167,7 +167,7 @@ input_number:
     initial: 25
 
   cumulus_soc_stop_pct:
-    name: SOC arrÃªt sécurité (%)
+    name: SOC arrêt sécurité (%)
     min: 0
     max: 100
     step: 0.5
@@ -199,12 +199,12 @@ input_boolean:
 # Fenêtres horaires
 input_datetime:
   cumulus_plage_pv_debut:
-    name: FenÃªtre PV - début
+    name: Fenêtre PV - début
     has_date: false
     has_time: true
     initial: "10:20:00"
   cumulus_plage_pv_fin:
-    name: FenÃªtre PV - fin
+    name: Fenêtre PV - fin
     has_date: false
     has_time: true
     initial: "17:50:00"

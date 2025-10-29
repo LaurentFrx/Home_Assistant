@@ -223,25 +223,9 @@
             - service: input_boolean.turn_on
               target:
                 entity_id: input_boolean.cumulus_temp_atteinte_aujourdhui
-            # ✅ CORRECTION : Ne PAS activer verrou si en HC (permet chauffe PV après HC)
-            - choose:
-                - conditions:
-                    - condition: state
-                      entity_id: binary_sensor.cumulus_en_hc
-                      state: "off"
-                  sequence:
-                    - service: input_boolean.turn_on
-                      target:
-                        entity_id: input_boolean.cumulus_verrou_jour
-                    - service: logbook.log
-                      data:
-                        name: "Cumulus Verrou Activé"
-                        message: "Température max hors HC - verrou activé immédiatement"
-              default:
-                - service: logbook.log
-                  data:
-                    name: "Cumulus Temp Max HC"
-                    message: "Température atteinte pendant HC - verrou activé à la fin HC"
+            - service: input_boolean.turn_on
+              target:
+                entity_id: input_boolean.cumulus_verrou_jour
             - service: switch.turn_off
               target:
                 entity_id: "{{ sw_id }}"
@@ -506,25 +490,7 @@
   action:
     - variables:
         sw_id: "{{ states('input_text.cumulus_entity_contacteur') }}"
-        temp_atteinte: "{{ is_state('input_boolean.cumulus_temp_atteinte_aujourdhui', 'on') }}"
-    # ✅ Si température atteinte pendant HC, activer verrou maintenant
-    - choose:
-        - conditions:
-            - "{{ temp_atteinte }}"
-          sequence:
-            - service: input_boolean.turn_on
-              target:
-                entity_id: input_boolean.cumulus_verrou_jour
-            - service: logbook.log
-              data:
-                name: "Cumulus Fin HC - Verrou Activé"
-                message: "Température atteinte pendant HC - verrou jour activé"
-      default:
-        - service: logbook.log
-          data:
-            name: "Cumulus Fin HC"
-            message: "Fin HC - température non atteinte, chauffe PV possible"
-        - condition: template
+    - condition: template
       value_template: "{{ sw_id != '' and sw_id not in ['unknown', 'unavailable'] and states(sw_id) == 'on' }}"
     - service: switch.turn_off
       target:
@@ -544,7 +510,7 @@
   trigger:
     - id: daily_reset
       platform: time
-      at: "08:10:00"
+      at: "08:05:00"
     - id: override_on
       platform: state
       entity_id: input_boolean.cumulus_override
