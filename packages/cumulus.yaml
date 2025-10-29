@@ -175,6 +175,16 @@ input_number:
     icon: mdi:battery-alert-variant-outline
     initial: 15
 
+  cumulus_seuil_prevision_favorable_kwh:
+    name: Seuil prévision favorable (kWh)
+    min: 0
+    max: 20
+    step: 0.5
+    unit_of_measurement: kWh
+    icon: mdi:weather-sunny
+    initial: 8
+
+
 input_boolean:
   cumulus_interdit:
     name: Interdit (sécurité/maintenance)
@@ -484,6 +494,17 @@ template:
              and is_state('input_boolean.cumulus_vacances','off')
              and is_state('input_boolean.cumulus_verrou_jour','off') }}
 
+      - name: "cumulus_meteo_favorable_demain"
+        unique_id: cumulus_meteo_favorable_demain
+        icon: mdi:weather-sunny
+        state: >-
+          {% set prevision_demain = states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) %}
+          {% set seuil_favorable = states('input_number.cumulus_seuil_prevision_favorable_kwh') | float(8) %}
+          {{ prevision_demain >= seuil_favorable }}
+        attributes:
+          prevision_demain_kwh: "{{ states('sensor.solcast_pv_forecast_previsions_pour_demain') }}"
+          seuil_kwh: "{{ states('input_number.cumulus_seuil_prevision_favorable_kwh') }}"
+
   # --------------------------- SENSORS DEBUG ----------------------------- #
   - sensor:
       # SENSOR DE DEBUG : Affiche l'état de tous les sensors liés au "besoin urgent"
@@ -779,18 +800,10 @@ automation:
             target: { entity_id: input_boolean.temp_atteinte_aujourdhui }
     mode: single
 
-  # 7) Reset du tag "temp atteinte" chaque jour (après fin HC)
-  - id: cumulus_reset_daily_flags
-    alias: Cumulus — Reset journalier (après HC)
-    trigger:
-      - platform: time
-        at: "08:10:00"
-    action:
-      - service: input_boolean.turn_off
-        target: { entity_id: input_boolean.temp_atteinte_aujourdhui }
-      - service: input_boolean.turn_off
-        target: { entity_id: input_boolean.cumulus_verrou_jour }
-    mode: single
+  # 7) Reset du tag "temp atteinte" - SUPPRIMÉ (doublon)
+  # L'automatisation "Reset quotidien & Override" dans automations/cumulus.yaml
+  # gère le reset à 08:10 + la fonctionnalité override manuel
+
 
   # 8) CORRECTION 2024-11-08 : Notification des incohérences détectées
   # CORRECTION 2024-11-08b : Gère correctement le cas où besoin_urgent n'existe pas

@@ -503,6 +503,37 @@
           L'automation universelle détectera si température max atteinte.
         entity_id: "{{ sw_id }}"
 
+# 9b) Désactivation verrou intelligente (23h00)
+- id: cumulus_desactivation_verrou_intelligente
+  alias: "Cumulus — Désactivation verrou si météo défavorable (23h)"
+  description: "Désactive verrou à 23h si météo défavorable demain pour permettre chauffe HC préventive"
+  mode: single
+  trigger:
+    - platform: time
+      at: "23:00:00"
+  condition:
+    # Seulement si verrou actif + température atteinte + météo défavorable
+    - condition: state
+      entity_id: input_boolean.cumulus_verrou_jour
+      state: "on"
+    - condition: state
+      entity_id: input_boolean.cumulus_temp_atteinte_aujourdhui
+      state: "on"
+    - condition: state
+      entity_id: binary_sensor.cumulus_meteo_favorable_demain
+      state: "off"  # Météo DÉFAVORABLE
+  action:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.cumulus_verrou_jour
+    - service: logbook.log
+      data:
+        name: "Cumulus Verrou Désactivé (Météo)"
+        message: >
+          Verrou désactivé à 23h00 : météo défavorable demain.
+          Chauffe HC préventive autorisée.
+          Prévision demain : {{ states('sensor.solcast_pv_forecast_previsions_pour_demain') }} kWh
+
 # 10) Reset flags quotidien + Override
 - id: cumulus_reset_daily_et_override
   alias: "Cumulus — Reset quotidien & Override"
@@ -510,7 +541,7 @@
   trigger:
     - id: daily_reset
       platform: time
-      at: "08:05:00"
+      at: "08:10:00"
     - id: override_on
       platform: state
       entity_id: input_boolean.cumulus_override
