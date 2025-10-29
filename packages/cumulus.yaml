@@ -206,6 +206,11 @@ input_boolean:
     name: Température atteinte aujourd'hui
     icon: mdi:thermometer-check
 
+  cumulus_chauffe_hc_exceptionnelle:
+    name: Chauffe HC exceptionnelle
+    icon: mdi:lightning-bolt-circle
+    initial: false
+
 # Fenêtres horaires
 input_datetime:
   cumulus_plage_pv_debut:
