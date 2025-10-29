@@ -1,0 +1,17 @@
+CHANGELOG Vue LAU/cumu - 2025-10-29
+
+Ajout Previsions Solaires Solcast
+
+Modifications apportees:
+- Ajout section Previsions Solaires apres header (position carte 3-4)
+- Titre: Previsions Solaires / Solcast PV Forecast
+- 2 cartes Mushroom horizontales: Aujourd hui et Demain
+- Sensors utilises:
+  * sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+  * sensor.solcast_pv_forecast_previsions_pour_demain
+- Total cartes dans vue cumu: 14 -> 16
+- Backup cree: .storage/lovelace.dashboard_lau.backup_avant_solcast
+- Home Assistant redemarre avec succes
+
+Note: Le fichier .storage/lovelace.dashboard_lau n est pas versionne (correctement exclu par .gitignore)
+Ce changelog documente les modifications apportees au dashboard de reference LAU/cumu.
