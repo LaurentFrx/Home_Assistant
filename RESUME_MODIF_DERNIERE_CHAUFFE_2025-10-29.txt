@@ -1,0 +1,56 @@
+================================================================================
+  MODIFICATION DASHBOARD LAU/CUMU - DERNIERE CHAUFFE EDITABLE
+  Date: 2025-10-29
+================================================================================
+
+OBJECTIF :
+----------
+Permettre de modifier manuellement l heure de la derniere chauffe complete
+depuis le dashboard LAU/cumu.
+
+MODIFICATION EFFECTUEE :
+------------------------
+1. Ajout dans /config/packages/cumulus.yaml :
+
+   input_datetime:
+     cumulus_derniere_chauffe_complete:
+       name: Derniere chauffe complete
+       has_date: true
+       has_time: true
+       icon: mdi:calendar-clock
+
+2. Backup cree : cumulus.yaml.backup_20251029_100520
+
+3. Configuration validee et Home Assistant redémarre
+
+UTILISATION :
+-------------
+1. Ouvrir le dashboard LAU
+2. Aller dans l onglet Cumulus (cumu)
+3. Cliquer sur Derniere chauffe complete
+4. Modifier la date/heure
+5. Valider
+
+L entite etait deja affichee dans le dashboard mais n existait pas.
+Maintenant elle existe et est modifiable.
+
+IMPACT :
+--------
+- sensor.cumulus_heures_depuis_derniere_chauffe utilise cette date
+- Les automatisations mettent a jour cette date automatiquement
+- Calcul du besoin urgent base sur cette date
+- Modification manuelle prise en compte immediatement
+
+CAS D USAGE :
+-------------
+- Corriger une chauffe non detectee automatiquement
+- Initialiser la valeur lors de la premiere utilisation
+- Tester le declenchement du besoin urgent
+
+FICHIERS DOCUMENTES :
+---------------------
+- /config/MODIFICATION_DERNIERE_CHAUFFE.md
+- /config/lovelace/CHANGELOG_LAU_CUMU.md (mis a jour)
+
+STATUS : ? TERMINE ET FONCTIONNEL
+================================================================================

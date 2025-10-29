@@ -1,0 +1,83 @@
+=== ENTITÉS UNIQUES (NON PRÉSENTES DANS LAU/cumu) ===
+Total: 47 entités
+
+
+📂 Monitoring/Diagnostic
+============================================================
+  ✓ binary_sensor.cumulus_chauffe_reelle
+  ✓ binary_sensor.cumulus_capacite_suffisante
+  ✓ binary_sensor.cumulus_meteo_favorable_aujourdhui
+  ✓ binary_sensor.cumulus_meteo_favorable_demain
+  ✓ binary_sensor.cumulus_temps_suffisant_fenetre_pv
+  ✓ binary_sensor.cumulus_appareil_en_cours
+  ✓ binary_sensor.cumulus_deadband_actif
+  ✓ binary_sensor.cumulus_fini_par_import
+  ✓ sensor.cumulus_consommation_reelle_w
+  ✓ sensor.cumulus_litres_disponibles_estimes
+  ✓ sensor.cumulus_temperature_estimee
+  ✓ sensor.cumulus_temperature_ballon_c
+  ✓ sensor.cumulus_pv_effectif_w
+  ✓ sensor.cumulus_puissance_disponible_w
+
+📂 Configuration/Réglages
+============================================================
+  ✓ input_number.cumulus_capacite_litres
+  ✓ input_number.cumulus_nb_personnes
+  ✓ input_number.cumulus_puissance_w
+  ✓ input_number.cumulus_temperature_cible_c
+  ✓ input_number.cumulus_talon_maison_w
+  ✓ input_number.cumulus_talon_w
+  ✓ input_number.cumulus_espacement_max_h
+
+📂 Configuration Avancée PV/Solarbank
+============================================================
+  ✓ input_number.cumulus_alpha_aps
+  ✓ input_number.cumulus_aps_max_w
+  ✓ input_number.cumulus_seuil_pv_on_w
+  ✓ input_number.cumulus_soc_start_pct
+  ✓ input_number.cumulus_soc_stop_pct
+  ✓ input_number.cumulus_soc_mini_pct
+  ✓ input_number.cumulus_solarbank_max_w
+  ✓ input_number.cumulus_seuil_solcast_bon_kwh
+  ✓ input_number.cumulus_prevision_mini_kwh
+  ✓ sensor.cumulus_sb_dispo_w
+
+📂 Configuration Avancée Import/Temporisation
+============================================================
+  ✓ input_number.cumulus_marge_import_w
+  ✓ input_number.cumulus_marge_fin_import_w
+  ✓ input_number.cumulus_import_demarrage_max_w
+  ✓ input_number.cumulus_deadband_s
+  ✓ input_number.cumulus_mini_deadband_no_delay_s
+  ✓ input_number.cumulus_on_delay_s
+  ✓ input_number.cumulus_seuil_appareil_actif_w
+  ✓ sensor.cumulus_seuil_fin_chauffe_w
+  ✓ sensor.cumulus_seuil_import_limiteur_w
+
+📂 Modes/Contrôles
+============================================================
+  ✓ binary_sensor.cumulus_autoriser_chauffe_hc_intelligente
+  ✓ input_boolean.cumulus_interdit_depart
+  ✓ input_boolean.cumulus_mode_vacances
+  ✓ input_boolean.cumulus_temp_atteinte_aujourdhui
+
+
+============================================================
+PROPOSITION STRUCTURE DASHBOARD UNIFIÉ (2 PAGES)
+============================================================
+
+PAGE 1 : MONITORING & DIAGNOSTIC
+  - État chauffe réelle
+  - Consommation temps réel
+  - Températures (estimée/ballon)
+  - Capacité/Litres disponibles
+  - Météo favorable
+  - Puissance PV/disponible
+  - États (deadband, appareil en cours, etc.)
+
+PAGE 2 : CONFIGURATION & RÉGLAGES AVANCÉS
+  - Réglages de base (capacité, nb personnes, puissance, température)
+  - Configuration PV/Solarbank (seuils, SOC, APS)
+  - Configuration Import/Temporisation (marges, deadband, délais)
+  - Modes et contrôles
+

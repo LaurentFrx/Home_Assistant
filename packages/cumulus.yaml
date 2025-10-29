@@ -220,6 +220,12 @@ input_datetime:
     has_time: true
     initial: "08:05:00"
 
+  cumulus_derniere_chauffe_complete:
+    name: Derniere chauffe complete
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-clock
+
 timer:
   cumulus_deadband_ui:
     name: Temporisation UI (deadband)
