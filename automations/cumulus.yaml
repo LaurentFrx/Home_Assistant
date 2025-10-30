@@ -151,6 +151,17 @@
     - condition: state
       entity_id: binary_sensor.cumulus_en_hc
       state: 'off'
+  - condition: and
+    conditions:
+    - condition: template
+      value_template: '{{ states(''sensor.cumulus_import_reseau_w'') not in [''unavailable'',
+        ''unknown''] }}'
+    - condition: template
+      value_template: '{{ states(''binary_sensor.cumulus_en_hc'') not in [''unavailable'',
+        ''unknown''] }}'
+    - condition: template
+      value_template: '{{ states(''binary_sensor.cumulus_chauffe_reelle'') not in
+        [''unavailable'', ''unknown''] }}'
   action:
   - variables:
       sw_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
