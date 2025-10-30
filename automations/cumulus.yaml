@@ -140,6 +140,17 @@
   - condition: state
     entity_id: binary_sensor.cumulus_chauffe_reelle
     state: 'on'
+  - condition: and
+    conditions:
+    - condition: state
+      entity_id: input_boolean.cumulus_override
+      state: 'off'
+    - condition: state
+      entity_id: input_boolean.cumulus_chauffe_hc_exceptionnelle
+      state: 'off'
+    - condition: state
+      entity_id: binary_sensor.cumulus_en_hc
+      state: 'off'
   action:
   - variables:
       sw_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
@@ -646,6 +657,9 @@
   trigger:
   - platform: state
     entity_id: binary_sensor.cumulus_en_hc
+    to: 'on'
+  - platform: state
+    entity_id: input_boolean.cumulus_chauffe_hc_exceptionnelle
     to: 'on'
   condition:
   - condition: or
