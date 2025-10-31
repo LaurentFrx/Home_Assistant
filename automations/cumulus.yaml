@@ -308,7 +308,7 @@
         target:
           entity_id: input_datetime.cumulus_derniere_chauffe_complete
         data:
-          datetime: '{{ now().replace(microsecond=0, tzinfo=None).isoformat() }}'
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
       - service: input_boolean.turn_on
         target:
           entity_id: input_boolean.cumulus_temp_atteinte_aujourdhui
@@ -797,20 +797,8 @@
     chauffe HC préventive
   mode: single
   trigger:
-  - platform: template
-    value_template: '
-
-
-
-      {% set hc_debut = states(''input_datetime.cumulus_heures_creuses_debut'') %}
-
-
-
-      {% set now_time = now().strftime(''%H:%M:%S'') %}
-
-
-
-      {{ hc_debut == now_time }}'
+  - platform: time
+    at: input_datetime.cumulus_heures_creuses_debut
   condition:
   - condition: state
     entity_id: input_boolean.cumulus_verrou_jour
@@ -1387,7 +1375,7 @@
     target:
       entity_id: input_datetime.cumulus_debut_chauffe_actuelle
     data:
-      datetime: '{{ now().replace(microsecond=0, tzinfo=None).isoformat() }}'
+      datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
   - service: logbook.log
     data:
       name: Cumulus Début Chauffe
