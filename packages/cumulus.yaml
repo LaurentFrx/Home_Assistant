@@ -273,6 +273,25 @@ template:
   - name: cumulus_deadband_actif
     unique_id: cumulus_deadband_actif
     state: '{{ is_state(''timer.cumulus_deadband_ui'', ''active'') }}'
+  - name: cumulus_soleil_suffisant
+    unique_id: cumulus_soleil_suffisant
+    icon: mdi:weather-sunny
+    state: >-
+      {% set aps = states('sensor.cumulus_production_aps_w') | float(0) %}
+      {% set seuil = states('input_number.cumulus_seuil_pv_statique_w') | float(100) %}
+      {{ aps >= seuil }}
+    attributes:
+      aps_w: '{{ states(''sensor.cumulus_production_aps_w'') }}'
+      seuil_w: '{{ states(''input_number.cumulus_seuil_pv_statique_w'') }}'
+  - name: cumulus_appareil_prioritaire_actif
+    unique_id: cumulus_appareil_prioritaire_actif
+    icon: mdi:home-lightning-bolt
+    state: >-
+      {{ is_state('binary_sensor.cumulus_lave_linge_actif', 'on')
+         or is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') }}
+    attributes:
+      lave_linge: '{{ states(''binary_sensor.cumulus_lave_linge_actif'') }}'
+      lave_vaisselle: '{{ states(''binary_sensor.cumulus_lave_vaisselle_actif'') }}'
   - name: cumulus_chauffe_reelle
     unique_id: cumulus_chauffe_reelle_v2
     device_class: running
@@ -437,6 +456,23 @@ template:
           -1
         {% endif %}
       seuil_h: '{{ states(''input_number.cumulus_espacement_max_h'') | float(50) }}'
+  - name: cumulus_autoriser_chauffe_hc_intelligente
+    unique_id: cumulus_autoriser_chauffe_hc_intelligente
+    icon: mdi:checkbox-marked-circle
+    state: >-
+      {{ is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on')
+         or is_state('binary_sensor.cumulus_meteo_favorable_demain', 'off') }}
+    attributes:
+      raison: >-
+        {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+          Besoin urgent (>50h)
+        {% elif is_state('binary_sensor.cumulus_meteo_favorable_demain', 'off') %}
+          Météo défavorable demain
+        {% else %}
+          Aucune raison de chauffer en HC
+        {% endif %}
+      besoin_urgent: '{{ states(''binary_sensor.cumulus_besoin_chauffe_urgente'') }}'
+      meteo_demain: '{{ states(''binary_sensor.cumulus_meteo_favorable_demain'') }}'
 - sensor:
   - name: cumulus_debug_besoin_urgent
     unique_id: cumulus_debug_besoin_urgent
@@ -459,6 +495,56 @@ template:
         ''besoin_urgent_sensor_existe'') }}'
       explication: Ce sensor de debug affiche tous les états liés au message 'besoin
         urgent'. Consultez les attributs pour identifier d'où vient le message.
+  - name: cumulus_sante_systeme
+    unique_id: cumulus_sante_systeme
+    unit_of_measurement: '%'
+    icon: mdi:heart-pulse
+    state: >-
+      {% set score = namespace(total=0) %}
+
+      {# Évaluation entités (25 pts) #}
+      {% if is_state('binary_sensor.cumulus_entites_ok', 'on') %}
+        {% set score.total = score.total + 25 %}
+      {% endif %}
+
+      {# Cohérence mesures (25 pts) - assume OK si pas d'état cohérence ou si OK #}
+      {% if states('binary_sensor.cumulus_etat_coherent') in ['on', 'unknown', 'unavailable'] %}
+        {% set score.total = score.total + 25 %}
+      {% endif %}
+
+      {# Espacement chauffes (25 pts) - OK si pas de besoin urgent #}
+      {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'off') %}
+        {% set score.total = score.total + 25 %}
+      {% endif %}
+
+      {# État fonctionnel (25 pts) - OK si pas en mode vacances et pas interdit #}
+      {% if is_state('input_boolean.cumulus_mode_vacances', 'off')
+         and is_state('input_boolean.cumulus_interdit_depart', 'off') %}
+        {% set score.total = score.total + 25 %}
+      {% endif %}
+
+      {{ score.total }}
+    attributes:
+      niveau_sante: >-
+        {% set score = states('sensor.cumulus_sante_systeme') | float(0) %}
+        {% if score >= 90 %}Excellent
+        {% elif score >= 75 %}Bon
+        {% elif score >= 50 %}Moyen
+        {% elif score >= 25 %}Dégradé
+        {% else %}Critique
+        {% endif %}
+      evaluation_entites: >-
+        {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_entites_ok', 'on') else 'KO (0pt)' }}
+      evaluation_coherence: >-
+        {{ 'OK (25pts)' if states('binary_sensor.cumulus_etat_coherent') in ['on', 'unknown', 'unavailable'] else 'KO (0pt)' }}
+      evaluation_espacement: >-
+        {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'off') else 'Urgent (0pt)' }}
+      evaluation_fonctionnel: >-
+        {{ 'OK (25pts)' if (is_state('input_boolean.cumulus_mode_vacances', 'off') and is_state('input_boolean.cumulus_interdit_depart', 'off')) else 'Bloqué (0pt)' }}
+      dernier_evenement: >-
+        {% set score = states('sensor.cumulus_sante_systeme') | float(0) %}
+        {% set niveau = state_attr('sensor.cumulus_sante_systeme', 'niveau_sante') %}
+        Santé: {{ niveau }} ({{ score }}%)
   - name: cumulus_heures_depuis_derniere_chauffe
     unique_id: cumulus_heures_depuis_derniere_chauffe
     unit_of_measurement: h
