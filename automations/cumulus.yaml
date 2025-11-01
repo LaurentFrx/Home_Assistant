@@ -487,6 +487,11 @@
   - service: switch.turn_off
     target:
       entity_id: '{{ sw_id }}'
+  - service: timer.start
+    target:
+      entity_id: timer.cumulus_deadband_ui
+    data:
+      duration: 00:{{ states('input_number.cumulus_deadband_min') | int(5) }}:00
   - service: persistent_notification.create
     data:
       title: Cumulus - Arrêt Prioritaire
@@ -508,7 +513,8 @@
 
 
 
-        Redémarrage automatique après.
+        Redémarrage automatique après deadband ({{ states(''input_number.cumulus_deadband_min'')
+        | int(5) }} min).
 
 
 
@@ -517,7 +523,8 @@
   - service: logbook.log
     data:
       name: Cumulus Arrêt Prioritaire
-      message: Arrêt temporaire {{ appareil_actif }}. PAS de verrou.
+      message: Arrêt temporaire {{ appareil_actif }}. PAS de verrou. Deadband {{ states('input_number.cumulus_deadband_min')
+        | int(5) }}min activé.
       entity_id: '{{ sw_id }}'
 - id: cumulus_arret_si_conso_domestique_elevee
   alias: Cumulus — Arrêt si conso domestique élevée
