@@ -308,7 +308,7 @@
         target:
           entity_id: input_datetime.cumulus_derniere_chauffe_complete
         data:
-          datetime: '{{ now().replace(microsecond=0, tzinfo=None).isoformat() }}'
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
       - service: input_boolean.turn_on
         target:
           entity_id: input_boolean.cumulus_temp_atteinte_aujourdhui
@@ -487,6 +487,11 @@
   - service: switch.turn_off
     target:
       entity_id: '{{ sw_id }}'
+  - service: timer.start
+    target:
+      entity_id: timer.cumulus_deadband_ui
+    data:
+      duration: 00:{{ states('input_number.cumulus_deadband_min') | int(5) }}:00
   - service: persistent_notification.create
     data:
       title: Cumulus - Arrêt Prioritaire
@@ -508,7 +513,8 @@
 
 
 
-        Redémarrage automatique après.
+        Redémarrage automatique après deadband ({{ states(''input_number.cumulus_deadband_min'')
+        | int(5) }} min).
 
 
 
@@ -517,7 +523,8 @@
   - service: logbook.log
     data:
       name: Cumulus Arrêt Prioritaire
-      message: Arrêt temporaire {{ appareil_actif }}. PAS de verrou.
+      message: Arrêt temporaire {{ appareil_actif }}. PAS de verrou. Deadband {{ states('input_number.cumulus_deadband_min')
+        | int(5) }}min activé.
       entity_id: '{{ sw_id }}'
 - id: cumulus_arret_si_conso_domestique_elevee
   alias: Cumulus — Arrêt si conso domestique élevée
@@ -797,20 +804,8 @@
     chauffe HC préventive
   mode: single
   trigger:
-  - platform: template
-    value_template: '
-
-
-
-      {% set hc_debut = states(''input_datetime.cumulus_heures_creuses_debut'') %}
-
-
-
-      {% set now_time = now().strftime(''%H:%M:%S'') %}
-
-
-
-      {{ hc_debut == now_time }}'
+  - platform: time
+    at: input_datetime.cumulus_heures_creuses_debut
   condition:
   - condition: state
     entity_id: input_boolean.cumulus_verrou_jour
@@ -1387,7 +1382,7 @@
     target:
       entity_id: input_datetime.cumulus_debut_chauffe_actuelle
     data:
-      datetime: '{{ now().replace(microsecond=0, tzinfo=None).isoformat() }}'
+      datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
   - service: logbook.log
     data:
       name: Cumulus Début Chauffe
