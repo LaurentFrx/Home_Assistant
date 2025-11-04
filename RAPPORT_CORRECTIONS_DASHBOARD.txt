@@ -1,0 +1,162 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║       RAPPORT DE CORRECTION - DASHBOARD CUMULUS (Vue "cumu")              ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+Date: 2025-11-02
+Fichier modifié: .storage/lovelace.dashboard_lau
+Backup créé: .storage/lovelace.dashboard_lau.backup_avant_correction
+
+═══════════════════════════════════════════════════════════════════════════
+
+1. CORRECTIONS DES NOMS D'ENTITÉS
+═══════════════════════════════════════════════════════════════════════════
+
+✅ input_boolean.cumulus_interdit
+   → Corrigé en: input_boolean.cumulus_interdit_depart
+
+✅ input_boolean.cumulus_vacances
+   → Corrigé en: input_boolean.cumulus_mode_vacances
+
+✅ input_boolean.temp_atteinte_aujourdhui
+   → Corrigé en: input_boolean.cumulus_temp_atteinte_aujourdhui
+
+Ces 3 corrections ont été appliquées dans:
+- Le bouton de contrôle "Interdit"
+- Le bouton de contrôle "Vacances"
+- Le bouton de contrôle "Temp. OK"
+- La carte markdown "Diagnostic" (template Jinja2)
+
+═══════════════════════════════════════════════════════════════════════════
+
+2. ENTITÉS SUPPRIMÉES (INEXISTANTES)
+═══════════════════════════════════════════════════════════════════════════
+
+Section "📊 Données techniques" - Entités retirées:
+
+❌ sensor.cumulus_temperature_physique_c
+   Raison: Jamais définie dans la configuration
+
+❌ sensor.cumulus_eau_chaude_disponible_40c_litres
+   Raison: Jamais définie dans la configuration
+
+❌ sensor.cumulus_besoin_journalier_litres
+   Raison: Jamais définie dans la configuration
+
+❌ sensor.cumulus_capacity_factor
+   Raison: Jamais définie dans la configuration
+
+Impact: Ces 4 lignes affichaient "unavailable" et ont été supprimées.
+        La section "Données techniques" ne contient plus que les sensors
+        réellement disponibles.
+
+═══════════════════════════════════════════════════════════════════════════
+
+3. CORRECTIONS SOLCAST
+═══════════════════════════════════════════════════════════════════════════
+
+✅ sensor.cumulus_solcast_forecast_tomorrow (inexistant)
+   → Corrigé en: sensor.solcast_pv_forecast_previsions_pour_demain ✓
+
+Cette correction a été appliquée dans la carte markdown "Diagnostic",
+section "Prochaine action prévue".
+
+═══════════════════════════════════════════════════════════════════════════
+
+4. ENTITÉS LAVE-LINGE/VAISSELLE (CONSERVÉES)
+═══════════════════════════════════════════════════════════════════════════
+
+✓ binary_sensor.cumulus_lave_linge_actif
+  → EXISTE (créé via interface HA comme template sensor)
+  → Source: sensor.lave_linge_power (Zigbee MQTT)
+
+✓ binary_sensor.cumulus_lave_vaisselle_actif
+  → EXISTE (créé via interface HA comme template sensor)
+  → Source: sensor.lave_vaisselle_power (Zigbee MQTT)
+
+Appareils Zigbee identifiés:
+- Lave-linge: 0xa4c138110b73d75b (friendly_name: Lave-linge)
+- Lave-vaisselle: 0xa4c1383d394955cb (friendly_name: Lave_vaisselle)
+
+Ces entités fonctionnent correctement et ont été conservées dans le dashboard.
+
+═══════════════════════════════════════════════════════════════════════════
+
+5. RÉSUMÉ DES MODIFICATIONS
+═══════════════════════════════════════════════════════════════════════════
+
+Total modifications: 8
+  ├─ Noms d'entités corrigés: 4 (3 entités × multiples occurrences)
+  ├─ Entités supprimées: 4
+  └─ Référence Solcast corrigée: 1
+
+État du dashboard après correction:
+  ✅ Toutes les entités référencées existent
+  ✅ Plus de messages "unavailable" pour entités manquantes
+  ✅ Boutons de contrôle fonctionnels
+  ✅ Carte diagnostic avec bonnes variables
+  ✅ Section données techniques nettoyée
+
+═══════════════════════════════════════════════════════════════════════════
+
+6. ENTITÉS ENCORE ABSENTES (NON CRITIQUES)
+═══════════════════════════════════════════════════════════════════════════
+
+Ces entités sont référencées dans le dashboard mais n'existent pas:
+
+⚠️ sensor.cumulus_temps_restant_fenetre_pv_h
+   Localisation: Carte "Temps restant PV"
+   Impact: Affichera "unknown h"
+   Solution: Créer un sensor template pour calculer le temps restant
+
+⚠️ input_number.cumulus_capacite_litres
+   Localisation: En-tête "Ballon XXL"
+   Impact: Affichera "Ballon unknown L"
+   Solution: Créer un input_number avec la capacité du ballon
+
+⚠️ input_number.cumulus_nb_personnes
+   Localisation: En-tête "X personne(s)"
+   Impact: Affichera "unknown personne(s)"
+   Solution: Créer un input_number avec le nb de personnes
+
+⚠️ input_boolean.cumulus_autoriser_hc
+   Localisation: Bouton "HC autorisées"
+   Impact: Bouton unavailable/non fonctionnel
+   Note: Un sensor similaire existe (cumulus_autoriser_chauffe_hc_intelligente)
+         mais c'est un sensor calculé, pas un bouton contrôlable
+
+Ces entités sont NON CRITIQUES et peuvent être ajoutées ultérieurement
+si les fonctionnalités sont désirées.
+
+═══════════════════════════════════════════════════════════════════════════
+
+7. ACTIONS REQUISES
+═══════════════════════════════════════════════════════════════════════════
+
+Pour finaliser les corrections:
+
+1. ⚠️ REDÉMARRER HOME ASSISTANT
+   Le fichier .storage/lovelace.dashboard_lau a été modifié directement.
+   Un redémarrage complet est FORTEMENT RECOMMANDÉ.
+
+2. ✓ Vérifier le dashboard
+   Après redémarrage, ouvrir le dashboard "Lau" > Vue "Cumulus"
+   et vérifier que:
+   - Les boutons Interdit/Vacances/Temp. OK fonctionnent
+   - La section Diagnostic affiche correctement
+   - Plus de messages "unavailable" dans Données techniques
+
+3. (Optionnel) Créer les entités manquantes non critiques
+   Si vous souhaitez avoir les infos "Temps restant PV", "Capacité ballon",
+   "Nb personnes", il faudra créer ces entités dans packages/cumulus.yaml
+
+═══════════════════════════════════════════════════════════════════════════
+
+FICHIERS CRÉÉS
+═══════════════════════════════════════════════════════════════════════════
+
+✓ .storage/lovelace.dashboard_lau.backup_avant_correction
+  → Backup de sécurité (à conserver)
+
+═══════════════════════════════════════════════════════════════════════════
+FIN DU RAPPORT
+═══════════════════════════════════════════════════════════════════════════

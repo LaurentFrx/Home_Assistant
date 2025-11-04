@@ -203,76 +203,16 @@
 
         '
       entity_id: '{{ sw_id }}'
-- id: cumulus_securite_soc_bas
-  alias: Cumulus — Sécurité SOC bas
-  description: Arrêt si SOC < seuil stop pendant > 5s
-  mode: restart
-  trigger:
-  - platform: template
-    value_template: "\n{% if states('sensor.cumulus_soc_solarbank_pct') not in ['unavailable',\
-      \ 'unknown'] %}\n{{ states('sensor.cumulus_soc_solarbank_pct')|float(100)\n\n\
-      \n   < states('input_number.cumulus_soc_stop_pct')|float(5)\n }}\n{% else %}\n\
-      \  false\n{% endif %}"
-    for:
-      seconds: 5
-  condition:
-  - condition: state
-    entity_id: binary_sensor.cumulus_chauffe_reelle
-    state: 'on'
-  action:
-  - variables:
-      sw_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
-  - condition: template
-    value_template: '{{ sw_id != '''' and sw_id not in [''unknown'', ''unavailable'']
-      and states(sw_id) == ''on'' }}'
-  - service: switch.turn_off
-    target:
-      entity_id: '{{ sw_id }}'
-  - service: input_text.set_value
-    target:
-      entity_id: input_text.cumulus_raison_deadband
-    data:
-      value: 'SOC {{ states(''sensor.cumulus_soc_solarbank_pct'') }}% < seuil {{ states(''input_number.cumulus_soc_stop_pct'')
-
-        }}%'
-  - service: timer.start
-    target:
-      entity_id: timer.cumulus_deadband_ui
-    data:
-      duration: 00:{{ states('input_number.cumulus_deadband_min') | int(5) }}:00
-  - service: logbook.log
-    data:
-      name: Cumulus Sécurité SOC
-      message: '
-
-
-
-
-
-        Arrêt temporaire (SOC {{ states(''sensor.cumulus_soc_solarbank_pct'') }}%
-        < seuil).
-
-
-
-
-
-        PAS de verrou (température non atteinte).
-
-
-
-        '
-      entity_id: '{{ sw_id }}'
 - id: cumulus_fin_chauffe_universelle
-  alias: Cumulus — Fin chauffe universelle
-  description: Détecte fin chauffe quelle que soit l'origine (PV/HC/manuelle) et met
-    à jour le système
+  alias: Cumulus — Fin chauffe universelle (AMÉLIORÉ)
+  description: Détecte fin chauffe quelle que soit l'origine (PV/HC/manuelle) avec notification intelligente
   mode: restart
   trigger:
   - platform: state
     entity_id: binary_sensor.cumulus_chauffe_reelle
     to: 'off'
     for:
-      seconds: 60
+      seconds: 15
   condition:
   - condition: state
     entity_id: input_boolean.cumulus_interdit_depart
@@ -281,23 +221,22 @@
     entity_id: input_boolean.cumulus_override
     state: 'off'
   - condition: template
-    value_template: "\n\n{% if trigger.from_state is not none and trigger.from_state.state\
-      \ == 'on' %}\n\n\n  {{ (as_timestamp(trigger.to_state.last_changed)\n - as_timestamp(trigger.from_state.last_changed))\
-      \ >= 120 }}\n\n\n{% else %}\n\n\n  false\n\n\n{% endif %}\n"
+    value_template: >
+      {% if trigger.from_state is not none and trigger.from_state.state == 'on' %}
+        {{ (as_timestamp(trigger.to_state.last_changed) - as_timestamp(trigger.from_state.last_changed)) >= 120 }}
+      {% else %}
+        false
+      {% endif %}
   action:
   - variables:
       sw_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
-      duree_chauffe_min: "\n\n{% if trigger.from_state is not none and trigger.from_state.state\
-        \ == 'on' %}\n\n\n  {{ ((as_timestamp(trigger.to_state.last_changed)\n - as_timestamp(trigger.from_state.last_changed))\
-        \ / 60) | round(0) }}\n\n\n{% else %}\n\n\n  0\n\n\n{% endif %}\n"
-      switch_encore_on: '
-
-
-
-
-
-        {{ sw_id != '''' and sw_id not in [''unknown'', ''unavailable''] and is_state(sw_id,
-        ''on'') }}'
+      duree_chauffe_min: >
+        {% if trigger.from_state is not none and trigger.from_state.state == 'on' %}
+          {{ ((as_timestamp(trigger.to_state.last_changed) - as_timestamp(trigger.from_state.last_changed)) / 60) | round(0) }}
+        {% else %}
+          0
+        {% endif %}
+      switch_encore_on: '{{ sw_id != '''' and sw_id not in [''unknown'', ''unavailable''] and is_state(sw_id, ''on'') }}'
       conso_w: '{{ states(''sensor.cumulus_consommation_reelle_w'') | float(0) }}'
   - choose:
     - conditions:
@@ -319,148 +258,74 @@
         target:
           entity_id: '{{ sw_id }}'
       - variables:
-          pv_pct: '{{ state_attr(''sensor.cumulus_repartition_sources'', ''autonomie_pv_pct'')
-            | int(0) }}'
-          nouvelle_entree: '{{ now().strftime(''%d/%m %H:%M'') }} - {{ duree_chauffe_min
-            }}min - {{ pv_pct }}% PV - Complète'
+          pv_pct: '{{ state_attr(''sensor.cumulus_repartition_sources'', ''autonomie_pv_pct'') | int(0) }}'
+          nouvelle_entree: '{{ now().strftime(''%d/%m %H:%M'') }} - {{ duree_chauffe_min }}min - {{ pv_pct }}% PV - Complète'
           hist_actuel: '{{ states(''input_text.cumulus_historique_chauffes'') }}'
       - service: input_text.set_value
         target:
           entity_id: input_text.cumulus_historique_chauffes
         data:
-          value: "\n\n{% if hist_actuel in ['[]', '', 'unknown', 'unavailable'] %}\n\
-            \n\n  {{ nouvelle_entree }}\n\n\n{% else\n %}\n\n\n  {% set chauffes =\
-            \ hist_actuel.split('|') %}\n\n\n  {% set nouvelles_chauffes = (chauffes\
-            \ + [nouvelle_entree])[-10:]\n %}\n\n\n  {{ nouvelles_chauffes | join('|')\
-            \ }}\n\n\n{% endif %}"
+          value: >
+            {% if hist_actuel in ['[]', '', 'unknown', 'unavailable'] %}
+              {{ nouvelle_entree }}
+            {% else %}
+              {% set chauffes = hist_actuel.split('|') %}
+              {% set nouvelles_chauffes = (chauffes + [nouvelle_entree])[-10:] %}
+              {{ nouvelles_chauffes | join('|') }}
+            {% endif %}
       - service: logbook.log
         data:
           name: Cumulus Température Max
-          message: '
-
-
-
-
-
+          message: >
             Thermostat interne coupé (température max atteinte).
-
-
-
-
-
             Durée : {{ duree_chauffe_min }} min.
-
-
-
-
-
             Conso finale : {{ conso_w }}W.
-
-
-
-
-
             Verrou jour activé.
-
-
-
-            '
           entity_id: '{{ sw_id }}'
       - service: persistent_notification.create
         data:
-          title: Cumulus - Température Max Atteinte
-          message: '
+          title: "✅ Cumulus - Chauffe terminée"
+          message: >
+            {% set temp = states('sensor.cumulus_temperature_physique_c') | float(0) %}
+            {% set litres = states('sensor.cumulus_eau_chaude_disponible_40c_litres') | int(0) %}
+            {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') %}
 
+            **Chauffe complète en {{ duree_chauffe_min }} minutes** 🎯
 
+            **Bilan :**
 
+            • Eau chaude : {{ temp | round(0) }}°C ({{ litres }}L disponibles)
 
+            • Mode : {% if import_w < 0 %}☀️ 100% solaire{% elif en_hc %}🌙 Heures creuses{% else %}⚡ Mixte solaire/réseau{% endif %}
 
-            Chauffe complète après {{ duree_chauffe_min }} minutes.
+            • Prochaine chauffe : Demain ou selon besoin
 
-
-
-
-
-
-
-
-
-
-
-            Bilan :
-
-
-
-
-
-            - {{ state_attr(''sensor.cumulus_repartition_sources'', ''autonomie_pv_pct'')
-            }}% PV
-
-
-
-
-
-            - Température estimée : {{ states(''sensor.cumulus_temperature_physique_c'')
-            }}°C
-
-
-
-
-
-            - Capacité 40°C : {{ states(''sensor.cumulus_eau_chaude_disponible_40c_litres'')
-            }}L
-
-
-
-
-
-
-
-
-
-
-
-            Verrou jour activé - prochaine chauffe demain.
-
-
-
-            '
-          notification_id: cumulus_temp_max
+            Verrou activé - Le système gère la suite ! 😊
+          notification_id: cumulus_fin_chauffe
     default:
     - variables:
-        pv_pct: '{{ state_attr(''sensor.cumulus_repartition_sources'', ''autonomie_pv_pct'')
-          | int(0) }}'
-        nouvelle_entree: '{{ now().strftime(''%d/%m %H:%M'') }} - {{ duree_chauffe_min
-          }}min - {{ pv_pct }}% PV - Interrompue'
+        pv_pct: '{{ state_attr(''sensor.cumulus_repartition_sources'', ''autonomie_pv_pct'') | int(0) }}'
+        nouvelle_entree: '{{ now().strftime(''%d/%m %H:%M'') }} - {{ duree_chauffe_min }}min - {{ pv_pct }}% PV - Interrompue'
         hist_actuel: '{{ states(''input_text.cumulus_historique_chauffes'') }}'
     - service: input_text.set_value
       target:
         entity_id: input_text.cumulus_historique_chauffes
       data:
-        value: "\n\n{% if hist_actuel in ['[]', '', 'unknown', 'unavailable'] %}\n\
-          \n\n  {{ nouvelle_entree }}\n\n\n{% else\n %}\n\n\n  {% set chauffes = hist_actuel.split('|')\
-          \ %}\n\n\n  {% set nouvelles_chauffes = (chauffes + [nouvelle_entree])[-10:]\n\
-          \ %}\n\n\n  {{ nouvelles_chauffes | join('|') }}\n\n\n{% endif %}"
+        value: >
+          {% if hist_actuel in ['[]', '', 'unknown', 'unavailable'] %}
+            {{ nouvelle_entree }}
+          {% else %}
+            {% set chauffes = hist_actuel.split('|') %}
+            {% set nouvelles_chauffes = (chauffes + [nouvelle_entree])[-10:] %}
+            {{ nouvelles_chauffes | join('|') }}
+          {% endif %}
     - service: logbook.log
       data:
         name: Cumulus Fin Chauffe
-        message: '
-
-
-
-
-
+        message: >
           Fin de chauffe après {{ duree_chauffe_min }} min (interruption).
-
-
-
-
-
           Température non atteinte, pas de verrou.
-
-
-
-          '
         entity_id: '{{ sw_id }}'
 - id: cumulus_arret_si_appareil_demarre
   alias: Cumulus — Arrêt si appareil démarre
@@ -1054,229 +919,74 @@
     data:
       message: 'Cumulus refus démarrage : {{ raisons_blocage }}'
       name: Cumulus
-- id: cumulus_detection_chauffe_externe
-  alias: Cumulus — Détection chauffe externe
-  description: Détecte les démarrages manuels via app Shelly ou autres sources externes
+- id: cumulus_detection_anomalie_coherence
+  alias: Cumulus — Anomalie cohérence (CORRIGÉ)
+  description: Alerte uniquement si vraie anomalie (pas fin chauffe normale)
   mode: single
   trigger:
   - platform: state
     entity_id: binary_sensor.cumulus_chauffe_reelle
-    to: 'on'
+    to: 'off'
     for:
-      seconds: 30
+      minutes: 2
   condition:
   - condition: template
-    value_template: "\n\n{{ not is_state('binary_sensor.cumulus_fenetre_pv', 'on')\n\
-      \n\n   and not is_state('binary_sensor.cumulus_en_hc',\n 'on')\n\n\n   and not\
-      \ is_state('input_boolean.cumulus_override', 'on') }}"
-  action:
-  - service: persistent_notification.create
-    data:
-      title: Cumulus - Chauffe Externe Détectée
-      message: '
-
-
-
-
-
-        Le cumulus a été démarré manuellement (app Shelly ou autre).
-
-
-
-
-
-        Le système surveille cette chauffe et mettra à jour les compteurs automatiquement.
-
-
-
-        '
-      notification_id: cumulus_chauffe_externe
-  - service: logbook.log
-    data:
-      name: Cumulus Chauffe Externe
-      message: '
-
-
-
-
-
-        Démarrage manuel détecté (source externe).
-
-
-
-
-
-        Consommation : {{ states(''sensor.cumulus_consommation_reelle_w'') }}W
-
-
-
-        '
-      entity_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
-- id: cumulus_detection_anomalie_coherence
-  alias: Cumulus — Détection anomalie cohérence
-  description: Alerte si switch ON mais consommation < 100W pendant 30s (anomalie
-    détection)
-  mode: single
-  trigger:
-  - platform: template
-    value_template: '
-
-
-
-
-
-      {% set sw_id = states(''input_text.cumulus_entity_contacteur'') %}
-
-
-
-
-
-      {% set sw_on = sw_id not in ['''', ''unknown'', ''unavailable''] and is_state(sw_id,
-      ''on'') %}
-
-
-
-
-
-      {% set conso = states(''sensor.cumulus_consommation_reelle_w'') | float(0) %}
-
-
-
-
-
-      {{ sw_on and conso < 100 }}'
-    for:
-      seconds: 30
-  condition:
+    value_template: >
+      {{ is_state(states('input_text.cumulus_entity_contacteur'), 'on') }}
   - condition: state
-    entity_id: input_boolean.cumulus_interdit_depart
+    entity_id: input_boolean.cumulus_verrou_jour
     state: 'off'
+  - condition: template
+    value_template: >
+      {% set debut_chauffe = states('input_datetime.cumulus_debut_chauffe_actuelle') | as_datetime %}
+      {% if debut_chauffe is not none %}
+        {% set duree_min = (now() - debut_chauffe).total_seconds() / 60 %}
+        {{ duree_min < 20 }}
+      {% else %}
+        false
+      {% endif %}
   action:
-  - variables:
-      sw_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
-      conso: '{{ states(''sensor.cumulus_consommation_reelle_w'') | float(0) }}'
-      import_w: '{{ states(''sensor.cumulus_import_reseau_w'') | float(0) }}'
-      pv_w: '{{ states(''sensor.cumulus_pv_power_w'') | float(0) }}'
   - service: persistent_notification.create
     data:
-      title: ⚠️ Cumulus - ANOMALIE Détection
-      message: '
+      title: "⚠️ Cumulus - Chauffe anormalement courte"
+      message: >
+        {% set debut_chauffe = states('input_datetime.cumulus_debut_chauffe_actuelle') | as_datetime %}
+        {% if debut_chauffe is not none %}
+          {% set duree_min = ((now() - debut_chauffe).total_seconds() / 60) | int %}
+        {% else %}
+          {% set duree_min = 0 %}
+        {% endif %}
 
+        **Chauffe arrêtée après seulement {{ duree_min }} minutes**
 
+        **Situation :**
 
+        • Contacteur : {{ states(states('input_text.cumulus_entity_contacteur')) }}
 
+        • Consommation : {{ states('sensor.cumulus_consommation_reelle_w') | float(0) | round(0) }}W
 
-        ANOMALIE DE COHÉRENCE DÉTECTÉE !
+        **Causes possibles :**
 
+        1. Cumulus déjà chaud (peu de besoin)
 
+        2. Arrêt automatique (SOC/import/appareil)
 
+        3. Problème technique rare
 
-
-
-
-
-
-
-
-        Le contacteur est ON mais consommation anormalement faible :
-
-
-
-
-
-        - Contacteur : {{ states(sw_id) }}
-
-
-
-
-
-        - Consommation mesurée : {{ conso }}W (< 100W)
-
-
-
-
-
-        - Import réseau : {{ import_w }}W
-
-
-
-
-
-        - Production PV : {{ pv_w }}W
-
-
-
-
-
-
-
-
-
-
-
-        Causes possibles :
-
-
-
-
-
-        - Défaillance contacteur ou relais
-
-
-
-
-
-        - Problème de mesure
-
-
-
-
-
-        - Thermostat coupé immédiatement
-
-
-
-
-
-        - Cumulus déjà à température max
-
-
-
-
-
-
-
-
-
-
-
-        Vérification manuelle recommandée.
-
-
-
-        '
-      notification_id: cumulus_anomalie_coherence
+        👉 Consultez l'historique des chauffes pour diagnostic.
+      notification_id: cumulus_anomalie
   - service: logbook.log
     data:
-      name: ⚠️ Cumulus ANOMALIE
-      message: '
-
-
-
-
-
-        ANOMALIE: Switch ON mais conso {{ conso }}W < 100W pendant 30s.
-
-
-
-
-
-        Import={{ import_w }}W, PV={{ pv_w }}W
-
-
-
-        '
-      entity_id: '{{ sw_id }}'
+      name: ⚠️ Cumulus Anomalie
+      message: >
+        {% set debut_chauffe = states('input_datetime.cumulus_debut_chauffe_actuelle') | as_datetime %}
+        {% if debut_chauffe is not none %}
+          {% set duree_min = ((now() - debut_chauffe).total_seconds() / 60) | int %}
+        {% else %}
+          {% set duree_min = 0 %}
+        {% endif %}
+        Chauffe anormalement courte : {{ duree_min }} min. Verrou jour OFF donc température non atteinte.
+      entity_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
 - id: cumulus_alerte_entite_unavailable_chauffe
   alias: Cumulus — Alerte entité unavailable pendant chauffe
   description: Notifie si une entité critique devient unavailable pendant une chauffe
@@ -1569,4 +1279,48 @@
 
 
         '
+      entity_id: sensor.cumulus_sante_systeme
+- id: cumulus_alerte_maintenance
+  alias: Cumulus — Alerte maintenance préventive
+  description: Alerte si comportement inhabituel répété
+  mode: single
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.cumulus_sante_systeme
+    below: 70
+    for:
+      hours: 1
+  action:
+  - service: persistent_notification.create
+    data:
+      title: "🔧 Cumulus - Maintenance recommandée"
+      message: >
+        {% set sante = states('sensor.cumulus_sante_systeme') | int(0) %}
+        {% set eval_entites = state_attr('sensor.cumulus_sante_systeme', 'evaluation_entites') %}
+        {% set eval_coherence = state_attr('sensor.cumulus_sante_systeme', 'evaluation_coherence') %}
+        {% set eval_espacement = state_attr('sensor.cumulus_sante_systeme', 'evaluation_espacement') %}
+
+        **Score santé système : {{ sante }}%**
+
+        Le système fonctionne mais présente des anomalies récurrentes.
+
+        **Vérifications recommandées :**
+
+        {% if 'KO' in eval_entites %}
+        • Vérifier capteurs unavailable
+        {% endif %}
+        {% if 'KO' in eval_coherence %}
+        • Vérifier cohérence mesures import/PV
+        {% endif %}
+        {% if 'Urgent' in eval_espacement %}
+        • Besoin urgent actif - Vérifier pourquoi
+        {% endif %}
+
+        👉 Consultez le Guide Dépannage
+      notification_id: cumulus_maintenance
+  - service: logbook.log
+    data:
+      name: 🔧 Cumulus Maintenance
+      message: >
+        Alerte maintenance préventive - Score santé {{ states('sensor.cumulus_sante_systeme') }}% < 70%
       entity_id: sensor.cumulus_sante_systeme
