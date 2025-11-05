@@ -1,7 +1,7 @@
 {
     // ====== Spécifique Home Assistant ======
     "files.associations": {
-        "*.yaml": "home-assistant"
+        "*.yaml": "yaml"  // Désactivé "home-assistant" pour éviter erreurs extension
     },
     "[yaml]": {
         "editor.tabSize": 2,
