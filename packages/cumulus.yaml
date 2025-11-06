@@ -136,6 +136,32 @@ input_number:
     unit_of_measurement: h
     icon: mdi:clock-alert
     initial: 50
+  cumulus_seuil_pv_statique_w:
+    name: Seuil PV statique (W)
+    min: 500
+    max: 3000
+    step: 100
+    mode: slider
+    unit_of_measurement: W
+    icon: mdi:solar-power-variant
+    initial: 1800
+  cumulus_capacite_litres:
+    name: Capacité ballon (L)
+    min: 50
+    max: 500
+    step: 10
+    mode: slider
+    unit_of_measurement: L
+    icon: mdi:water-boiler
+    initial: 200
+  cumulus_nb_personnes:
+    name: Nombre de personnes
+    min: 1
+    max: 10
+    step: 1
+    mode: slider
+    icon: mdi:account-multiple
+    initial: 2
 input_boolean:
   cumulus_interdit_depart:
     name: Interdit départ (sécurité/maintenance)
@@ -182,6 +208,11 @@ input_datetime:
     has_date: true
     has_time: true
     icon: mdi:calendar-clock
+  cumulus_debut_chauffe_actuelle:
+    name: Début chauffe actuelle
+    has_date: true
+    has_time: true
+    icon: mdi:clock-start
 timer:
   cumulus_deadband_ui:
     name: Temporisation UI (deadband)
@@ -259,6 +290,60 @@ template:
     unique_id: cumulus_last_full_heat_duration
     unit_of_measurement: min
     state: '{{ states(''sensor.cumulus_last_full_heat_duration'') }}'
+  - name: cumulus_production_aps_w
+    unique_id: cumulus_production_aps_w
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-panel
+    state: '{{ states(''sensor.solar_total_power'') | float(0) }}'
+  - name: cumulus_puissance_disponible_w
+    unique_id: cumulus_puissance_disponible_w
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:flash
+    state: '{{ states(''sensor.cumulus_pv_power_w'') | float(0) }}'
+  - name: cumulus_seuil_pv_dynamique_w
+    unique_id: cumulus_seuil_pv_dynamique_w
+    unit_of_measurement: W
+    device_class: power
+    icon: mdi:chart-line
+    state: >
+      {% set base = states('input_number.cumulus_seuil_pv_statique_w') | float(1800) %}
+      {% set heure = now().hour %}
+      {% if heure >= 12 and heure < 15 %}
+        {{ base * 0.7 }}
+      {% elif heure >= 15 %}
+        {{ base * 0.5 }}
+      {% else %}
+        {{ base }}
+      {% endif %}
+  - name: cumulus_repartition_sources
+    unique_id: cumulus_repartition_sources
+    icon: mdi:chart-donut
+    state: '{{ "calculé" }}'
+    attributes:
+      autonomie_pv_pct: >
+        {% set import = states('sensor.cumulus_import_reseau_w') | float(0) %}
+        {% if import < 0 %}
+          100
+        {% else %}
+          0
+        {% endif %}
+  - name: cumulus_temps_restant_fenetre_pv_h
+    unique_id: cumulus_temps_restant_fenetre_pv_h
+    unit_of_measurement: h
+    icon: mdi:clock-time-eight
+    state: >
+      {% set fin = states('input_datetime.cumulus_plage_pv_fin') %}
+      {% if fin not in ['unknown', 'unavailable'] %}
+        {% set fin_dt = today_at(fin) %}
+        {% set delta = (fin_dt - now()).total_seconds() / 3600 %}
+        {{ [0, delta] | max | round(1) }}
+      {% else %}
+        0
+      {% endif %}
 - binary_sensor:
   - name: cumulus_fenetre_pv
     unique_id: cumulus_fenetre_pv
@@ -473,6 +558,15 @@ template:
         {% endif %}
       besoin_urgent: '{{ states(''binary_sensor.cumulus_besoin_chauffe_urgente'') }}'
       meteo_demain: '{{ states(''binary_sensor.cumulus_meteo_favorable_demain'') }}'
+  - name: cumulus_meteo_favorable_aujourdhui
+    unique_id: cumulus_meteo_favorable_aujourdhui
+    icon: mdi:weather-sunny-alert
+    state: >
+      {% set production_today = states('sensor.solar_production_of_today') | float(0) %}
+      {{ production_today > 5 }}
+    attributes:
+      production_kwh: '{{ states(''sensor.solar_production_of_today'') }}'
+      seuil_kwh: '5'
 - sensor:
   - name: cumulus_debug_besoin_urgent
     unique_id: cumulus_debug_besoin_urgent

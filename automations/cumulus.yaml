@@ -77,6 +77,11 @@
   - service: switch.turn_on
     target:
       entity_id: '{{ sw_id }}'
+  - service: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.cumulus_debut_chauffe_actuelle
+    data:
+      datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
   - service: input_text.set_value
     target:
       entity_id: input_text.cumulus_raison_deadband
@@ -286,16 +291,10 @@
         data:
           title: "✅ Cumulus - Chauffe terminée"
           message: >
-            {% set temp = states('sensor.cumulus_temperature_physique_c') | float(0) %}
-            {% set litres = states('sensor.cumulus_eau_chaude_disponible_40c_litres') | int(0) %}
             {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
             {% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') %}
 
             **Chauffe complète en {{ duree_chauffe_min }} minutes** 🎯
-
-            **Bilan :**
-
-            • Eau chaude : {{ temp | round(0) }}°C ({{ litres }}L disponibles)
 
             • Mode : {% if import_w < 0 %}☀️ 100% solaire{% elif en_hc %}🌙 Heures creuses{% else %}⚡ Mixte solaire/réseau{% endif %}
 
@@ -619,6 +618,11 @@
   - service: switch.turn_on
     target:
       entity_id: '{{ sw_id }}'
+  - service: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.cumulus_debut_chauffe_actuelle
+    data:
+      datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
   - service: logbook.log
     data:
       name: Cumulus Démarrage HC
@@ -750,6 +754,31 @@
       - service: input_boolean.turn_off
         target:
           entity_id: input_boolean.cumulus_verrou_jour
+- id: cumulus_reset_locks_debut_fenetre_pv
+  alias: Cumulus — Reset locks au début fenêtre PV
+  description: Reset verrous à 10:20 pour permettre chauffe PV après HC nocturne
+  mode: single
+  trigger:
+  - platform: template
+    value_template: >
+      {{ now().strftime('%H:%M') == states('input_datetime.cumulus_plage_pv_debut')[0:5] }}
+  condition:
+  - condition: state
+    entity_id: input_boolean.cumulus_verrou_jour
+    state: 'on'
+  - condition: state
+    entity_id: input_boolean.cumulus_temp_atteinte_aujourdhui
+    state: 'on'
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id:
+        - input_boolean.cumulus_verrou_jour
+        - input_boolean.cumulus_temp_atteinte_aujourdhui
+  - service: logbook.log
+    data:
+      name: Cumulus Reset Fenêtre PV
+      message: "Verrous réinitialisés au début de la fenêtre PV ({{ now().strftime('%H:%M') }}). Permet nouvelle évaluation avec soleil disponible."
 - id: cumulus_override_desactive_verrou
   alias: Cumulus — Override désactive verrou
   description: Permet commande manuelle même si verrou actif
