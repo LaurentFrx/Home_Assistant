@@ -12,6 +12,14 @@ input_text:
     name: ENTITÉ - SOC Solarbank (%)
     icon: mdi:battery
     initial: sensor.system_sanguinet_etat_de_charge_du_sb
+  cumulus_entity_lave_linge_power:
+    name: ENTITÉ - Lave-linge puissance (W)
+    icon: mdi:washing-machine
+    initial: sensor.lave_linge_power
+  cumulus_entity_lave_vaisselle_power:
+    name: ENTITÉ - Lave-vaisselle puissance (W)
+    icon: mdi:dishwasher
+    initial: sensor.lave_vaisselle_power
 input_number:
   cumulus_seuil_pv_on_w:
     name: Seuil PV pour démarrage (W)
@@ -157,6 +165,20 @@ input_boolean:
     name: Chauffe HC exceptionnelle
     icon: mdi:lightning-bolt-circle
     initial: false
+  # === Alias et contrôles pour compatibilité dashboard-lau/cumu ===
+  cumulus_autoriser_hc:
+    name: Autoriser chauffe heures creuses
+    icon: mdi:clock-check
+    initial: true
+  cumulus_interdit:
+    name: Interdit (alias)
+    icon: mdi:hand-back-right-off
+  cumulus_vacances:
+    name: Mode vacances (alias)
+    icon: mdi:beach
+  temp_atteinte_aujourdhui:
+    name: Température atteinte (alias)
+    icon: mdi:thermometer-check
 input_datetime:
   cumulus_plage_pv_debut:
     name: Fenêtre PV - début
@@ -260,6 +282,58 @@ template:
     unique_id: cumulus_last_full_heat_duration
     unit_of_measurement: min
     state: '{{ states(''sensor.cumulus_last_full_heat_duration'') }}'
+  # === Alias Solcast pour compatibilité dashboard-lau/cumu ===
+  - name: cumulus_solcast_forecast_today
+    unique_id: cumulus_solcast_forecast_today
+    unit_of_measurement: kWh
+    device_class: energy
+    icon: mdi:solar-power
+    state: "{{ states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') | float(0) }}"
+  - name: cumulus_solcast_forecast_tomorrow
+    unique_id: cumulus_solcast_forecast_tomorrow
+    unit_of_measurement: kWh
+    device_class: energy
+    icon: mdi:solar-power-variant
+    state: "{{ states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) }}"
+  # === Sensors de calcul avancés (ajoutés pour dashboard-lau/cumu) ===
+  - name: cumulus_temps_restant_fenetre_pv_h
+    unique_id: cumulus_temps_restant_fenetre_pv_h
+    unit_of_measurement: h
+    device_class: duration
+    icon: mdi:clock-outline
+    state: >
+      {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+        {% set fin = states('input_datetime.cumulus_plage_pv_fin') %}
+        {% set fin_ts = today_at(fin).timestamp() %}
+        {% set now_ts = now().timestamp() %}
+        {% set diff_h = ((fin_ts - now_ts) / 3600) %}
+        {{ [0, diff_h] | max | round(1) }}
+      {% else %}
+        0
+      {% endif %}
+  - name: cumulus_seuil_pv_dynamique_w
+    unique_id: cumulus_seuil_pv_dynamique_w
+    unit_of_measurement: W
+    device_class: power
+    icon: mdi:flash-auto
+    state: >
+      {% set base = states('input_number.cumulus_seuil_pv_on_w') | float(100) %}
+      {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(50) %}
+      {% if soc > 80 %}
+        {{ (base * 0.7) | round(0) }}
+      {% elif soc > 50 %}
+        {{ base | round(0) }}
+      {% else %}
+        {{ (base * 1.3) | round(0) }}
+      {% endif %}
+  - name: cumulus_capacity_factor
+    unique_id: cumulus_capacity_factor
+    unit_of_measurement: '%'
+    icon: mdi:percent
+    state: >
+      {% set prev_today = states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') | float(0) %}
+      {% set capacite_max = 12 %}
+      {{ ((prev_today / capacite_max) * 100) | round(1) if capacite_max > 0 else 0 }}
 - binary_sensor:
   - name: cumulus_fenetre_pv
     unique_id: cumulus_fenetre_pv
@@ -284,6 +358,39 @@ template:
     attributes:
       aps_w: '{{ states(''sensor.cumulus_production_aps_w'') }}'
       seuil_w: '{{ states(''input_number.cumulus_seuil_pv_statique_w'') }}'
+  # === Détection appareils prioritaires (ajouté pour dashboard-lau/cumu) ===
+  - name: cumulus_lave_linge_actif
+    unique_id: cumulus_lave_linge_actif
+    icon: mdi:washing-machine
+    device_class: running
+    state: >
+      {% set entity_id = states('input_text.cumulus_entity_lave_linge_power') %}
+      {% if entity_id in ['', 'unknown', 'unavailable'] or entity_id == 'sensor.lave_linge_power' %}
+        false
+      {% else %}
+        {% set power = states(entity_id) | float(0) %}
+        {{ power > 20 }}
+      {% endif %}
+  - name: cumulus_lave_vaisselle_actif
+    unique_id: cumulus_lave_vaisselle_actif
+    icon: mdi:dishwasher
+    device_class: running
+    state: >
+      {% set entity_id = states('input_text.cumulus_entity_lave_vaisselle_power') %}
+      {% if entity_id in ['', 'unknown', 'unavailable'] or entity_id == 'sensor.lave_vaisselle_power' %}
+        false
+      {% else %}
+        {% set power = states(entity_id) | float(0) %}
+        {{ power > 20 }}
+      {% endif %}
+  # === Météo favorable aujourd'hui (ajouté pour dashboard-lau/cumu) ===
+  - name: cumulus_meteo_favorable_aujourdhui
+    unique_id: cumulus_meteo_favorable_aujourdhui
+    icon: mdi:weather-sunny
+    state: >
+      {% set prevision_today = states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') | float(0) %}
+      {% set seuil_favorable = states('input_number.cumulus_seuil_prevision_favorable_kwh') | float(8) %}
+      {{ prevision_today >= seuil_favorable }}
   - name: cumulus_appareil_prioritaire_actif
     unique_id: cumulus_appareil_prioritaire_actif
     icon: mdi:home-lightning-bolt
@@ -567,3 +674,29 @@ template:
           Jamais
         {% endif %}
       espacement_max_h: '{{ states(''input_number.cumulus_espacement_max_h'') | float(50) }}'
+  # === Sensors de priorité BASSE (estimations/valeurs fixes) ===
+  - name: cumulus_besoin_journalier_litres
+    unique_id: cumulus_besoin_journalier_litres
+    unit_of_measurement: L
+    icon: mdi:water
+    state: >
+      {% set nb_personnes = states('input_number.cumulus_nb_personnes') | float(2) %}
+      {{ (nb_personnes * 45) | round(0) }}
+  - name: cumulus_temperature_physique_c
+    unique_id: cumulus_temperature_physique_c
+    unit_of_measurement: °C
+    device_class: temperature
+    icon: mdi:thermometer
+    state: "60"
+  - name: cumulus_eau_chaude_disponible_40c_litres
+    unique_id: cumulus_eau_chaude_disponible_40c_litres
+    unit_of_measurement: L
+    icon: mdi:water-thermometer
+    state: >
+      {% set temp = states('sensor.cumulus_temperature_physique_c') | float(60) %}
+      {% set capacite = states('input_number.cumulus_capacite_litres') | float(200) %}
+      {% if temp > 40 %}
+        {{ ((temp - 15) / (40 - 15) * capacite) | round(0) }}
+      {% else %}
+        0
+      {% endif %}
