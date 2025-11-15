@@ -20,6 +20,14 @@ input_text:
     name: ENTITÉ - Lave-vaisselle puissance (W)
     icon: mdi:dishwasher
     initial: sensor.lave_vaisselle_power
+  cumulus_raison_deadband:
+    name: Raison dernier deadband
+    icon: mdi:information-outline
+    max: 255
+  cumulus_historique_chauffes:
+    name: Historique des 10 dernières chauffes
+    max: 500
+    icon: mdi:history
 input_number:
   cumulus_seuil_pv_on_w:
     name: Seuil PV pour démarrage (W)
@@ -145,6 +153,50 @@ input_number:
     unit_of_measurement: h
     icon: mdi:clock-alert
     initial: 50
+  cumulus_seuil_pv_statique_w:
+    name: Seuil PV statique (APS minimum)
+    min: 0
+    max: 2000
+    step: 10
+    mode: slider
+    unit_of_measurement: W
+    icon: mdi:solar-power
+    initial: 100
+  cumulus_soc_min_pct:
+    name: SOC minimum pour démarrage PV
+    min: 0
+    max: 100
+    step: 1
+    mode: slider
+    unit_of_measurement: '%'
+    icon: mdi:battery-30
+    initial: 25
+  cumulus_capacite_litres:
+    name: Capacité ballon (litres)
+    min: 50
+    max: 500
+    step: 10
+    mode: slider
+    unit_of_measurement: L
+    icon: mdi:water
+    initial: 300
+  cumulus_nb_personnes:
+    name: Nombre de personnes
+    min: 1
+    max: 10
+    step: 1
+    mode: slider
+    icon: mdi:account-multiple
+    initial: 2
+  cumulus_temperature_cible_c:
+    name: Température cible
+    min: 40
+    max: 70
+    step: 1
+    mode: slider
+    unit_of_measurement: °C
+    icon: mdi:thermometer
+    initial: 60
 input_boolean:
   cumulus_interdit_depart:
     name: Interdit départ (sécurité/maintenance)
@@ -205,6 +257,11 @@ input_datetime:
     has_date: true
     has_time: true
     icon: mdi:calendar-clock
+  cumulus_debut_chauffe_actuelle:
+    name: Début chauffe actuelle
+    has_date: true
+    has_time: true
+    icon: mdi:clock-start
 timer:
   cumulus_deadband_ui:
     name: Temporisation UI (deadband)
@@ -334,6 +391,91 @@ template:
       {% set prev_today = states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') | float(0) %}
       {% set capacite_max = 12 %}
       {{ ((prev_today / capacite_max) * 100) | round(1) if capacite_max > 0 else 0 }}
+  # === Sensors critiques pour automations (ajoutés après audit 2025-11-15) ===
+  - name: cumulus_production_aps_w
+    unique_id: cumulus_production_aps_w
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-power
+    state: >
+      {% set aps = states('sensor.anker_solix_e1600_solarbank_2_pro_output_preset') | float(0) %}
+      {{ aps | round(0) }}
+    availability: >
+      {{ states('sensor.anker_solix_e1600_solarbank_2_pro_output_preset') not in ['unknown', 'unavailable'] }}
+  - name: cumulus_puissance_disponible_w
+    unique_id: cumulus_puissance_disponible_w
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:lightning-bolt
+    state: >
+      {% set sb_max = states('input_number.cumulus_solarbank_max_w') | float(1200) %}
+      {% set aps_w = states('sensor.cumulus_production_aps_w') | float(0) %}
+      {{ (sb_max + aps_w) | round(0) }}
+  - name: cumulus_pv_effectif_w
+    unique_id: cumulus_pv_effectif_w
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-panel-large
+    state: >
+      {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+        {% set pv_total = states('sensor.cumulus_pv_power_w') | float(0) %}
+        {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+        {% if import_w < 0 %}
+          {{ pv_total | round(0) }}
+        {% else %}
+          {{ (pv_total - import_w) | max(0) | round(0) }}
+        {% endif %}
+      {% else %}
+        0
+      {% endif %}
+  - name: cumulus_temperature_estimee
+    unique_id: cumulus_temperature_estimee
+    unit_of_measurement: °C
+    device_class: temperature
+    icon: mdi:thermometer-water
+    state: >
+      {% set ts_derniere = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+      {% if ts_derniere is not none and ts_derniere > 0 %}
+        {% set heures_ecoulees = ((as_timestamp(now()) - ts_derniere) / 3600) | float %}
+        {% set temp_initiale = 58 %}
+        {% set deperdition_par_h = 0.3 %}
+        {% set temp_ambiante = 20 %}
+        {% set temp_actuelle = temp_initiale - (heures_ecoulees * deperdition_par_h) %}
+        {{ [temp_actuelle, temp_ambiante] | max | round(1) }}
+      {% else %}
+        {{ states('input_number.cumulus_temperature_cible_c') | float(60) }}
+      {% endif %}
+  - name: cumulus_litres_disponibles_estimes
+    unique_id: cumulus_litres_disponibles_estimes
+    unit_of_measurement: L
+    icon: mdi:water-check
+    state: >
+      {% set temp = states('sensor.cumulus_temperature_estimee') | float(60) %}
+      {% set capacite = states('input_number.cumulus_capacite_litres') | float(300) %}
+      {% set temp_usage = 40 %}
+      {% set temp_froide = 15 %}
+      {% if temp > temp_usage %}
+        {{ (((temp - temp_froide) / (temp_usage - temp_froide)) * capacite) | round(0) }}
+      {% else %}
+        0
+      {% endif %}
+  - name: cumulus_repartition_sources
+    unique_id: cumulus_repartition_sources
+    icon: mdi:chart-pie
+    state: >
+      {{ state_attr('sensor.cumulus_repartition_sources', 'autonomie_pv_pct') | int(0) }}
+    attributes:
+      autonomie_pv_pct: >
+        {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+          {% set pv_effectif = states('sensor.cumulus_pv_effectif_w') | float(0) %}
+          {% set conso_reelle = states('sensor.cumulus_consommation_reelle_w') | float(1) %}
+          {{ ((pv_effectif / conso_reelle) * 100) | round(0) if conso_reelle > 0 else 0 }}
+        {% else %}
+          0
+        {% endif %}
 - binary_sensor:
   - name: cumulus_fenetre_pv
     unique_id: cumulus_fenetre_pv
@@ -581,6 +723,18 @@ template:
         {% endif %}
       besoin_urgent: '{{ states(''binary_sensor.cumulus_besoin_chauffe_urgente'') }}'
       meteo_demain: '{{ states(''binary_sensor.cumulus_meteo_favorable_demain'') }}'
+  # === Binary sensor ajouté après audit 2025-11-15 ===
+  - name: cumulus_capacite_suffisante
+    unique_id: cumulus_capacite_suffisante
+    icon: mdi:water-percent
+    state: >
+      {% set litres_dispo = states('sensor.cumulus_litres_disponibles_estimes') | float(0) %}
+      {% set besoin = states('sensor.cumulus_besoin_journalier_litres') | float(90) %}
+      {{ litres_dispo >= (besoin * 0.7) }}
+    attributes:
+      litres_disponibles: '{{ states(''sensor.cumulus_litres_disponibles_estimes'') }}'
+      besoin_journalier: '{{ states(''sensor.cumulus_besoin_journalier_litres'') }}'
+      seuil_70pct: '{{ (states(''sensor.cumulus_besoin_journalier_litres'') | float(90) * 0.7) | round(0) }}'
 - sensor:
   - name: cumulus_debug_besoin_urgent
     unique_id: cumulus_debug_besoin_urgent
