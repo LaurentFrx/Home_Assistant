@@ -1,3 +1,9 @@
+###############################################################################
+# SCRIPT: Ouverture Portail
+# Description: Ouvre le portail d'entrée
+# Usage: Déclenchement manuel ou via automatisation (arrivée voiture)
+###############################################################################
+
 ouverture_portail:
   alias: "Ouverture Portail"
   sequence:

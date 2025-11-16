@@ -7,22 +7,10 @@
   - platform: template
     value_template: '
 
-
-
-
-
       {% set aps = states(''sensor.cumulus_production_aps_w'') | float(0) %}
-
-
-
-
 
       {% set seuil = states(''input_number.cumulus_seuil_pv_statique_w'') | float(100)
       %}
-
-
-
-
 
       {{ aps >= seuil }}'
     for:
@@ -91,35 +79,16 @@
     data:
       name: Cumulus Démarrage PV
       message: '
-
-
-
-
-
         Démarrage PV. Disponible={{ states(''sensor.cumulus_puissance_disponible_w'')
         }}W
-
-
-
-
 
         (SB: {{ states(''input_number.cumulus_solarbank_max_w'') }}W + APS: {{ states(''sensor.cumulus_production_aps_w'')
 
         }}W),
 
-
-
-
-
         Seuil={{ states(''sensor.cumulus_seuil_pv_dynamique_w'') }}W,
 
-
-
-
-
         SOC={{ states(''sensor.cumulus_soc_solarbank_pct'') }}%
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -185,21 +154,10 @@
     data:
       name: Cumulus Limiteur
       message: '
-
-
-
-
-
         Arrêt temporaire (import {{ states(''sensor.cumulus_import_reseau_w'') }}W
         > seuil).
 
-
-
-
-
         PAS de verrou (température non atteinte).
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -244,21 +202,10 @@
     data:
       name: Cumulus Sécurité SOC
       message: '
-
-
-
-
-
         Arrêt temporaire (SOC {{ states(''sensor.cumulus_soc_solarbank_pct'') }}%
         < seuil).
 
-
-
-
-
         PAS de verrou (température non atteinte).
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -291,10 +238,6 @@
         \ == 'on' %}\n\n\n  {{ ((as_timestamp(trigger.to_state.last_changed)\n - as_timestamp(trigger.from_state.last_changed))\
         \ / 60) | round(0) }}\n\n\n{% else %}\n\n\n  0\n\n\n{% endif %}\n"
       switch_encore_on: '
-
-
-
-
 
         {{ sw_id != '''' and sw_id not in [''unknown'', ''unavailable''] and is_state(sw_id,
         ''on'') }}'
@@ -337,32 +280,13 @@
         data:
           name: Cumulus Température Max
           message: '
-
-
-
-
-
-            Thermostat interne coupé (température max atteinte).
-
-
-
-
+        Thermostat interne coupé (température max atteinte).
 
             Durée : {{ duree_chauffe_min }} min.
 
-
-
-
-
             Conso finale : {{ conso_w }}W.
 
-
-
-
-
             Verrou jour activé.
-
-
 
             '
           entity_id: '{{ sw_id }}'
@@ -370,59 +294,20 @@
         data:
           title: Cumulus - Température Max Atteinte
           message: '
-
-
-
-
-
-            Chauffe complète après {{ duree_chauffe_min }} minutes.
-
-
-
-
-
-
-
-
-
-
+        Chauffe complète après {{ duree_chauffe_min }} minutes.
 
             Bilan :
-
-
-
-
 
             - {{ state_attr(''sensor.cumulus_repartition_sources'', ''autonomie_pv_pct'')
             }}% PV
 
-
-
-
-
             - Température estimée : {{ states(''sensor.cumulus_temperature_physique_c'')
             }}°C
-
-
-
-
 
             - Capacité 40°C : {{ states(''sensor.cumulus_eau_chaude_disponible_40c_litres'')
             }}L
 
-
-
-
-
-
-
-
-
-
-
             Verrou jour activé - prochaine chauffe demain.
-
-
 
             '
           notification_id: cumulus_temp_max
@@ -445,20 +330,9 @@
       data:
         name: Cumulus Fin Chauffe
         message: '
-
-
-
-
-
-          Fin de chauffe après {{ duree_chauffe_min }} min (interruption).
-
-
-
-
+        Fin de chauffe après {{ duree_chauffe_min }} min (interruption).
 
           Température non atteinte, pas de verrou.
-
-
 
           '
         entity_id: '{{ sw_id }}'
@@ -496,27 +370,12 @@
     data:
       title: Cumulus - Arrêt Prioritaire
       message: '
-
-
-
-
-
         {{ appareil_actif }} a démarré.
-
-
-
-
 
         Le cumulus a été arrêté temporairement.
 
-
-
-
-
         Redémarrage automatique après deadband ({{ states(''input_number.cumulus_deadband_min'')
         | int(5) }} min).
-
-
 
         '
       notification_id: cumulus_arret_appareil
@@ -534,22 +393,10 @@
   - platform: template
     value_template: '
 
-
-
-
-
       {% set import_w = states(''sensor.cumulus_import_reseau_w'') | float(0) %}
-
-
-
-
 
       {% set talon = states(''input_number.cumulus_talon_maison_w'') | float(300)
       %}
-
-
-
-
 
       {{ import_w > (talon + 200) }}'
     for:
@@ -604,27 +451,12 @@
     data:
       name: Cumulus Pause Conso Domestique
       message: '
-
-
-
-
-
         Arrêt temporaire - import {{ states(''sensor.cumulus_import_reseau_w'') }}W
         > talon+200W.
 
-
-
-
-
         Maison consomme plus que prévu. PAS de verrou.
 
-
-
-
-
         Deadband {{ states(''input_number.cumulus_deadband_min'') }}min activé.
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -672,20 +504,9 @@
     data:
       name: Cumulus Redémarrage
       message: '
-
-
-
-
-
         Tous les appareils sont arrêtés depuis 60s. Conditions réunies pour redémarrer.
 
-
-
-
-
         Vérification : Lave-linge=OFF, Lave-vaisselle=OFF, Composite=OFF
-
-
 
         '
       entity_id: input_boolean.cumulus_verrou_jour
@@ -781,20 +602,9 @@
     data:
       name: Cumulus Fin HC
       message: '
-
-
-
-
-
         Arrêt forcé fin heures creuses.
 
-
-
-
-
         L''automation universelle détectera si température max atteinte.
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -824,21 +634,12 @@
     data:
       name: Cumulus Verrou Désactivé (Météo)
       message: '
-
-
-
         Verrou désactivé à 23h00 : météo défavorable demain.
-
-
 
         Chauffe HC préventive autorisée.
 
-
-
         Prévision demain : {{ states(''sensor.solcast_pv_forecast_previsions_pour_demain'')
         }} kWh
-
-
 
         '
 - id: cumulus_reset_daily_et_override
@@ -905,20 +706,9 @@
     data:
       title: Cumulus - Forçage Manuel Activé
       message: '
-
-
-
-
-
         Verrou jour désactivé automatiquement.
 
-
-
-
-
         Vous pouvez commander le cumulus manuellement.
-
-
 
         '
       notification_id: cumulus_override_actif
@@ -949,26 +739,11 @@
     data:
       title: Cumulus - Chauffe Urgente
       message: '
-
-
-
-
-
         Délai max {{ states(''input_number.cumulus_espacement_max_h'') }}h dépassé.
-
-
-
-
 
         Dernière chauffe : {{ derniere_chauffe }}
 
-
-
-
-
         Température : {{ states(''sensor.cumulus_temperature_physique_c'') }}°C
-
-
 
         '
       notification_id: cumulus_alerte_urgent
@@ -1018,35 +793,14 @@
     data:
       title: Cumulus - Refus Démarrage
       message: '
-
-
-
-
-
         Puissance disponible ({{ states(''sensor.cumulus_puissance_disponible_w'')
         }}W) > seuil ({{ states(''sensor.cumulus_seuil_pv_dynamique_w'')
 
         }}W)
 
-
-
-
-
         mais cumulus ne démarre pas.
 
-
-
-
-
-
-
-
-
-
-
         Blocage : {{ raisons_blocage }}
-
-
 
         '
       notification_id: cumulus_refus_demarrage
@@ -1074,20 +828,9 @@
     data:
       title: Cumulus - Chauffe Externe Détectée
       message: '
-
-
-
-
-
         Le cumulus a été démarré manuellement (app Shelly ou autre).
 
-
-
-
-
         Le système surveille cette chauffe et mettra à jour les compteurs automatiquement.
-
-
 
         '
       notification_id: cumulus_chauffe_externe
@@ -1095,20 +838,9 @@
     data:
       name: Cumulus Chauffe Externe
       message: '
-
-
-
-
-
         Démarrage manuel détecté (source externe).
 
-
-
-
-
         Consommation : {{ states(''sensor.cumulus_consommation_reelle_w'') }}W
-
-
 
         '
       entity_id: '{{ states(''input_text.cumulus_entity_contacteur'') }}'
@@ -1121,28 +853,12 @@
   - platform: template
     value_template: '
 
-
-
-
-
       {% set sw_id = states(''input_text.cumulus_entity_contacteur'') %}
-
-
-
-
 
       {% set sw_on = sw_id not in ['''', ''unknown'', ''unavailable''] and is_state(sw_id,
       ''on'') %}
 
-
-
-
-
       {% set conso = states(''sensor.cumulus_consommation_reelle_w'') | float(0) %}
-
-
-
-
 
       {{ sw_on and conso < 100 }}'
     for:
@@ -1161,98 +877,29 @@
     data:
       title: ⚠️ Cumulus - ANOMALIE Détection
       message: '
-
-
-
-
-
         ANOMALIE DE COHÉRENCE DÉTECTÉE !
-
-
-
-
-
-
-
-
-
-
 
         Le contacteur est ON mais consommation anormalement faible :
 
-
-
-
-
         - Contacteur : {{ states(sw_id) }}
-
-
-
-
 
         - Consommation mesurée : {{ conso }}W (< 100W)
 
-
-
-
-
         - Import réseau : {{ import_w }}W
-
-
-
-
 
         - Production PV : {{ pv_w }}W
 
-
-
-
-
-
-
-
-
-
-
         Causes possibles :
-
-
-
-
 
         - Défaillance contacteur ou relais
 
-
-
-
-
         - Problème de mesure
-
-
-
-
 
         - Thermostat coupé immédiatement
 
-
-
-
-
         - Cumulus déjà à température max
 
-
-
-
-
-
-
-
-
-
-
         Vérification manuelle recommandée.
-
-
 
         '
       notification_id: cumulus_anomalie_coherence
@@ -1260,20 +907,9 @@
     data:
       name: ⚠️ Cumulus ANOMALIE
       message: '
-
-
-
-
-
         ANOMALIE: Switch ON mais conso {{ conso }}W < 100W pendant 30s.
 
-
-
-
-
         Import={{ import_w }}W, PV={{ pv_w }}W
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -1300,51 +936,16 @@
     data:
       title: ⚠️ Cumulus - Entité Unavailable Pendant Chauffe
       message: '
-
-
-
-
-
         Une ou plusieurs entités critiques sont devenues unavailable pendant la chauffe
         !
 
-
-
-
-
-
-
-
-
-
-
         État des entités :
-
-
-
-
 
         {{ entites_details }}
 
-
-
-
-
-
-
-
-
-
-
         La chauffe continue mais la fiabilité des mesures est compromise.
 
-
-
-
-
         Vérifiez la connectivité de vos capteurs.
-
-
 
         '
       notification_id: cumulus_entite_unavailable
@@ -1352,20 +953,9 @@
     data:
       name: ⚠️ Cumulus Entité Unavailable
       message: '
-
-
-
-
-
         Entité(s) unavailable pendant chauffe active.
 
-
-
-
-
         Détails: {{ entites_details }}
-
-
 
         '
       entity_id: '{{ sw_id }}'
@@ -1441,111 +1031,28 @@
     data:
       title: ⚠️ Cumulus - Santé Système Dégradée
       message: '
-
-
-
-
-
         Le score de santé du système est dégradé : {{ score | round(0) }}% ({{ niveau
         }})
 
-
-
-
-
-
-
-
-
-
-
         Évaluations détaillées :
-
-
-
-
-
-
-
-
-
-
 
         📡 Entités :
 
-
-
-
-
         {{ eval_entites }}
-
-
-
-
-
-
-
-
-
-
 
         🔍 Cohérence mesures :
 
-
-
-
-
         {{ eval_coherence }}
-
-
-
-
-
-
-
-
-
-
 
         ⏱️ Espacement chauffes :
 
-
-
-
-
         {{ eval_espacement }}
-
-
-
-
-
-
-
-
-
-
 
         ⚙️ État fonctionnel :
 
-
-
-
-
         {{ eval_fonctionnel }}
 
-
-
-
-
-
-
-
-
-
-
         Action recommandée : Vérifier la configuration et l''état des capteurs.
-
-
 
         '
       notification_id: cumulus_sante_degradee
@@ -1553,20 +1060,9 @@
     data:
       name: ⚠️ Cumulus Santé Dégradée
       message: '
-
-
-
-
-
         Score santé {{ score | round(0) }}% < 70% ({{ niveau }}).
 
-
-
-
-
         Entités: {{ eval_entites }}, Cohérence: {{ eval_coherence }}
-
-
 
         '
       entity_id: sensor.cumulus_sante_systeme

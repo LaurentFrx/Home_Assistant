@@ -1,3 +1,9 @@
+###############################################################################
+# SCRIPT: Ouverture Volets
+# Description: Ouvre tous les volets de la maison
+# Usage: Déclenchement manuel ou via automatisation matinale
+###############################################################################
+
 ouverture_volets:
   alias: "Ouverture Volets"
   sequence:

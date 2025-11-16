@@ -1,5 +1,9 @@
-# Chauffage de la salle de bain en mode BOOST puis retour en ECO
-# Utilisé pour tester le thermostat de la SdB
+###############################################################################
+# SCRIPT: Chauffage Salle de Bain
+# Description: Active le mode BOOST puis retour automatique en ECO
+# Usage: Préparation avant douche, s'arrête quand Isabelle quitte la maison
+# Dépendances: climate.thermostat_sdb, person.isabelle, zone.home
+###############################################################################
 
 script_chauffage_sdb:
   alias: "Chauffage SdB"
