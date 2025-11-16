@@ -57,6 +57,14 @@ lovelace:
       show_in_sidebar: true
       filename: lovelace/dashboard_design_test.yaml
 
+    # Dashboard Simple - Sans custom cards
+    lovelace-design-simple:
+      mode: yaml
+      title: Simple Design
+      icon: mdi:star
+      show_in_sidebar: true
+      filename: lovelace/dashboard_design_simple.yaml
+
 # === Journalisation ===
 logger:
   default: warning
