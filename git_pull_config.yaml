@@ -2,7 +2,7 @@
 # À copier-coller dans : Paramètres → Modules complémentaires → Git Pull → Configuration
 
 repository: https://github.com/LaurentFrx/Home_Assistant.git
-branch: claude/review-style-home-assistant-01KR3Gx1RjJrBHEEQTAdg4J6
+branch: main
 auto_restart: false
 repeat:
   active: true
