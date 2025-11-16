@@ -30,40 +30,7 @@ template: !include_dir_merge_list templates
 
 # === Dashboards Lovelace ===
 lovelace:
-  dashboards:
-    # Dashboard Cumulus Avancé - Informations NON présentes dans LAU/cumu
-    # 2 vues : Monitoring + Configuration
-    lovelace-cumulus-avance:
-      mode: yaml
-      title: Cumulus Avancé
-      icon: mdi:water-boiler-auto
-      show_in_sidebar: true
-      filename: lovelace/dashboard_cumulus_avance.yaml
-
-    # Dashboard Design Glassmorphique - Style moderne inspiré de style-home-assistant
-    # 2 vues : Cumulus + Configuration avec effet verre dépoli
-    lovelace-design:
-      mode: yaml
-      title: Design Glassmorphique
-      icon: mdi:palette
-      show_in_sidebar: true
-      filename: lovelace/dashboard_design.yaml
-
-    # Dashboard Test - Pour diagnostic
-    lovelace-design-test:
-      mode: yaml
-      title: Test Design
-      icon: mdi:test-tube
-      show_in_sidebar: true
-      filename: lovelace/dashboard_design_test.yaml
-
-    # Dashboard Simple - Sans custom cards
-    lovelace-design-simple:
-      mode: yaml
-      title: Simple Design
-      icon: mdi:star
-      show_in_sidebar: true
-      filename: lovelace/dashboard_design_simple.yaml
+  dashboards: !include lovelace/dashboards.yaml
 
 # === Journalisation ===
 logger:
