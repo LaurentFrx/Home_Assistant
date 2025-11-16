@@ -1,0 +1,32 @@
+title: Test Design
+icon: mdi:test-tube
+
+views:
+  - title: Test
+    path: test
+    icon: mdi:check
+    cards:
+      - type: markdown
+        content: |
+          # ✅ Dashboard Test Fonctionnel
+
+          Si vous voyez ce message, le dashboard YAML fonctionne !
+
+          Cliquez sur le bouton ci-dessous pour voir le statut du cumulus.
+
+      - type: entities
+        title: "Test Cumulus"
+        entities:
+          - entity: switch.shellypro1_ece334ee1b64
+            name: "Cumulus ON/OFF"
+          - entity: sensor.cumulus_pv_power_w
+            name: "Production PV"
+          - entity: binary_sensor.cumulus_besoin_chauffe_urgente
+            name: "Besoin urgent"
+
+      - type: button
+        entity: switch.shellypro1_ece334ee1b64
+        name: "Toggle Cumulus"
+        icon: mdi:water-boiler
+        tap_action:
+          action: toggle

@@ -49,6 +49,14 @@ lovelace:
       show_in_sidebar: true
       filename: lovelace/dashboard_design.yaml
 
+    # Dashboard Test - Pour diagnostic
+    lovelace-design-test:
+      mode: yaml
+      title: Test Design
+      icon: mdi:test-tube
+      show_in_sidebar: true
+      filename: lovelace/dashboard_design_test.yaml
+
 # === Journalisation ===
 logger:
   default: warning
