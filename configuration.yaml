@@ -30,15 +30,7 @@ template: !include_dir_merge_list templates
 
 # === Dashboards Lovelace ===
 lovelace:
-  dashboards:
-    # Dashboard Cumulus Avancé - Informations NON présentes dans LAU/cumu
-    # 2 vues : Monitoring + Configuration
-    lovelace-cumulus-avance:
-      mode: yaml
-      title: Cumulus Avancé
-      icon: mdi:water-boiler-auto
-      show_in_sidebar: true
-      filename: lovelace/dashboard_cumulus_avance.yaml
+  dashboards: !include lovelace/dashboards.yaml
 
 # === Journalisation ===
 logger:

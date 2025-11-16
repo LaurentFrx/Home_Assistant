@@ -2,6 +2,7 @@
 # À copier-coller dans : Paramètres → Modules complémentaires → Git Pull → Configuration
 
 repository: https://github.com/LaurentFrx/Home_Assistant.git
+branch: main
 auto_restart: false
 repeat:
   active: true
