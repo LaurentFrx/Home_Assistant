@@ -18,6 +18,7 @@ from operator import itemgetter
 from pathlib import Path
 import random
 import re
+import shutil
 import sys
 import time
 import traceback
@@ -1505,7 +1506,42 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         await self.serialise_data(data, filename)
         except json.decoder.JSONDecodeError:
             _LOGGER.error("The cached data in %s is corrupt in load_saved_data()", file)
-            status = f"The cached data in {file} is corrupted, suggest removing or repairing it"
+            # Backup the corrupted file for analysis
+            if file and Path(file).is_file():
+                corrupt_backup = f"{file}.corrupt"
+                try:
+                    shutil.copy2(file, corrupt_backup)
+                    _LOGGER.warning("Backed up corrupted file to %s", corrupt_backup)
+                    # Remove the corrupted file
+                    Path(file).unlink()
+                    _LOGGER.info("Removed corrupted cache file %s", file)
+                except Exception as e:
+                    _LOGGER.error("Failed to backup/remove corrupted file: %s", e)
+
+            # Reset data structures to fresh state
+            self._data = copy.deepcopy(FRESH_DATA)
+            self._data_undampened = copy.deepcopy(FRESH_DATA)
+            self._data_actuals = copy.deepcopy(FRESH_DATA)
+            self._data_actuals_dampened = copy.deepcopy(FRESH_DATA)
+            self._loaded_data = False
+
+            # Fetch fresh forecast data
+            _LOGGER.warning("Fetching fresh solar forecast data after corruption recovery")
+            try:
+                status = await self.get_forecast_update(do_past_hours=168)
+                self._loaded_data = True
+                # Save the new data to all cache files
+                for filename, data in {
+                    self._filename: self._data,
+                    self._filename_undampened: self._data_undampened,
+                    self._filename_actuals: self._data_actuals,
+                    self._filename_actuals_dampened: self._data_actuals_dampened,
+                }.items():
+                    await self.serialise_data(data, filename)
+                _LOGGER.info("Successfully recovered from cache corruption")
+            except Exception as e:
+                _LOGGER.error("Failed to fetch forecast after corruption: %s", e)
+                status = f"Cache corruption detected in {file}. Recovery attempted but failed: {e}"
         return status
 
     async def build_forecast_and_actuals(self) -> str:
