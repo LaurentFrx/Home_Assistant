@@ -1,3 +1,9 @@
+###############################################################################
+# SCRIPT: Fermeture Volets
+# Description: Ferme tous les volets de la maison
+# Usage: Déclenchement manuel ou via automatisation en soirée
+###############################################################################
+
 fermeture_volets:
   alias: "Fermeture Volets"
   sequence:
