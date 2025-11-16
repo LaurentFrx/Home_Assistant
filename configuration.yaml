@@ -40,6 +40,15 @@ lovelace:
       show_in_sidebar: true
       filename: lovelace/dashboard_cumulus_avance.yaml
 
+    # Dashboard Design Glassmorphique - Style moderne inspiré de style-home-assistant
+    # 2 vues : Cumulus + Configuration avec effet verre dépoli
+    lovelace-design:
+      mode: yaml
+      title: Design Glassmorphique
+      icon: mdi:palette
+      show_in_sidebar: true
+      filename: lovelace/dashboard_design.yaml
+
 # === Journalisation ===
 logger:
   default: warning
