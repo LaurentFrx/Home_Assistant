@@ -34,3 +34,20 @@ lovelace-design-simple:
   icon: mdi:star
   show_in_sidebar: true
   filename: lovelace/dashboard_design_simple.yaml
+
+# Dashboard Mobile iPhone - Interface optimisée pour iPhone avec navigation par boutons
+# Vues : Accueil, Cumulus, Alarme, Capteurs, Résumé
+lovelace-mobile-iphone:
+  mode: yaml
+  title: Mobile iPhone
+  icon: mdi:cellphone
+  show_in_sidebar: true
+  filename: lovelace/dashboard_mobile_iphone.yaml
+
+# Dashboard Mobile Test - Version simplifiée pour diagnostic
+lovelace-mobile-test:
+  mode: yaml
+  title: Mobile Test
+  icon: mdi:cellphone-check
+  show_in_sidebar: true
+  filename: lovelace/dashboard_mobile_test_simple.yaml

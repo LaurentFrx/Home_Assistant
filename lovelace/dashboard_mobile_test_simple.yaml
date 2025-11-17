@@ -1,0 +1,28 @@
+title: Mobile Test Simple
+icon: mdi:cellphone-check
+
+views:
+  - title: Test
+    path: test
+    cards:
+      - type: markdown
+        content: |
+          # ✅ Dashboard Mobile Fonctionne !
+
+          Si vous voyez ce message, le problème vient des **custom cards** dans le dashboard principal.
+
+          ## Custom cards requises :
+          - `custom:button-card`
+          - `custom:mushroom-chips-card`
+          - `custom:mod-card`
+
+          ## Solution :
+          Installez ces custom cards via HACS :
+          1. Ouvrez HACS
+          2. Frontend
+          3. Recherchez et installez :
+             - Button Card
+             - Mushroom
+             - Card Mod
+
+          Ensuite, rechargez le dashboard "Mobile iPhone" !
