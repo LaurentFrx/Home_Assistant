@@ -51,3 +51,12 @@ lovelace-mobile-test:
   icon: mdi:cellphone-check
   show_in_sidebar: true
   filename: lovelace/dashboard_mobile_test_simple.yaml
+
+# Dashboard Sans Menus - Mode plein écran sans menu latéral ni header
+# Vue unique en mode panel pour une expérience immersive
+lovelace-sans-menus:
+  mode: yaml
+  title: Sans Menus
+  icon: mdi:fullscreen
+  show_in_sidebar: true
+  filename: lovelace/dashboard_sans_menus.yaml
