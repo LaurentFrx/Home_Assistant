@@ -43,3 +43,11 @@ lovelace-mobile-iphone:
   icon: mdi:cellphone
   show_in_sidebar: true
   filename: lovelace/dashboard_mobile_iphone.yaml
+
+# Dashboard Mobile Test - Version simplifiée pour diagnostic
+lovelace-mobile-test:
+  mode: yaml
+  title: Mobile Test
+  icon: mdi:cellphone-check
+  show_in_sidebar: true
+  filename: lovelace/dashboard_mobile_test_simple.yaml
