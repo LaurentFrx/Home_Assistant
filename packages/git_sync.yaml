@@ -17,8 +17,11 @@
 # Shell Commands
 ###############################################################################
 shell_command:
-  # Commande principale de synchronisation Git
-  git_sync: "/config/scripts/git_sync.sh"
+  # Commande principale de synchronisation Git (version simplifiée)
+  git_sync: "/config/scripts/git_sync_simple.sh"
+
+  # Commande complète avec vérification (à utiliser manuellement si besoin)
+  git_sync_advanced: "/config/scripts/git_sync.sh"
 
   # Commande pour vérifier manuellement les mises à jour sans les appliquer
   git_check_updates: "cd /config && git fetch origin main && git rev-list HEAD..origin/main --count"
