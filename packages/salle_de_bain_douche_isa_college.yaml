@@ -265,3 +265,102 @@ automation:
               name: "SDB Boost"
               message: "Consigne NON confirmee apres retries."
               entity_id: "{{ _ce }}"
+
+  - id: '1732009800001'
+    alias: "Douche matinale - Week-end/Vacances"
+    description: "Mode confort de 8h00 a 10h00 quand Isa ne va pas au college (week-end, vacances, jours feries)"
+    mode: single
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.sdb_reveil_enable
+        state: "on"
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: calendar.vacances_scolaires
+            state: "on"
+          - condition: state
+            entity_id: calendar.jours_feries_en_france
+            state: "on"
+          - condition: template
+            value_template: >
+              {% set ns = namespace(has_course=false) %}
+              {% set start_of_day = now().replace(hour=0, minute=0, second=0, microsecond=0) %}
+              {% set end_of_day = now().replace(hour=23, minute=59, second=59, microsecond=999999) %}
+              {% set course_start = state_attr('calendar.planning_cours_isa', 'start_time') %}
+              {% if course_start is not none %}
+                {% set course_dt = as_datetime(course_start) %}
+                {% if course_dt is not none and start_of_day <= course_dt <= end_of_day %}
+                  {% set ns.has_course = true %}
+                {% endif %}
+              {% endif %}
+              {{ not ns.has_course }}
+      - condition: template
+        value_template: >
+          {% set last = this.attributes.last_triggered %}
+          {{ last is none or (as_datetime(last)).date() != now().date() }}
+    action:
+      - variables:
+          _ce: "{{ states('input_text.sdb_entity_climate') | trim }}"
+          _t_confort: "{{ states('input_number.sdb_temp_confort_c') | float(22) }}"
+          _t_eco: "{{ states('input_number.sdb_temp_eco_c') | float(18.5) }}"
+          _max_retries_boost: 10
+          _max_retries_eco: 6
+      - repeat:
+          sequence:
+            - service: script.sdb_set_temp
+              data:
+                climate_entity: "{{ _ce }}"
+                temp: "{{ _t_confort }}"
+            - delay: "00:00:30"
+          until:
+            - condition: template
+              value_template: >
+                {{ is_state('binary_sensor.sdb_consigne_confirmee','on') or repeat.index >= _max_retries_boost }}
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('binary_sensor.sdb_consigne_confirmee','on') }}"
+            sequence:
+              - service: logbook.log
+                data:
+                  name: "SDB Boost Week-end/Vacances"
+                  message: "Consigne confirmee a {{ _t_confort }} degC"
+                  entity_id: "{{ _ce }}"
+              - delay: "02:00:00"
+              - repeat:
+                  sequence:
+                    - service: script.sdb_set_temp
+                      data:
+                        climate_entity: "{{ _ce }}"
+                        temp: "{{ _t_eco }}"
+                    - delay: "00:00:30"
+                  until:
+                    - condition: template
+                      value_template: >
+                        {{ is_state('binary_sensor.sdb_consigne_confirmee','on') or repeat.index >= _max_retries_eco }}
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ is_state('binary_sensor.sdb_consigne_confirmee','on') }}"
+                    sequence:
+                      - service: logbook.log
+                        data:
+                          name: "SDB Eco Week-end/Vacances"
+                          message: "Consigne confirmee a {{ _t_eco }} degC"
+                          entity_id: "{{ _ce }}"
+                default:
+                  - service: logbook.log
+                    data:
+                      name: "SDB Eco Week-end/Vacances"
+                      message: "Consigne NON confirmee apres retries."
+                      entity_id: "{{ _ce }}"
+        default:
+          - service: logbook.log
+            data:
+              name: "SDB Boost Week-end/Vacances"
+              message: "Consigne NON confirmee apres retries."
+              entity_id: "{{ _ce }}"
