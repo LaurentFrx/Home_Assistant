@@ -18,6 +18,11 @@ input_text:
     icon: mdi:thermometer
     initial: sensor.thermo_sdb_temperature
 
+  sdb_last_preset:
+    name: SDB - Dernier preset demande
+    icon: mdi:thermometer-lines
+    initial: ""
+
 input_number:
   sdb_temp_confort_c:
     name: SDB - Consigne Confort (degC)
@@ -133,6 +138,89 @@ script:
                     Mettez a jour input_text.sdb_entity_climate.
                   notification_id: sdb_missing_climate
 
+  sdb_set_preset:
+    alias: SDB - Changer mode preset (confort/eco)
+    mode: parallel
+    max: 10
+    fields:
+      climate_entity:
+        description: "Entite climate.* de la salle de bain"
+        example: "climate.salle_de_bain"
+      preset:
+        description: "Mode preset (comfort ou eco)"
+        example: "comfort"
+    sequence:
+      - variables:
+          ce: "{{ (climate_entity | default(states('input_text.sdb_entity_climate'))) | string | trim }}"
+          p: "{{ preset | string | lower }}"
+          exists: "{{ states(ce) not in ['unknown','unavailable',''] }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ exists }}"
+            sequence:
+              - service: input_text.set_value
+                data:
+                  entity_id: input_text.sdb_last_preset
+                  value: "{{ p }}"
+              - service: climate.turn_on
+                data:
+                  entity_id: "{{ ce }}"
+              - wait_template: >-
+                  {{ state_attr(ce, 'current_temperature') is number }}
+                timeout: "00:00:30"
+                continue_on_timeout: true
+              - service: climate.set_preset_mode
+                data:
+                  entity_id: "{{ ce }}"
+                  preset_mode: "{{ p }}"
+              - delay: "00:00:02"
+              - variables:
+                  ok_now: >-
+                    {% set cur = state_attr(ce, 'preset_mode') %}
+                    {{ cur is not none and cur | lower == p }}
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ not ok_now }}"
+                    sequence:
+                      - delay: "00:00:03"
+                      - service: climate.set_preset_mode
+                        data:
+                          entity_id: "{{ ce }}"
+                          preset_mode: "{{ p }}"
+                      - wait_template: >-
+                          {% set cur = state_attr(ce, 'preset_mode') %}
+                          {{ cur is not none and cur | lower == p }}
+                        timeout: "00:00:10"
+                        continue_on_timeout: true
+                      - variables:
+                          ok_final: >-
+                            {% set cur = state_attr(ce, 'preset_mode') %}
+                            {{ cur is not none and cur | lower == p }}
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ not ok_final }}"
+                            sequence:
+                              - service: persistent_notification.create
+                                data:
+                                  title: "SDB - Preset non confirme"
+                                  message: >-
+                                    Impossible de confirmer le preset {{ p }} pour {{ ce }}.
+                                    Verifiez les presets disponibles et l'entite
+                                    dans input_text.sdb_entity_climate.
+                                  notification_id: sdb_preset_error
+          - conditions: []
+            sequence:
+              - service: persistent_notification.create
+                data:
+                  title: "SDB - Entite climate introuvable"
+                  message: >-
+                    L'entite '{{ ce }}' n'existe pas ou est indisponible.
+                    Mettez a jour input_text.sdb_entity_climate.
+                  notification_id: sdb_missing_climate_preset
+
 ###############################################################################
 
 template:
@@ -143,6 +231,7 @@ template:
         entity_id:
           - input_text.sdb_entity_climate
           - input_number.sdb_last_setpoint_c
+          - input_text.sdb_last_preset
     binary_sensor:
       - name: "SDB - Consigne confirmee"
         unique_id: sdb_consigne_confirmee
@@ -175,12 +264,33 @@ template:
           {% set s = this.state %}
           {{ 'mdi:thermometer' if s in ['on','true'] else 'mdi:thermometer-off' if s == 'off' else 'mdi:help-circle' }}
 
+      - name: "SDB - Preset confirme"
+        unique_id: sdb_preset_confirme
+        state: >-
+          {% set ce = states('input_text.sdb_entity_climate') | trim %}
+          {% set req = states('input_text.sdb_last_preset') | lower %}
+          {% set cur = state_attr(ce, 'preset_mode') %}
+          {{ states(ce) not in ['unknown','unavailable',''] and req != '' and cur is not none and cur | lower == req }}
+        icon: >-
+          {% set s = this.state %}
+          {{ 'mdi:check-circle' if s in ['on','true']
+             else 'mdi:progress-clock' if s in ['unknown','unavailable'] else 'mdi:alert-circle' }}
+        attributes:
+          requested_preset: "{{ states('input_text.sdb_last_preset') }}"
+          current_preset: >-
+            {% set ce = states('input_text.sdb_entity_climate') | trim %}
+            {{ state_attr(ce, 'preset_mode') }}
+        availability: >-
+          {% set ce = states('input_text.sdb_entity_climate') | trim %}
+          {% set req = states('input_text.sdb_last_preset') %}
+          {{ states(ce) not in ['unknown','unavailable',''] and req not in ['unknown','unavailable',''] }}
+
 ###############################################################################
 
 automation:
   - id: '1709595278512'
     alias: "Reveil college chauffage douche"
-    description: "Monte a 22 degC 2h30 avant la premiere douche, puis repasse a 18.5 degC deux heures apres."
+    description: "Passe en mode confort 2h30 avant le 1er cours, puis repasse en mode eco deux heures apres."
     mode: single
     trigger:
       - platform: calendar
@@ -206,69 +316,67 @@ automation:
     action:
       - variables:
           _ce: "{{ states('input_text.sdb_entity_climate') | trim }}"
-          _t_confort: "{{ states('input_number.sdb_temp_confort_c') | float(22) }}"
-          _t_eco: "{{ states('input_number.sdb_temp_eco_c') | float(18.5) }}"
           _max_retries_boost: 10
           _max_retries_eco: 6
       - repeat:
           sequence:
-            - service: script.sdb_set_temp
+            - service: script.sdb_set_preset
               data:
                 climate_entity: "{{ _ce }}"
-                temp: "{{ _t_confort }}"
+                preset: "comfort"
             - delay: "00:00:30"
           until:
             - condition: template
               value_template: >
-                {{ is_state('binary_sensor.sdb_consigne_confirmee','on') or repeat.index >= _max_retries_boost }}
+                {{ is_state('binary_sensor.sdb_preset_confirme','on') or repeat.index >= _max_retries_boost }}
       - choose:
           - conditions:
               - condition: template
-                value_template: "{{ is_state('binary_sensor.sdb_consigne_confirmee','on') }}"
+                value_template: "{{ is_state('binary_sensor.sdb_preset_confirme','on') }}"
             sequence:
               - service: logbook.log
                 data:
                   name: "SDB Boost"
-                  message: "Consigne confirmee a {{ _t_confort }} degC"
+                  message: "Mode confort confirme"
                   entity_id: "{{ _ce }}"
               - delay: "02:00:00"
               - repeat:
                   sequence:
-                    - service: script.sdb_set_temp
+                    - service: script.sdb_set_preset
                       data:
                         climate_entity: "{{ _ce }}"
-                        temp: "{{ _t_eco }}"
+                        preset: "eco"
                     - delay: "00:00:30"
                   until:
                     - condition: template
                       value_template: >
-                        {{ is_state('binary_sensor.sdb_consigne_confirmee','on') or repeat.index >= _max_retries_eco }}
+                        {{ is_state('binary_sensor.sdb_preset_confirme','on') or repeat.index >= _max_retries_eco }}
               - choose:
                   - conditions:
                       - condition: template
-                        value_template: "{{ is_state('binary_sensor.sdb_consigne_confirmee','on') }}"
+                        value_template: "{{ is_state('binary_sensor.sdb_preset_confirme','on') }}"
                     sequence:
                       - service: logbook.log
                         data:
                           name: "SDB Eco"
-                          message: "Consigne confirmee a {{ _t_eco }} degC"
+                          message: "Mode eco confirme"
                           entity_id: "{{ _ce }}"
                 default:
                   - service: logbook.log
                     data:
                       name: "SDB Eco"
-                      message: "Consigne NON confirmee apres retries."
+                      message: "Mode eco NON confirme apres retries."
                       entity_id: "{{ _ce }}"
         default:
           - service: logbook.log
             data:
               name: "SDB Boost"
-              message: "Consigne NON confirmee apres retries."
+              message: "Mode confort NON confirme apres retries."
               entity_id: "{{ _ce }}"
 
   - id: '1732009800001'
     alias: "Douche matinale - Week-end/Vacances"
-    description: "Mode confort de 8h00 a 10h00 quand Isa ne va pas au college (week-end, vacances, jours feries)"
+    description: "Passe en mode confort a 8h00 quand Isa ne va pas au college le matin (week-end, vacances, jours feries)"
     mode: single
     trigger:
       - platform: time
@@ -287,17 +395,17 @@ automation:
             state: "on"
           - condition: template
             value_template: >
-              {% set ns = namespace(has_course=false) %}
+              {% set ns = namespace(has_morning_course=false) %}
               {% set start_of_day = now().replace(hour=0, minute=0, second=0, microsecond=0) %}
-              {% set end_of_day = now().replace(hour=23, minute=59, second=59, microsecond=999999) %}
+              {% set cutoff_time = now().replace(hour=11, minute=0, second=0, microsecond=0) %}
               {% set course_start = state_attr('calendar.planning_cours_isa', 'start_time') %}
               {% if course_start is not none %}
                 {% set course_dt = as_datetime(course_start) %}
-                {% if course_dt is not none and start_of_day <= course_dt <= end_of_day %}
-                  {% set ns.has_course = true %}
+                {% if course_dt is not none and start_of_day <= course_dt < cutoff_time %}
+                  {% set ns.has_morning_course = true %}
                 {% endif %}
               {% endif %}
-              {{ not ns.has_course }}
+              {{ not ns.has_morning_course }}
       - condition: template
         value_template: >
           {% set last = this.attributes.last_triggered %}
@@ -305,62 +413,60 @@ automation:
     action:
       - variables:
           _ce: "{{ states('input_text.sdb_entity_climate') | trim }}"
-          _t_confort: "{{ states('input_number.sdb_temp_confort_c') | float(22) }}"
-          _t_eco: "{{ states('input_number.sdb_temp_eco_c') | float(18.5) }}"
           _max_retries_boost: 10
           _max_retries_eco: 6
       - repeat:
           sequence:
-            - service: script.sdb_set_temp
+            - service: script.sdb_set_preset
               data:
                 climate_entity: "{{ _ce }}"
-                temp: "{{ _t_confort }}"
+                preset: "comfort"
             - delay: "00:00:30"
           until:
             - condition: template
               value_template: >
-                {{ is_state('binary_sensor.sdb_consigne_confirmee','on') or repeat.index >= _max_retries_boost }}
+                {{ is_state('binary_sensor.sdb_preset_confirme','on') or repeat.index >= _max_retries_boost }}
       - choose:
           - conditions:
               - condition: template
-                value_template: "{{ is_state('binary_sensor.sdb_consigne_confirmee','on') }}"
+                value_template: "{{ is_state('binary_sensor.sdb_preset_confirme','on') }}"
             sequence:
               - service: logbook.log
                 data:
                   name: "SDB Boost Week-end/Vacances"
-                  message: "Consigne confirmee a {{ _t_confort }} degC"
+                  message: "Mode confort confirme"
                   entity_id: "{{ _ce }}"
               - delay: "02:00:00"
               - repeat:
                   sequence:
-                    - service: script.sdb_set_temp
+                    - service: script.sdb_set_preset
                       data:
                         climate_entity: "{{ _ce }}"
-                        temp: "{{ _t_eco }}"
+                        preset: "eco"
                     - delay: "00:00:30"
                   until:
                     - condition: template
                       value_template: >
-                        {{ is_state('binary_sensor.sdb_consigne_confirmee','on') or repeat.index >= _max_retries_eco }}
+                        {{ is_state('binary_sensor.sdb_preset_confirme','on') or repeat.index >= _max_retries_eco }}
               - choose:
                   - conditions:
                       - condition: template
-                        value_template: "{{ is_state('binary_sensor.sdb_consigne_confirmee','on') }}"
+                        value_template: "{{ is_state('binary_sensor.sdb_preset_confirme','on') }}"
                     sequence:
                       - service: logbook.log
                         data:
                           name: "SDB Eco Week-end/Vacances"
-                          message: "Consigne confirmee a {{ _t_eco }} degC"
+                          message: "Mode eco confirme"
                           entity_id: "{{ _ce }}"
                 default:
                   - service: logbook.log
                     data:
                       name: "SDB Eco Week-end/Vacances"
-                      message: "Consigne NON confirmee apres retries."
+                      message: "Mode eco NON confirme apres retries."
                       entity_id: "{{ _ce }}"
         default:
           - service: logbook.log
             data:
               name: "SDB Boost Week-end/Vacances"
-              message: "Consigne NON confirmee apres retries."
+              message: "Mode confort NON confirme apres retries."
               entity_id: "{{ _ce }}"
