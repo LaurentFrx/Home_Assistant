@@ -10,15 +10,6 @@ lovelace-cumulus-avance:
   show_in_sidebar: true
   filename: lovelace/dashboard_cumulus_avance.yaml
 
-# Dashboard Design Glassmorphique - Style moderne inspiré de style-home-assistant
-# 2 vues : Cumulus + Configuration avec effet verre dépoli
-lovelace-design:
-  mode: yaml
-  title: Design Glassmorphique
-  icon: mdi:palette
-  show_in_sidebar: true
-  filename: lovelace/dashboard_design.yaml
-
 # Dashboard Test - Pour diagnostic
 lovelace-design-test:
   mode: yaml
@@ -26,20 +17,3 @@ lovelace-design-test:
   icon: mdi:test-tube
   show_in_sidebar: true
   filename: lovelace/dashboard_design_test.yaml
-
-# Dashboard Simple - Sans custom cards
-lovelace-design-simple:
-  mode: yaml
-  title: Simple Design
-  icon: mdi:star
-  show_in_sidebar: true
-  filename: lovelace/dashboard_design_simple.yaml
-
-# Dashboard Sans Menus - Mode plein écran sans menu latéral ni header
-# Vue unique en mode panel pour une expérience immersive
-lovelace-sans-menus:
-  mode: yaml
-  title: Sans Menus
-  icon: mdi:fullscreen
-  show_in_sidebar: true
-  filename: lovelace/dashboard_sans_menus.yaml
