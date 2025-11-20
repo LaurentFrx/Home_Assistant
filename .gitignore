@@ -85,3 +85,12 @@ www/None
 *.diff
 nul
 .storage/
+
+# Git Sync runtime
+.last_known_good_commit
+
+# SSH keys (sécurité)
+.ssh/
+
+# Solcast corrupt files
+solcast.json.corrupt
