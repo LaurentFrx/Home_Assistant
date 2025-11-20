@@ -20,6 +20,16 @@ input_text:
     name: ENTITÉ - Lave-vaisselle puissance (W)
     icon: mdi:dishwasher
     initial: sensor.lave_vaisselle_power
+  cumulus_raison_deadband:
+    name: Raison deadband actuel
+    icon: mdi:information
+    max: 255
+    initial: "Aucun"
+  cumulus_historique_chauffes:
+    name: Historique des 10 dernières chauffes
+    icon: mdi:history
+    max: 500
+    initial: ""
 input_number:
   cumulus_seuil_pv_on_w:
     name: Seuil PV pour démarrage (W)
@@ -145,6 +155,22 @@ input_number:
     unit_of_measurement: h
     icon: mdi:clock-alert
     initial: 50
+  cumulus_seuil_pv_statique_w:
+    name: Seuil PV statique pour démarrage (W)
+    min: 0
+    max: 1000
+    step: 10
+    unit_of_measurement: W
+    icon: mdi:solar-power
+    initial: 100
+  cumulus_soc_min_pct:
+    name: SOC minimum pour démarrage (%)
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: '%'
+    icon: mdi:battery-30
+    initial: 10
 input_boolean:
   cumulus_interdit_depart:
     name: Interdit départ (sécurité/maintenance)
@@ -205,6 +231,11 @@ input_datetime:
     has_date: true
     has_time: true
     icon: mdi:calendar-clock
+  cumulus_debut_chauffe_actuelle:
+    name: Début chauffe actuelle
+    has_date: true
+    has_time: true
+    icon: mdi:clock-start
 timer:
   cumulus_deadband_ui:
     name: Temporisation UI (deadband)
@@ -232,6 +263,45 @@ template:
     state_class: measurement
     state: '{% set pv = states(''sensor.pv_total_entree_sb_aps_w'') | float(0) %}
       {{ pv }}'
+  - name: cumulus_production_aps_w
+    unique_id: cumulus_production_aps_w
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-panel
+    state: >
+      {% set aps_sensor = 'sensor.aps_power_w' %}
+      {% if states(aps_sensor) not in ['unknown', 'unavailable'] %}
+        {{ states(aps_sensor) | float(0) }}
+      {% else %}
+        0
+      {% endif %}
+    availability: >
+      {{ states('sensor.aps_power_w') not in ['unknown', 'unavailable'] }}
+  - name: cumulus_puissance_disponible_w
+    unique_id: cumulus_puissance_disponible_w
+    unit_of_measurement: W
+    device_class: power
+    icon: mdi:flash-triangle
+    state: >
+      {% set sb_max = states('input_number.cumulus_solarbank_max_w') | float(1200) %}
+      {% set aps = states('sensor.cumulus_production_aps_w') | float(0) %}
+      {% set talon = states('input_number.cumulus_talon_maison_w') | float(300) %}
+      {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+
+      {# Puissance dispo = ce qui peut être utilisé SANS importer du réseau #}
+      {# Si import négatif (export), on a encore plus de marge #}
+      {% set puissance_brute = sb_max + aps %}
+      {% set conso_maison = talon + import_w %}
+      {% set disponible = puissance_brute - conso_maison %}
+
+      {{ [0, disponible] | max | round(0) }}
+    attributes:
+      sb_max_w: '{{ states(''input_number.cumulus_solarbank_max_w'') }}'
+      aps_prod_w: '{{ states(''sensor.cumulus_production_aps_w'') }}'
+      talon_w: '{{ states(''input_number.cumulus_talon_maison_w'') }}'
+      import_w: '{{ states(''sensor.cumulus_import_reseau_w'') }}'
+      formule: "SB_max + APS - Talon - Import"
   - name: cumulus_seuil_import_limiteur_w
     unique_id: cumulus_seuil_import_limiteur_w
     unit_of_measurement: W
@@ -615,8 +685,8 @@ template:
         {% set score.total = score.total + 25 %}
       {% endif %}
 
-      {# Cohérence mesures (25 pts) - assume OK si pas d'état cohérence ou si OK #}
-      {% if states('binary_sensor.cumulus_etat_coherent') in ['on', 'unknown', 'unavailable'] %}
+      {# Cohérence mesures (25 pts) - OK si binary_sensor = OFF (device_class: problem) #}
+      {% if states('binary_sensor.cumulus_etat_coherent') == 'off' %}
         {% set score.total = score.total + 25 %}
       {% endif %}
 
@@ -644,7 +714,7 @@ template:
       evaluation_entites: >-
         {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_entites_ok', 'on') else 'KO (0pt)' }}
       evaluation_coherence: >-
-        {{ 'OK (25pts)' if states('binary_sensor.cumulus_etat_coherent') in ['on', 'unknown', 'unavailable'] else 'KO (0pt)' }}
+        {{ 'OK (25pts)' if states('binary_sensor.cumulus_etat_coherent') == 'off' else 'KO (0pt)' }}
       evaluation_espacement: >-
         {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'off') else 'Urgent (0pt)' }}
       evaluation_fonctionnel: >-
