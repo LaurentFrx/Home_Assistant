@@ -94,3 +94,6 @@ nul
 
 # Solcast corrupt files
 solcast.json.corrupt
+custom_components/anker_solix/solixapi/authcache/
+blueprints/script/
+blueprints/template/
