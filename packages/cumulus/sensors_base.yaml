@@ -1,0 +1,339 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - SENSORS DE BASE                                      ║
+# ║ Capteurs essentiels pour le fonctionnement du système                      ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+template:
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ MESURES PUISSANCE EN TEMPS RÉEL                                         │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - sensor:
+      # Import réseau instantané (valeur positive = import, négative = export)
+      - name: "Cumulus - Import réseau W"
+        unique_id: cumulus_import_reseau_w
+        state: >
+          {% set import = states('sensor.smart_meter_grid_import') | float(0) %}
+          {{ import if import > 0 else 0 }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:transmission-tower-import
+        attributes:
+          source: "Smart Meter Linky"
+          last_update: "{{ now().isoformat() }}"
+
+      # Production PV totale (Solarbank + APS)
+      - name: "Cumulus - Production PV totale W"
+        unique_id: cumulus_pv_power_w
+        state: >
+          {% set pv_total = states('sensor.pv_total_entree_sb_aps_w') | float(0) %}
+          {{ pv_total if pv_total >= 0 else 0 }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-power
+        attributes:
+          solarbank_contribution: >
+            {% set total = states('sensor.pv_total_entree_sb_aps_w') | float(0) %}
+            {% set aps = states('sensor.aps_power_w') | float(0) %}
+            {{ (total - aps) if (total - aps) > 0 else 0 }}
+          aps_contribution: "{{ states('sensor.aps_power_w') | float(0) }}"
+
+      # Production APS seule (micro-onduleur)
+      - name: "Cumulus - Production APS W"
+        unique_id: cumulus_production_aps_w
+        state: >
+          {% set aps = states('sensor.aps_power_w') | float(0) %}
+          {{ aps if aps >= 0 else 0 }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-panel
+        attributes:
+          inverter_status: >
+            {% if states('sensor.aps_power_w') | float(0) > 10 %}
+              Producing
+            {% else %}
+              Idle
+            {% endif %}
+
+      # État de charge Solarbank
+      - name: "Cumulus - SOC Batterie"
+        unique_id: cumulus_soc_batterie
+        state: >
+          {% set soc = states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) %}
+          {{ soc if soc >= 0 and soc <= 100 else 0 }}
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        icon: >
+          {% set soc = states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) %}
+          {% if soc >= 80 %}
+            mdi:battery-high
+          {% elif soc >= 50 %}
+            mdi:battery-medium
+          {% elif soc >= 20 %}
+            mdi:battery-low
+          {% else %}
+            mdi:battery-alert
+          {% endif %}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ ÉTAT CUMULUS ET MODE ACTIF                                              │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # État ON/OFF du cumulus avec protection
+      - name: "Cumulus - État contacteur"
+        unique_id: cumulus_etat_contacteur
+        state: >
+          {% if states('switch.shellypro1_ece334ee1b64') in ['on', 'off'] %}
+            {{ states('switch.shellypro1_ece334ee1b64') }}
+          {% else %}
+            off
+          {% endif %}
+        icon: >
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            mdi:water-boiler
+          {% else %}
+            mdi:water-boiler-off
+          {% endif %}
+        attributes:
+          power_consumption: >
+            {{ 3000 if is_state('switch.shellypro1_ece334ee1b64', 'on') else 0 }}
+          state_since: >
+            {{ states.switch.shellypro1_ece334ee1b64.last_changed | default(now()) }}
+
+      # Mode de fonctionnement actif
+      - name: "Cumulus - Mode actif"
+        unique_id: cumulus_mode_actif
+        state: >
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% set in_hc = is_state('binary_sensor.heures_creuses', 'on') %}
+            {% set pv_active = states('sensor.cumulus_production_aps_w') | float(0) > 50 %}
+            {% set force = is_state('input_boolean.cumulus_force_manuel', 'on') %}
+            {% if force %}
+              FORCE
+            {% elif pv_active and not in_hc %}
+              PV
+            {% elif in_hc %}
+              HC
+            {% else %}
+              AUTO
+            {% endif %}
+          {% else %}
+            OFF
+          {% endif %}
+        icon: >
+          {% set mode = states('sensor.cumulus_mode_actif') %}
+          {% if mode == 'PV' %}
+            mdi:white-balance-sunny
+          {% elif mode == 'HC' %}
+            mdi:moon-waning-crescent
+          {% elif mode == 'FORCE' %}
+            mdi:fire
+          {% elif mode == 'AUTO' %}
+            mdi:robot
+          {% else %}
+            mdi:power-off
+          {% endif %}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ TEMPÉRATURE ET ESTIMATION                                               │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Température estimée du cumulus (modèle adaptatif)
+      - name: "Cumulus - Température estimée"
+        unique_id: cumulus_temperature_estimee
+        state: >
+          {# Récupération dernière chauffe et durée #}
+          {% set last_heat_time = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
+          {% set now_time = now() %}
+
+          {# Si pas de dernière chauffe, on démarre à 45°C #}
+          {% if not last_heat_time %}
+            45
+          {% else %}
+            {% set hours_since = ((now_time - last_heat_time).total_seconds() / 3600) | round(2) %}
+            {% set gradient = states('input_number.cumulus_gradient_refroidissement') | float(0.8) %}
+
+            {# Température de départ après chauffe complète #}
+            {% set temp_start = 60 %}
+
+            {# Modèle de refroidissement exponentiel #}
+            {% set temp_current = temp_start - (gradient * hours_since) %}
+
+            {# Ajustement selon température extérieure (proxy via production solaire) #}
+            {% set pv_now = states('sensor.cumulus_pv_power_w') | float(0) %}
+            {% if pv_now < 100 %}
+              {# Nuit ou temps couvert = refroidissement plus rapide #}
+              {% set temp_current = temp_current - (hours_since * 0.2) %}
+            {% endif %}
+
+            {# Limites min/max #}
+            {{ [20, temp_current, 65] | sort | list[1] | round(1) }}
+          {% endif %}
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:thermometer-water
+        attributes:
+          model_type: "{{ states('input_select.cumulus_mode_calcul_temperature') }}"
+          gradient_used: "{{ states('input_number.cumulus_gradient_refroidissement') }}"
+          hours_since_heat: >
+            {% set last = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
+            {% if last %}
+              {{ ((now() - last).total_seconds() / 3600) | round(1) }}
+            {% else %}
+              999
+            {% endif %}
+
+      # Litres disponibles selon température
+      - name: "Cumulus - Litres disponibles"
+        unique_id: cumulus_litres_disponibles
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set capacity = 200 %}
+
+          {# Calcul basé sur delta température (eau froide à 15°C, usage à 40°C) #}
+          {% if temp >= 55 %}
+            {{ capacity }}
+          {% elif temp >= 50 %}
+            {{ (capacity * 0.85) | round(0) }}
+          {% elif temp >= 45 %}
+            {{ (capacity * 0.65) | round(0) }}
+          {% elif temp >= 40 %}
+            {{ (capacity * 0.40) | round(0) }}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "L"
+        icon: mdi:water
+        attributes:
+          douches_possibles: >
+            {{ (states('sensor.cumulus_litres_disponibles') | float(0) / 80) | round(1) }}
+          bains_possibles: >
+            {{ (states('sensor.cumulus_litres_disponibles') | float(0) / 150) | round(1) }}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ STATISTIQUES ET HISTORIQUE                                             │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Dernière chauffe (timestamp)
+      - name: "Cumulus - Dernière chauffe timestamp"
+        unique_id: cumulus_derniere_chauffe_timestamp
+        state: >
+          {% if states.switch.shellypro1_ece334ee1b64.last_changed %}
+            {% if is_state('switch.shellypro1_ece334ee1b64', 'off') %}
+              {{ states.switch.shellypro1_ece334ee1b64.last_changed.isoformat() }}
+            {% else %}
+              {{ (now() - timedelta(hours=24)).isoformat() }}
+            {% endif %}
+          {% else %}
+            {{ (now() - timedelta(hours=48)).isoformat() }}
+          {% endif %}
+        icon: mdi:history
+
+      # Dernière chauffe (format humain)
+      - name: "Cumulus - Dernière chauffe"
+        unique_id: cumulus_derniere_chauffe
+        state: >
+          {% set last = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
+          {% if last %}
+            {% set delta = now() - last %}
+            {% if delta.days > 0 %}
+              Il y a {{ delta.days }} jour{{ 's' if delta.days > 1 }}
+            {% elif delta.seconds > 3600 %}
+              Il y a {{ (delta.seconds / 3600) | round(0) }} heure{{ 's' if (delta.seconds / 3600) > 1 }}
+            {% else %}
+              Il y a {{ (delta.seconds / 60) | round(0) }} minute{{ 's' if (delta.seconds / 60) > 1 }}
+            {% endif %}
+          {% else %}
+            Jamais
+          {% endif %}
+        icon: mdi:clock-outline
+
+      # Heures depuis dernière chauffe
+      - name: "Cumulus - Heures depuis dernière chauffe"
+        unique_id: cumulus_heures_depuis_derniere_chauffe
+        state: >
+          {% set last = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
+          {% if last %}
+            {{ ((now() - last).total_seconds() / 3600) | round(1) }}
+          {% else %}
+            999
+          {% endif %}
+        unit_of_measurement: "h"
+        state_class: measurement
+        icon: mdi:timer-sand
+
+      # Temps restant de chauffe
+      - name: "Cumulus - Temps restant chauffe"
+        unique_id: cumulus_temps_restant_chauffe
+        state: >
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% set temp_current = states('sensor.cumulus_temperature_estimee') | float(45) %}
+            {% set temp_target = 60 %}
+            {% set delta = temp_target - temp_current %}
+            {% set minutes = (delta * 4) | round(0) %}  {# ~4min par degré avec 3000W #}
+            {{ [0, minutes, 150] | sort | list[1] }}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "min"
+        icon: mdi:timer
+
+      # Consommation du jour
+      - name: "Cumulus - Consommation jour"
+        unique_id: cumulus_consommation_jour
+        state: >
+          {% set heures = states('sensor.cumulus_heures_chauffe_jour') | float(0) %}
+          {{ (heures * 3.0) | round(2) }}
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:lightning-bolt
+
+      # Heures de chauffe aujourd'hui
+      - name: "Cumulus - Heures chauffe jour"
+        unique_id: cumulus_heures_chauffe_jour
+        state: >
+          {# Calcul basé sur l'historique du switch #}
+          {% set count = states('counter.cumulus_chauffes_jour') | int(0) %}
+          {{ (count * 2.5) | round(1) }}  {# Estimation 2.5h par chauffe moyenne #}
+        unit_of_measurement: "h"
+        icon: mdi:clock-check
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ FENÊTRES TEMPORELLES                                                    │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - binary_sensor:
+      # Fenêtre PV active
+      - name: "Cumulus - Fenêtre PV"
+        unique_id: cumulus_fenetre_pv
+        state: >
+          {% set now_time = now().time() %}
+          {% set start = today_at(states('input_datetime.cumulus_heure_debut_pv')).time() %}
+          {% set end = today_at(states('input_datetime.cumulus_heure_fin_pv')).time() %}
+          {{ start <= now_time <= end }}
+        device_class: running
+        icon: >
+          {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+            mdi:window-open
+          {% else %}
+            mdi:window-closed
+          {% endif %}
+        attributes:
+          window_start: "{{ states('input_datetime.cumulus_heure_debut_pv') }}"
+          window_end: "{{ states('input_datetime.cumulus_heure_fin_pv') }}"
+
+      # Heures creuses actives
+      - name: "Cumulus - Heures creuses"
+        unique_id: cumulus_heures_creuses
+        state: >
+          {# Adapter selon votre contrat - Exemple heures creuses classiques #}
+          {% set hour = now().hour %}
+          {{ hour >= 23 or hour < 7 }}
+        device_class: power
+        icon: >
+          {% if is_state('binary_sensor.cumulus_heures_creuses', 'on') %}
+            mdi:moon-waning-crescent
+          {% else %}
+            mdi:white-balance-sunny
+          {% endif %}
