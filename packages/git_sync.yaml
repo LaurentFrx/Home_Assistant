@@ -1,0 +1,293 @@
+###############################################################################
+# Package Git Sync - Synchronisation automatique Git
+# Remplace l'add-on Git Pull bugué
+#
+# Fonctionnalités :
+# - Pull automatique au démarrage de HA (après 60s)
+# - Pull périodique toutes les 10 minutes
+# - Vérification de config avant redémarrage
+# - Rollback automatique en cas d'erreur
+# - Monitoring et notifications
+#
+# Auteur : Claude Code CLI
+# Date : 2025-11-19
+###############################################################################
+
+###############################################################################
+# Shell Commands
+###############################################################################
+shell_command:
+  # Commande principale de synchronisation Git (version simplifiée)
+  git_sync: "/config/scripts/git_sync_simple.sh"
+
+  # Commande complète avec vérification (à utiliser manuellement si besoin)
+  git_sync_advanced: "/config/scripts/git_sync.sh"
+
+  # Commande pour vérifier manuellement les mises à jour sans les appliquer
+  git_check_updates: "cd /config && git fetch origin main && git rev-list HEAD..origin/main --count"
+
+  # Commande pour voir les dernières lignes du log
+  git_sync_view_log: "tail -n 50 /config/git_sync.log"
+
+###############################################################################
+# Input Boolean - Contrôle de la synchronisation automatique
+###############################################################################
+input_boolean:
+  git_sync_auto_enabled:
+    name: "Synchronisation Git automatique"
+    icon: mdi:git
+    initial: true
+
+  git_sync_notify_enabled:
+    name: "Notifications Git Sync"
+    icon: mdi:bell
+    initial: true
+
+###############################################################################
+# Sensors
+###############################################################################
+sensor:
+  # Sensor pour afficher la date de dernière synchronisation
+  - platform: command_line
+    name: "Git Dernière Synchronisation"
+    command: "grep 'Synchronisation terminée avec succès' /config/git_sync.log 2>/dev/null | tail -1 | grep -oP '\\[\\K[^\\]]+' | head -1 || echo 'Jamais'"
+    scan_interval: 300  # Mise à jour toutes les 5 minutes
+
+  # Sensor pour afficher le statut de la dernière sync
+  - platform: command_line
+    name: "Git Statut Dernière Sync"
+    command: >
+      if grep -q 'Synchronisation terminée avec succès' /config/git_sync.log 2>/dev/null | tail -1; then
+        echo 'Succès'
+      elif grep -q 'Configuration invalide après le pull' /config/git_sync.log 2>/dev/null | tail -1; then
+        echo 'Erreur config'
+      elif grep -q 'Échec du pull Git' /config/git_sync.log 2>/dev/null | tail -1; then
+        echo 'Erreur pull'
+      elif grep -q 'Pas de connectivité réseau' /config/git_sync.log 2>/dev/null | tail -1; then
+        echo 'Pas de réseau'
+      elif grep -q 'Aucune mise à jour' /config/git_sync.log 2>/dev/null | tail -1; then
+        echo 'À jour'
+      else
+        echo 'Inconnu'
+      fi
+    scan_interval: 300
+
+  # Sensor pour le commit actuel
+  - platform: command_line
+    name: "Git Commit Actuel"
+    command: "cd /config && git rev-parse --short HEAD"
+    scan_interval: 600
+
+  # Sensor pour compter les commits en retard
+  - platform: command_line
+    name: "Git Commits en Retard"
+    command: "cd /config && git fetch origin main 2>/dev/null && git rev-list HEAD..origin/main --count || echo '0'"
+    scan_interval: 600
+
+###############################################################################
+# Binary Sensors
+###############################################################################
+binary_sensor:
+  # Indique si des mises à jour sont disponibles
+  - platform: template
+    sensors:
+      git_updates_available:
+        friendly_name: "Mises à jour Git disponibles"
+        device_class: update
+        value_template: >
+          {{ states('sensor.git_commits_en_retard') | int(0) > 0 }}
+        icon_template: >
+          {% if states('sensor.git_commits_en_retard') | int(0) > 0 %}
+            mdi:source-pull
+          {% else %}
+            mdi:check-circle
+          {% endif %}
+
+###############################################################################
+# Automations
+###############################################################################
+automation:
+  #############################################################################
+  # Synchronisation au démarrage de Home Assistant
+  #############################################################################
+  - id: git_sync_on_startup
+    alias: "Git Sync - Synchronisation au démarrage"
+    description: "Pull automatique au boot de Home Assistant (après 60s de délai)"
+    mode: single
+    max_exceeded: silent
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: state
+        entity_id: input_boolean.git_sync_auto_enabled
+        state: "on"
+    action:
+      # Attendre 60 secondes pour laisser HA démarrer complètement
+      - delay:
+          seconds: 60
+
+      # Log du début de sync
+      - service: system_log.write
+        data:
+          message: "Git Sync - Démarrage de la synchronisation au boot"
+          level: info
+
+      # Exécuter le script de synchronisation
+      - service: shell_command.git_sync
+
+      # Attendre un peu pour laisser le script s'exécuter
+      - delay:
+          seconds: 5
+
+      # Notification optionnelle
+      - condition: state
+        entity_id: input_boolean.git_sync_notify_enabled
+        state: "on"
+
+      - service: persistent_notification.create
+        data:
+          title: "Git Sync - Démarrage"
+          message: >
+            Synchronisation Git exécutée au démarrage.
+            Statut : {{ states('sensor.git_statut_derniere_sync') }}
+            Consultez /config/git_sync.log pour les détails.
+          notification_id: git_sync_startup
+
+  #############################################################################
+  # Synchronisation périodique (toutes les 10 minutes)
+  #############################################################################
+  - id: git_sync_periodic
+    alias: "Git Sync - Synchronisation périodique"
+    description: "Pull automatique toutes les 10 minutes"
+    mode: single
+    max_exceeded: silent
+    trigger:
+      - platform: time_pattern
+        minutes: "/10"  # Toutes les 10 minutes
+    condition:
+      - condition: state
+        entity_id: input_boolean.git_sync_auto_enabled
+        state: "on"
+    action:
+      # Exécuter le script de synchronisation
+      - service: shell_command.git_sync
+
+  #############################################################################
+  # Notification en cas d'erreur de synchronisation
+  #############################################################################
+  - id: git_sync_error_notification
+    alias: "Git Sync - Notification d'erreur"
+    description: "Envoie une notification si la synchronisation échoue"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: sensor.git_statut_derniere_sync
+        to:
+          - "Erreur config"
+          - "Erreur pull"
+    condition:
+      - condition: state
+        entity_id: input_boolean.git_sync_notify_enabled
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "⚠️ Git Sync - Erreur"
+          message: >
+            La synchronisation Git a échoué !
+
+            Statut : {{ states('sensor.git_statut_derniere_sync') }}
+            Dernière sync : {{ states('sensor.git_derniere_synchronisation') }}
+
+            Consultez les logs avec :
+            ssh root@192.168.1.29 -p 22222
+            tail -n 100 /config/git_sync.log
+          notification_id: git_sync_error
+
+  #############################################################################
+  # Notification quand des mises à jour sont disponibles
+  #############################################################################
+  - id: git_sync_updates_available
+    alias: "Git Sync - Mises à jour disponibles"
+    description: "Notification quand des commits sont disponibles"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.git_updates_available
+        to: "on"
+        for:
+          minutes: 2
+    condition:
+      - condition: state
+        entity_id: input_boolean.git_sync_notify_enabled
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.git_sync_auto_enabled
+        state: "off"  # Notification uniquement si sync auto désactivée
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "🔔 Git Sync - Mises à jour disponibles"
+          message: >
+            {{ states('sensor.git_commits_en_retard') }} nouveau(x) commit(s) disponible(s).
+
+            Activez la synchronisation automatique ou lancez manuellement :
+            Paramètres > Développeur > Services > shell_command.git_sync
+          notification_id: git_sync_updates
+
+###############################################################################
+# Scripts
+###############################################################################
+script:
+  #############################################################################
+  # Script pour forcer une synchronisation manuelle
+  #############################################################################
+  git_sync_manual:
+    alias: "Git Sync - Synchronisation manuelle"
+    description: "Force une synchronisation Git immédiatement"
+    mode: single
+    sequence:
+      - service: system_log.write
+        data:
+          message: "Git Sync - Synchronisation manuelle déclenchée"
+          level: info
+
+      - service: shell_command.git_sync
+
+      - delay:
+          seconds: 5
+
+      - service: persistent_notification.create
+        data:
+          title: "Git Sync - Synchronisation manuelle"
+          message: >
+            Synchronisation manuelle terminée.
+            Statut : {{ states('sensor.git_statut_derniere_sync') }}
+
+            Consultez /config/git_sync.log pour les détails.
+          notification_id: git_sync_manual
+
+  #############################################################################
+  # Script pour afficher les logs
+  #############################################################################
+  git_sync_show_logs:
+    alias: "Git Sync - Afficher les logs"
+    description: "Affiche les 50 dernières lignes du log"
+    mode: single
+    sequence:
+      - service: shell_command.git_sync_view_log
+
+      - service: persistent_notification.create
+        data:
+          title: "Git Sync - Logs"
+          message: >
+            Consultez les logs complets via SSH :
+
+            ssh root@192.168.1.29 -p 22222
+            tail -f /config/git_sync.log
+
+            ou
+
+            cat /config/git_sync.log
+          notification_id: git_sync_logs
