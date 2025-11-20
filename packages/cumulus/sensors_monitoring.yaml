@@ -1,0 +1,445 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - SENSORS MONITORING & STATISTIQUES                    ║
+# ║ KPIs, métriques et analyse de performance                                  ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+template:
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ STATISTIQUES ÉNERGÉTIQUES                                               │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - sensor:
+      # Consommation mensuelle
+      - name: "Cumulus - kWh mois"
+        unique_id: cumulus_kwh_mois
+        state: >
+          {% set count = states('counter.cumulus_chauffes_mois') | int(0) %}
+          {% set kwh_per_heat = 7.5 %}  {# 3kW × 2.5h moyenne #}
+          {{ (count * kwh_per_heat) | round(1) }}
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:lightning-bolt-circle
+        attributes:
+          chauffes_ce_mois: "{{ states('counter.cumulus_chauffes_mois') }}"
+          moyenne_par_jour: >
+            {% set day = now().day %}
+            {{ (states('sensor.cumulus_kwh_mois') | float(0) / day) | round(2) }}
+
+      # Coût mensuel estimé
+      - name: "Cumulus - Coût mois"
+        unique_id: cumulus_cout_mois
+        state: >
+          {# Estimation basée sur répartition PV/HC/HP #}
+          {% set kwh_total = states('sensor.cumulus_kwh_mois') | float(0) %}
+          {% set pv_percent = states('sensor.cumulus_pourcentage_pv') | float(50) / 100 %}
+          {% set hc_percent = states('sensor.cumulus_pourcentage_hc') | float(40) / 100 %}
+          {% set hp_percent = 1 - pv_percent - hc_percent %}
+
+          {% set tarif_pv = 0 %}  {# Gratuit #}
+          {% set tarif_hc = 0.1470 %}  {# Tarif HC EDF 2024 #}
+          {% set tarif_hp = 0.2062 %}  {# Tarif HP EDF 2024 #}
+
+          {% set cout = (kwh_total * pv_percent * tarif_pv) +
+                       (kwh_total * hc_percent * tarif_hc) +
+                       (kwh_total * hp_percent * tarif_hp) %}
+          {{ cout | round(2) }}
+        unit_of_measurement: "€"
+        icon: mdi:currency-eur
+        attributes:
+          cout_sans_solaire: >
+            {% set kwh = states('sensor.cumulus_kwh_mois') | float(0) %}
+            {{ (kwh * 0.2062) | round(2) }}
+          economie_realisee: >
+            {% set sans = state_attr('sensor.cumulus_cout_mois', 'cout_sans_solaire') | float(0) %}
+            {% set avec = states('sensor.cumulus_cout_mois') | float(0) %}
+            {{ (sans - avec) | round(2) }}
+
+      # Répartition par mode (PV)
+      - name: "Cumulus - Pourcentage PV"
+        unique_id: cumulus_pourcentage_pv
+        state: >
+          {# Analyse basée sur l'historique JSON #}
+          {% set history = states('input_text.cumulus_historique_chauffes') %}
+          {% if history and history != 'unknown' %}
+            {# Parser le JSON et compter les modes #}
+            {% set total = history | from_json | length %}
+            {% set pv_count = history | from_json | selectattr('mode', 'eq', 'PV') | list | length %}
+            {{ ((pv_count / total * 100) if total > 0 else 0) | round(0) }}
+          {% else %}
+            50  {# Estimation par défaut #}
+          {% endif %}
+        unit_of_measurement: "%"
+        icon: mdi:solar-power-variant
+
+      # Répartition par mode (HC)
+      - name: "Cumulus - Pourcentage HC"
+        unique_id: cumulus_pourcentage_hc
+        state: >
+          {% set history = states('input_text.cumulus_historique_chauffes') %}
+          {% if history and history != 'unknown' %}
+            {% set total = history | from_json | length %}
+            {% set hc_count = history | from_json | selectattr('mode', 'eq', 'HC') | list | length %}
+            {{ ((hc_count / total * 100) if total > 0 else 0) | round(0) }}
+          {% else %}
+            40  {# Estimation par défaut #}
+          {% endif %}
+        unit_of_measurement: "%"
+        icon: mdi:moon-waning-crescent
+
+      # Répartition par mode (FORCE)
+      - name: "Cumulus - Pourcentage Force"
+        unique_id: cumulus_pourcentage_force
+        state: >
+          {% set pv = states('sensor.cumulus_pourcentage_pv') | float(0) %}
+          {% set hc = states('sensor.cumulus_pourcentage_hc') | float(0) %}
+          {{ (100 - pv - hc) | round(0) }}
+        unit_of_measurement: "%"
+        icon: mdi:fire
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ INDICATEURS DE PERFORMANCE                                              │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Autonomie solaire
+      - name: "Cumulus - Autonomie solaire"
+        unique_id: cumulus_autonomie_solaire
+        state: >
+          {% set pv_percent = states('sensor.cumulus_pourcentage_pv') | float(50) %}
+          {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
+
+          {# Ajustement selon stratégie #}
+          {% if strategy == 'Économie maximale' %}
+            {% set factor = 1.2 %}
+          {% elif strategy == 'Préserver batterie' %}
+            {% set factor = 0.8 %}
+          {% else %}
+            {% set factor = 1.0 %}
+          {% endif %}
+
+          {{ [0, (pv_percent * factor), 100] | sort | list[1] | round(0) }}
+        unit_of_measurement: "%"
+        icon: mdi:leaf
+        attributes:
+          niveau: >
+            {% set autonomie = states('sensor.cumulus_autonomie_solaire') | int(0) %}
+            {% if autonomie >= 80 %}Excellent
+            {% elif autonomie >= 60 %}Bon
+            {% elif autonomie >= 40 %}Moyen
+            {% else %}Faible{% endif %}
+
+      # Efficacité système
+      - name: "Cumulus - Efficacité système"
+        unique_id: cumulus_efficacite_systeme
+        state: >
+          {# Score composite basé sur plusieurs facteurs #}
+          {% set temp_avg = states('sensor.cumulus_temperature_moyenne') | float(50) %}
+          {% set chauffes_jour = states('counter.cumulus_chauffes_jour') | int(0) %}
+          {% set autonomie = states('sensor.cumulus_autonomie_solaire') | float(50) %}
+          {% set sante = states('sensor.cumulus_score_sante') | float(80) %}
+
+          {# Calcul efficacité (0-100) #}
+          {% set temp_score = ((temp_avg - 40) / 20 * 100) | round(0) %}
+          {% set chauffe_score = (100 - (chauffes_jour - 1) * 25) if chauffes_jour > 0 else 100 %}
+          {% set score = (temp_score * 0.3 + chauffe_score * 0.2 + autonomie * 0.3 + sante * 0.2) %}
+
+          {{ [0, score, 100] | sort | list[1] | round(0) }}
+        unit_of_measurement: "%"
+        icon: mdi:speedometer
+        attributes:
+          facteurs:
+            temperature_moyenne: "{{ states('sensor.cumulus_temperature_moyenne') }}°C"
+            chauffes_par_jour: "{{ states('counter.cumulus_chauffes_jour') }}"
+            autonomie_solaire: "{{ states('sensor.cumulus_autonomie_solaire') }}%"
+            sante_systeme: "{{ states('sensor.cumulus_score_sante') }}%"
+
+      # Température moyenne maintenue
+      - name: "Cumulus - Température moyenne"
+        unique_id: cumulus_temperature_moyenne
+        state: >
+          {# Moyenne glissante sur 24h - simplifiée #}
+          {% set current = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+
+          {% if hours_since < 24 %}
+            {# Récemment chauffé : moyenne plus élevée #}
+            {% set avg = 55 - (hours_since * 0.5) %}
+          {% else %}
+            {# Pas chauffé récemment : température actuelle #}
+            {% set avg = current %}
+          {% endif %}
+
+          {{ avg | round(1) }}
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:thermometer-lines
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ PRÉVISIONS ET TENDANCES                                                 │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Prévision consommation semaine
+      - name: "Cumulus - Prévision semaine"
+        unique_id: cumulus_prevision_semaine
+        state: >
+          {% set daily_avg = state_attr('sensor.cumulus_kwh_mois', 'moyenne_par_jour') | float(7.5) %}
+          {% set solar_week = states('sensor.solcast_pv_forecast_previsions_7j') | float(30) %}
+
+          {# Ajuster selon prévision solaire #}
+          {% if solar_week > 40 %}
+            {% set factor = 0.7 %}  {# Beaucoup de soleil = moins de conso #}
+          {% elif solar_week > 25 %}
+            {% set factor = 0.85 %}
+          {% else %}
+            {% set factor = 1.1 %}  {# Peu de soleil = plus de HC #}
+          {% endif %}
+
+          {{ (daily_avg * 7 * factor) | round(1) }}
+        unit_of_measurement: "kWh"
+        icon: mdi:crystal-ball
+        attributes:
+          prevision_solaire_7j: "{{ states('sensor.solcast_pv_forecast_previsions_7j') }} kWh"
+          facteur_ajustement: >
+            {% set solar = states('sensor.solcast_pv_forecast_previsions_7j') | float(30) %}
+            {% if solar > 40 %}Favorable (-30%)
+            {% elif solar > 25 %}Normal (-15%)
+            {% else %}Défavorable (+10%){% endif %}
+
+      # Tendance température
+      - name: "Cumulus - Tendance température"
+        unique_id: cumulus_tendance_temperature
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set last_heat = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% set gradient = states('input_number.cumulus_gradient_refroidissement') | float(0.8) %}
+
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            Montée
+          {% elif last_heat < 1 %}
+            Stable
+          {% elif gradient > 1 %}
+            Chute rapide
+          {% elif gradient > 0.5 %}
+            Descente
+          {% else %}
+            Descente lente
+          {% endif %}
+        icon: >
+          {% set trend = states('sensor.cumulus_tendance_temperature') %}
+          {% if trend == 'Montée' %}mdi:trending-up
+          {% elif trend == 'Stable' %}mdi:trending-neutral
+          {% else %}mdi:trending-down{% endif %}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ ALERTES ET ANOMALIES                                                    │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - binary_sensor:
+      # Anomalie consommation
+      - name: "Cumulus - Anomalie consommation"
+        unique_id: cumulus_anomalie_consommation
+        state: >
+          {% set daily = state_attr('sensor.cumulus_kwh_mois', 'moyenne_par_jour') | float(7.5) %}
+          {{ daily > 15 or daily < 2 }}
+        device_class: problem
+        attributes:
+          type: >
+            {% set daily = state_attr('sensor.cumulus_kwh_mois', 'moyenne_par_jour') | float(7.5) %}
+            {% if daily > 15 %}Surconsommation
+            {% elif daily < 2 %}Sous-consommation
+            {% else %}Normal{% endif %}
+
+      # Anomalie température
+      - name: "Cumulus - Anomalie température"
+        unique_id: cumulus_anomalie_temperature
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set gradient = states('input_number.cumulus_gradient_refroidissement') | float(0.8) %}
+          {% set is_heating = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+
+          {# Anomalie si : #}
+          {# - Température ne monte pas pendant chauffe #}
+          {# - Refroidissement trop rapide (>1.5°C/h) #}
+          {# - Température bloquée #}
+
+          {% if is_heating and gradient < 0 %}
+            true  {# Pas de montée pendant chauffe #}
+          {% elif not is_heating and gradient > 1.5 %}
+            true  {# Refroidissement trop rapide #}
+          {% else %}
+            false
+          {% endif %}
+        device_class: problem
+        attributes:
+          description: >
+            {% if is_state('binary_sensor.cumulus_anomalie_temperature', 'on') %}
+              {% set gradient = states('input_number.cumulus_gradient_refroidissement') | float(0.8) %}
+              {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+                Température ne monte pas pendant chauffe
+              {% else %}
+                Refroidissement anormal ({{ gradient }}°C/h)
+              {% endif %}
+            {% else %}
+              Aucune anomalie
+            {% endif %}
+
+      # Maintenance requise
+      - name: "Cumulus - Maintenance requise"
+        unique_id: cumulus_maintenance_requise
+        state: >
+          {% set score = states('sensor.cumulus_score_sante') | int(100) %}
+          {% set anomalie_conso = is_state('binary_sensor.cumulus_anomalie_consommation', 'on') %}
+          {% set anomalie_temp = is_state('binary_sensor.cumulus_anomalie_temperature', 'on') %}
+          {% set chauffes_total = states('counter.cumulus_chauffes_mois') | int(0) * 12 %}
+
+          {{
+            score < 60 or
+            anomalie_conso or
+            anomalie_temp or
+            chauffes_total > 1000
+          }}
+        device_class: problem
+        icon: mdi:wrench-clock
+        attributes:
+          raisons: >
+            {% set reasons = [] %}
+            {% if states('sensor.cumulus_score_sante') | int(100) < 60 %}
+              {% set reasons = reasons + ['Score santé faible'] %}
+            {% endif %}
+            {% if is_state('binary_sensor.cumulus_anomalie_consommation', 'on') %}
+              {% set reasons = reasons + ['Anomalie consommation'] %}
+            {% endif %}
+            {% if is_state('binary_sensor.cumulus_anomalie_temperature', 'on') %}
+              {% set reasons = reasons + ['Anomalie température'] %}
+            {% endif %}
+            {{ reasons | join(', ') if reasons else 'Aucune' }}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ STATISTIQUES TEMPS RÉEL                                                 │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - sensor:
+      # Durée chauffe en cours
+      - name: "Cumulus - Durée chauffe actuelle"
+        unique_id: cumulus_duree_chauffe_actuelle
+        state: >
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% set start = states.switch.shellypro1_ece334ee1b64.last_changed %}
+            {% if start %}
+              {{ ((now() - start).total_seconds() / 60) | round(0) }}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "min"
+        icon: mdi:timer-play
+
+      # Énergie chauffe en cours
+      - name: "Cumulus - kWh chauffe actuelle"
+        unique_id: cumulus_kwh_chauffe_actuelle
+        state: >
+          {% set minutes = states('sensor.cumulus_duree_chauffe_actuelle') | float(0) %}
+          {{ (minutes / 60 * 3.0) | round(2) }}
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: measurement
+
+      # Coût chauffe en cours
+      - name: "Cumulus - Coût chauffe actuelle"
+        unique_id: cumulus_cout_chauffe_actuelle
+        state: >
+          {% set kwh = states('sensor.cumulus_kwh_chauffe_actuelle') | float(0) %}
+          {% set mode = states('sensor.cumulus_mode_actif') %}
+
+          {% if mode == 'PV' %}
+            0
+          {% elif mode == 'HC' %}
+            {{ (kwh * 0.1470) | round(2) }}
+          {% else %}
+            {{ (kwh * 0.2062) | round(2) }}
+          {% endif %}
+        unit_of_measurement: "€"
+        icon: mdi:cash
+
+      # Nombre de chauffes semaine
+      - name: "Cumulus - Nombre chauffes semaine"
+        unique_id: cumulus_nombre_chauffes_semaine
+        state: >
+          {# Estimation basée sur le compteur journalier #}
+          {% set daily = states('counter.cumulus_chauffes_jour') | int(0) %}
+          {% set avg = daily if daily > 0 else 1 %}
+          {{ (avg * 7) | round(0) }}
+        unit_of_measurement: "chauffes"
+        icon: mdi:counter
+
+      # kWh semaine
+      - name: "Cumulus - kWh semaine"
+        unique_id: cumulus_kwh_semaine
+        state: >
+          {% set chauffes = states('sensor.cumulus_nombre_chauffes_semaine') | int(7) %}
+          {{ (chauffes * 7.5) | round(1) }}
+        unit_of_measurement: "kWh"
+        device_class: energy
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ INFORMATIONS SYSTÈME                                                    │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Version système
+      - name: "Cumulus - Version"
+        unique_id: cumulus_version
+        state: "2.0.0"
+        icon: mdi:tag
+        attributes:
+          date_installation: "2024-11-20"
+          derniere_maj: "{{ now().date() }}"
+
+      # Uptime système (depuis dernier reload)
+      - name: "Cumulus - Uptime"
+        unique_id: cumulus_uptime
+        state: >
+          {% set last_reload = states.sensor.cumulus_version.last_changed %}
+          {% if last_reload %}
+            {% set delta = now() - last_reload %}
+            {% if delta.days > 0 %}
+              {{ delta.days }}j {{ (delta.seconds // 3600) }}h
+            {% elif delta.seconds > 3600 %}
+              {{ delta.seconds // 3600 }}h {{ (delta.seconds % 3600) // 60 }}m
+            {% else %}
+              {{ delta.seconds // 60 }}m
+            {% endif %}
+          {% else %}
+            0m
+          {% endif %}
+        icon: mdi:clock-check
+
+      # État global système
+      - name: "Cumulus - État global"
+        unique_id: cumulus_etat_global
+        state: >
+          {% set score = states('sensor.cumulus_score_sante') | int(0) %}
+          {% set is_heating = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+
+          {% if score < 50 %}
+            Erreur
+          {% elif is_heating %}
+            Chauffe
+          {% elif temp >= 55 %}
+            Optimal
+          {% elif temp >= 45 %}
+            Normal
+          {% else %}
+            Attente
+          {% endif %}
+        icon: >
+          {% set state = states('sensor.cumulus_etat_global') %}
+          {% if state == 'Erreur' %}mdi:alert-circle
+          {% elif state == 'Chauffe' %}mdi:fire
+          {% elif state == 'Optimal' %}mdi:check-circle
+          {% elif state == 'Normal' %}mdi:circle-outline
+          {% else %}mdi:timer-sand{% endif %}
+        attributes:
+          details:
+            mode: "{{ states('sensor.cumulus_mode_actif') }}"
+            temperature: "{{ states('sensor.cumulus_temperature_estimee') }}°C"
+            production_pv: "{{ states('sensor.cumulus_pv_power_w') }}W"
+            soc_batterie: "{{ states('sensor.cumulus_soc_batterie') }}%"
+            score_sante: "{{ states('sensor.cumulus_score_sante') }}%"
