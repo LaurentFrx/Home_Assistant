@@ -1,0 +1,481 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - SENSORS DE CALCUL & PRÉDICTION                       ║
+# ║ Intelligence artificielle et calculs avancés                               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+template:
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ CALCULS DE PUISSANCE DISPONIBLE                                         │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - sensor:
+      # Puissance disponible pour le cumulus
+      - name: "Cumulus - Puissance disponible W"
+        unique_id: cumulus_puissance_disponible_w
+        state: >
+          {# Récupération des paramètres #}
+          {% set sb_max = states('input_number.cumulus_solarbank_max_w') | float(1200) %}
+          {% set aps = states('sensor.cumulus_production_aps_w') | float(0) %}
+          {% set talon = states('input_number.cumulus_talon_maison_w') | float(400) %}
+          {% set import_current = states('sensor.cumulus_import_reseau_w') | float(0) %}
+          {% set import_max = states('input_number.cumulus_import_max_w') | float(500) %}
+
+          {# Calcul puissance théorique disponible #}
+          {% set available = sb_max + aps - talon %}
+
+          {# Ajustement selon import actuel #}
+          {% if import_current > 0 %}
+            {% set available = available - import_current %}
+          {% endif %}
+
+          {# Protection import max #}
+          {% if available > (import_max + aps) %}
+            {% set available = import_max + aps %}
+          {% endif %}
+
+          {{ [0, available, 3000] | sort | list[1] | round(0) }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:gauge
+        attributes:
+          calculation_details: >
+            SB_max: {{ states('input_number.cumulus_solarbank_max_w') }}W
+            APS: {{ states('sensor.cumulus_production_aps_w') }}W
+            Talon: {{ states('input_number.cumulus_talon_maison_w') }}W
+            Import: {{ states('sensor.cumulus_import_reseau_w') }}W
+          percentage_3kw: >
+            {{ ((states('sensor.cumulus_puissance_disponible_w') | float(0) / 3000) * 100) | round(0) }}
+
+      # Seuil PV dynamique ajusté selon SOC
+      - name: "Cumulus - Seuil PV dynamique calculé"
+        unique_id: cumulus_seuil_pv_dynamique_calcule
+        state: >
+          {% set base_threshold = states('input_number.cumulus_seuil_pv_statique_w') | float(100) %}
+          {% set soc = states('sensor.cumulus_soc_batterie') | float(50) %}
+          {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
+
+          {# Facteur d'ajustement selon SOC #}
+          {% if soc > 80 %}
+            {% set factor = 0.7 %}  {# Plus permissif #}
+          {% elif soc > 60 %}
+            {% set factor = 0.85 %}
+          {% elif soc > 40 %}
+            {% set factor = 1.0 %}
+          {% elif soc > 20 %}
+            {% set factor = 1.2 %}
+          {% else %}
+            {% set factor = 1.5 %}  {# Plus restrictif #}
+          {% endif %}
+
+          {# Ajustement selon stratégie #}
+          {% if strategy == 'Économie maximale' %}
+            {% set factor = factor * 1.3 %}
+          {% elif strategy == 'Confort absolu' %}
+            {% set factor = factor * 0.7 %}
+          {% elif strategy == 'Préserver batterie' %}
+            {% set factor = factor * 1.5 %}
+          {% endif %}
+
+          {{ (base_threshold * factor) | round(0) }}
+        unit_of_measurement: "W"
+        icon: mdi:tune
+        attributes:
+          base_threshold: "{{ states('input_number.cumulus_seuil_pv_statique_w') }}"
+          soc_factor: >
+            {% set soc = states('sensor.cumulus_soc_batterie') | float(50) %}
+            {% if soc > 80 %}0.7
+            {% elif soc > 60 %}0.85
+            {% elif soc > 40 %}1.0
+            {% elif soc > 20 %}1.2
+            {% else %}1.5{% endif %}
+          strategy_factor: >
+            {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
+            {% if strategy == 'Économie maximale' %}1.3
+            {% elif strategy == 'Confort absolu' %}0.7
+            {% elif strategy == 'Préserver batterie' %}1.5
+            {% else %}1.0{% endif %}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ PRÉDICTIONS INTELLIGENTES                                               │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Prédiction besoin eau chaude du jour
+      - name: "Cumulus - Besoin prédit aujourd'hui"
+        unique_id: cumulus_besoin_predit_aujourdhui
+        state: >
+          {% set day_of_week = now().weekday() %}
+          {% set month = now().month %}
+          {% set temp_ext = states('sensor.temperature_exterieure') | float(15) %}
+
+          {# Besoin de base selon jour de la semaine #}
+          {% if day_of_week in [5, 6] %}  {# Weekend #}
+            {% set base_need = 240 %}  {# Plus de douches le weekend #}
+          {% elif day_of_week == 0 %}  {# Lundi #}
+            {% set base_need = 200 %}  {# Douches du lundi matin #}
+          {% else %}
+            {% set base_need = 160 %}  {# Jours normaux #}
+          {% endif %}
+
+          {# Ajustement saisonnier #}
+          {% if month in [12, 1, 2] %}  {# Hiver #}
+            {% set base_need = base_need * 1.2 %}
+          {% elif month in [6, 7, 8] %}  {# Été #}
+            {% set base_need = base_need * 0.9 %}
+          {% endif %}
+
+          {{ base_need | round(0) }}
+        unit_of_measurement: "L"
+        icon: mdi:water-check
+        attributes:
+          jour_semaine: >
+            {% set days = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'] %}
+            {{ days[now().weekday()] }}
+          facteur_saisonnier: >
+            {% set month = now().month %}
+            {% if month in [12, 1, 2] %}Hiver +20%
+            {% elif month in [6, 7, 8] %}Été -10%
+            {% else %}Normal{% endif %}
+          douches_equivalentes: >
+            {{ (states('sensor.cumulus_besoin_predit_aujourdhui') | float(0) / 80) | round(1) }}
+
+      # Prochaine chauffe prévue (intelligence)
+      - name: "Cumulus - Prochaine chauffe prévue"
+        unique_id: cumulus_prochaine_chauffe_prevue
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set solar_today = states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') | float(0) %}
+          {% set solar_tomorrow = states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) %}
+          {% set hour = now().hour %}
+          {% set in_pv_window = is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+          {% set in_hc = is_state('binary_sensor.cumulus_heures_creuses', 'on') %}
+
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            En cours maintenant
+          {% elif temp < 40 %}
+            {% if in_hc %}
+              Cette nuit (urgence)
+            {% else %}
+              Dès que possible (eau froide)
+            {% endif %}
+          {% elif temp < 45 %}
+            {% if hour < 12 and solar_today > 5 %}
+              Aujourd'hui vers midi ☀️
+            {% elif in_hc %}
+              Cette nuit en HC 🌙
+            {% else %}
+              Demain matin {{ '☀️' if solar_tomorrow > 5 else '🌙' }}
+            {% endif %}
+          {% elif temp < 50 %}
+            {% if solar_tomorrow > 8 %}
+              Demain midi ({{ solar_tomorrow | round(1) }} kWh prévu) ☀️
+            {% else %}
+              Prochaine nuit en HC 🌙
+            {% endif %}
+          {% else %}
+            {% if solar_tomorrow > 10 %}
+              Demain si grand soleil ☀️
+            {% else %}
+              Dans {{ (55 - temp) | round(0) }}h environ
+            {% endif %}
+          {% endif %}
+        icon: mdi:crystal-ball
+        attributes:
+          temperature_actuelle: "{{ states('sensor.cumulus_temperature_estimee') }}°C"
+          prevision_solaire_aujourd_hui: "{{ states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') }} kWh"
+          prevision_solaire_demain: "{{ states('sensor.solcast_pv_forecast_previsions_pour_demain') }} kWh"
+          mode_probable: >
+            {% set solar_tomorrow = states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) %}
+            {{ 'PV' if solar_tomorrow > 5 else 'HC' }}
+
+      # Meilleur moment pour chauffer (optimisation)
+      - name: "Cumulus - Meilleur moment chauffe"
+        unique_id: cumulus_meilleur_moment_chauffe
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set solar_48h = states('sensor.solcast_pv_forecast_previsions_48h') | float(0) %}
+          {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
+          {% set hour = now().hour %}
+
+          {% if strategy == 'Économie maximale' %}
+            {% if solar_48h > 15 %}
+              Attendre demain 12h (soleil)
+            {% else %}
+              Cette nuit 2h (tarif minimal)
+            {% endif %}
+          {% elif strategy == 'Confort absolu' %}
+            {% if temp < 50 %}
+              Maintenant (confort prioritaire)
+            {% else %}
+              Prochaine opportunité
+            {% endif %}
+          {% elif strategy == 'Préserver batterie' %}
+            {% if hour >= 11 and hour <= 15 %}
+              Maintenant (APS direct)
+            {% else %}
+              Prochaine fenêtre APS
+            {% endif %}
+          {% else %}
+            {% if solar_48h > 10 and temp > 45 %}
+              Demain midi (optimal)
+            {% elif temp < 45 %}
+              Cette nuit (besoin)
+            {% else %}
+              Selon opportunité
+            {% endif %}
+          {% endif %}
+        icon: mdi:chart-timeline-variant
+        attributes:
+          criteres_decision:
+            strategie: "{{ states('input_select.cumulus_strategie_optimisation') }}"
+            temperature: "{{ states('sensor.cumulus_temperature_estimee') }}°C"
+            prevision_48h: "{{ solar_48h }} kWh"
+            cout_estime: >
+              {% if 'soleil' in states('sensor.cumulus_meilleur_moment_chauffe') %}
+                0€ (solaire)
+              {% elif 'nuit' in states('sensor.cumulus_meilleur_moment_chauffe') %}
+                ~2.50€ (HC)
+              {% else %}
+                ~4.00€ (HP)
+              {% endif %}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SCORES ET DIAGNOSTICS                                                   │
+  # └─────────────────────────────────────────────────────────────────────────┘
+      # Score de santé global du système
+      - name: "Cumulus - Score santé"
+        unique_id: cumulus_score_sante
+        state: >
+          {% set score = 100 %}
+
+          {# Vérification sensors disponibles #}
+          {% set sensors = [
+            'sensor.cumulus_import_reseau_w',
+            'sensor.cumulus_pv_power_w',
+            'sensor.cumulus_production_aps_w',
+            'switch.shellypro1_ece334ee1b64'
+          ] %}
+          {% for sensor in sensors %}
+            {% if states(sensor) in ['unavailable', 'unknown', 'none'] %}
+              {% set score = score - 10 %}
+            {% endif %}
+          {% endfor %}
+
+          {# Vérification cohérence #}
+          {% if is_state('binary_sensor.cumulus_coherence_ok', 'off') %}
+            {% set score = score - 20 %}
+          {% endif %}
+
+          {# Vérification dernière chauffe #}
+          {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% if hours_since > 72 %}
+            {% set score = score - 15 %}
+          {% elif hours_since > 48 %}
+            {% set score = score - 5 %}
+          {% endif %}
+
+          {# Vérification température #}
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% if temp < 35 %}
+            {% set score = score - 25 %}
+          {% elif temp < 40 %}
+            {% set score = score - 10 %}
+          {% endif %}
+
+          {{ [0, score, 100] | sort | list[1] }}
+        unit_of_measurement: "%"
+        icon: >
+          {% set score = states('sensor.cumulus_score_sante') | int(0) %}
+          {% if score >= 80 %}
+            mdi:heart-pulse
+          {% elif score >= 60 %}
+            mdi:heart
+          {% else %}
+            mdi:heart-broken
+          {% endif %}
+        attributes:
+          diagnostic: >
+            {% set score = states('sensor.cumulus_score_sante') | int(0) %}
+            {% if score >= 90 %}
+              Système optimal
+            {% elif score >= 70 %}
+              Fonctionnement normal
+            {% elif score >= 50 %}
+              Attention requise
+            {% else %}
+              Intervention nécessaire
+            {% endif %}
+          problemes_detectes: >
+            {% set issues = [] %}
+            {% if states('sensor.cumulus_import_reseau_w') in ['unavailable', 'unknown'] %}
+              {% set issues = issues + ['Capteur import indisponible'] %}
+            {% endif %}
+            {% if states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) > 48 %}
+              {% set issues = issues + ['Pas de chauffe depuis >48h'] %}
+            {% endif %}
+            {% if states('sensor.cumulus_temperature_estimee') | float(45) < 40 %}
+              {% set issues = issues + ['Température trop basse'] %}
+            {% endif %}
+            {{ issues | join(', ') if issues else 'Aucun' }}
+
+      # Diagnostic détaillé
+      - name: "Cumulus - Diagnostic détails"
+        unique_id: cumulus_diagnostic_details
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set last_heat = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% set score = states('sensor.cumulus_score_sante') | int(100) %}
+
+          {% if score >= 90 %}
+            ✅ Tout est OK
+          {% elif temp < 40 %}
+            ⚠️ Eau froide détectée
+          {% elif last_heat > 48 %}
+            ⚠️ Pas de chauffe récente
+          {% elif score < 70 %}
+            ⚠️ Vérification requise
+          {% else %}
+            ℹ️ Surveillance normale
+          {% endif %}
+        icon: mdi:stethoscope
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ CONDITIONS ET DÉTECTEURS                                                │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - binary_sensor:
+      # Cohérence système OK
+      - name: "Cumulus - Cohérence OK"
+        unique_id: cumulus_coherence_ok
+        state: >
+          {% set cumulus_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+          {% set import = states('sensor.cumulus_import_reseau_w') | float(0) %}
+          {% set pv = states('sensor.cumulus_pv_power_w') | float(0) %}
+
+          {# Si cumulus ON, import devrait augmenter d'environ 3000W #}
+          {% if cumulus_on %}
+            {{ import > 2000 or pv > 2500 }}
+          {% else %}
+            true
+          {% endif %}
+        device_class: problem
+        icon: >
+          {% if is_state('binary_sensor.cumulus_coherence_ok', 'on') %}
+            mdi:check-circle
+          {% else %}
+            mdi:alert-circle
+          {% endif %}
+        attributes:
+          cumulus_state: "{{ states('switch.shellypro1_ece334ee1b64') }}"
+          import_power: "{{ states('sensor.cumulus_import_reseau_w') }}W"
+          pv_power: "{{ states('sensor.cumulus_pv_power_w') }}W"
+          expected_if_on: ">2000W import ou >2500W PV"
+
+      # Conditions PV remplies
+      - name: "Cumulus - Conditions PV OK"
+        unique_id: cumulus_conditions_pv_ok
+        state: >
+          {% set pv_available = states('sensor.cumulus_production_aps_w') | float(0) %}
+          {% set threshold = states('sensor.cumulus_seuil_pv_dynamique_calcule') | float(100) %}
+          {% set soc = states('sensor.cumulus_soc_batterie') | float(0) %}
+          {% set soc_min = states('input_number.cumulus_soc_min') | float(10) %}
+          {% set in_window = is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+          {% set no_deadband = is_state('input_boolean.cumulus_verrou_deadband', 'off') %}
+          {% set vacances = is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+
+          {{
+            pv_available >= threshold and
+            soc >= soc_min and
+            in_window and
+            no_deadband and
+            not vacances
+          }}
+        icon: >
+          {% if is_state('binary_sensor.cumulus_conditions_pv_ok', 'on') %}
+            mdi:check-bold
+          {% else %}
+            mdi:close-thick
+          {% endif %}
+        attributes:
+          pv_check: "{{ states('sensor.cumulus_production_aps_w') }}W >= {{ states('sensor.cumulus_seuil_pv_dynamique_calcule') }}W"
+          soc_check: "{{ states('sensor.cumulus_soc_batterie') }}% >= {{ states('input_number.cumulus_soc_min') }}%"
+          window_check: "{{ 'OK' if is_state('binary_sensor.cumulus_fenetre_pv', 'on') else 'Hors fenêtre' }}"
+          deadband_check: "{{ 'OK' if is_state('input_boolean.cumulus_verrou_deadband', 'off') else 'Verrou actif' }}"
+
+      # Conditions HC remplies
+      - name: "Cumulus - Conditions HC OK"
+        unique_id: cumulus_conditions_hc_ok
+        state: >
+          {% set in_hc = is_state('binary_sensor.cumulus_heures_creuses', 'on') %}
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set target = states('input_number.cumulus_temperature_cible_hc') | float(52) %}
+          {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% set min_spacing = states('input_number.cumulus_espacement_minimal_heures') | float(24) %}
+          {% set vacances = is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+
+          {{
+            in_hc and
+            temp < target and
+            hours_since >= min_spacing and
+            not vacances
+          }}
+        icon: >
+          {% if is_state('binary_sensor.cumulus_conditions_hc_ok', 'on') %}
+            mdi:check-bold
+          {% else %}
+            mdi:close-thick
+          {% endif %}
+        attributes:
+          hc_active: "{{ 'OUI' if is_state('binary_sensor.cumulus_heures_creuses', 'on') else 'NON' }}"
+          temp_check: "{{ states('sensor.cumulus_temperature_estimee') }}°C < {{ states('input_number.cumulus_temperature_cible_hc') }}°C"
+          spacing_check: "{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h >= {{ states('input_number.cumulus_espacement_minimal_heures') }}h"
+          mode_vacances: "{{ 'ACTIF' if is_state('input_boolean.cumulus_mode_vacances', 'on') else 'Inactif' }}"
+
+      # Alerte active
+      - name: "Cumulus - Alerte active"
+        unique_id: cumulus_alerte_active
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+          {% set score = states('sensor.cumulus_score_sante') | int(100) %}
+
+          {{ temp < 35 or hours_since > 72 or score < 50 }}
+        device_class: problem
+        icon: mdi:alert
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ MESSAGES ET NOTIFICATIONS                                               │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - sensor:
+      # Titre alerte
+      - name: "Cumulus - Alerte titre"
+        unique_id: cumulus_alerte_titre
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+
+          {% if temp < 35 %}
+            ❄️ Eau très froide !
+          {% elif hours_since > 72 %}
+            ⏰ Pas de chauffe depuis 3 jours
+          {% elif temp < 40 %}
+            ⚠️ Eau tiède seulement
+          {% else %}
+            ℹ️ Information système
+          {% endif %}
+        icon: mdi:message-alert
+
+      # Message alerte
+      - name: "Cumulus - Alerte message"
+        unique_id: cumulus_alerte_message
+        state: >
+          {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+          {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+
+          {% if temp < 35 %}
+            Risque légionelle ! Forcer une chauffe immédiatement
+          {% elif hours_since > 72 %}
+            Vérifier le système ou forcer une chauffe
+          {% elif temp < 40 %}
+            Chauffe recommandée pour le confort
+          {% else %}
+            Système en surveillance
+          {% endif %}
+        icon: mdi:message-text
