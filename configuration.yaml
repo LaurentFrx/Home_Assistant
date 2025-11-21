@@ -46,21 +46,21 @@ lovelace:
 logger:
   default: warning
 
-# === Input Select pour Cumulus (Test direct) ===
+# === Input Select pour Cumulus ===
 input_select:
   cumulus_strategie_optimisation:
-    name: "Cumulus - Stratégie optimisation"
+    name: "Cumulus - Strategie optimisation"
     options:
-      - "Économie maximale"
+      - "Economie maximale"
       - "Confort absolu"
-      - "Préserver batterie"
-      - "Équilibré"
-      - "Personnalisé"
-    initial: "Équilibré"
+      - "Preserver batterie"
+      - "Equilibre"
+      - "Personnalise"
+    initial: "Equilibre"
     icon: mdi:tune-variant
 
   cumulus_mode_calcul_temperature:
-    name: "Cumulus - Mode calcul température"
+    name: "Cumulus - Mode calcul temperature"
     options:
       - "Estimation simple"
       - "Estimation adaptative"
