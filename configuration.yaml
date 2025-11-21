@@ -46,3 +46,25 @@ lovelace:
 # === Journalisation ===
 logger:
   default: warning
+
+# === Input Select pour Cumulus (Test direct) ===
+input_select:
+  cumulus_strategie_optimisation:
+    name: "Cumulus - Stratégie optimisation"
+    options:
+      - "Économie maximale"
+      - "Confort absolu"
+      - "Préserver batterie"
+      - "Équilibré"
+      - "Personnalisé"
+    initial: "Équilibré"
+    icon: mdi:tune-variant
+
+  cumulus_mode_calcul_temperature:
+    name: "Cumulus - Mode calcul température"
+    options:
+      - "Estimation simple"
+      - "Estimation adaptative"
+      - "Capteur physique"
+    initial: "Estimation adaptative"
+    icon: mdi:thermometer-lines
