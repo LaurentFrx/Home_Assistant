@@ -6,7 +6,12 @@ mobile_app:
 
 # === Personnalisation de Home Assistant ===
 homeassistant:
-  packages: !include_dir_named packages    
+  packages:
+    cumulus: !include_dir_merge_named packages/cumulus
+    carte_batterie: !include packages/carte_batterie.yaml
+    git_sync: !include packages/git_sync.yaml
+    solaire_economies: !include packages/solaire_economies.yaml
+    salle_de_bain: !include packages/salle_de_bain_douche_isa_college.yaml
   customize:
     climate.thermostat_sdb:
       friendly_name: ""
