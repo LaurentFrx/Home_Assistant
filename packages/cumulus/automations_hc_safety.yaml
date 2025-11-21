@@ -1,0 +1,536 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - AUTOMATIONS HC & SÉCURITÉS                           ║
+# ║ Gestion heures creuses et protections système                              ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+automation:
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ HEURES CREUSES - DÉMARRAGE INTELLIGENT                                  │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_demarrage_hc_intelligent
+    alias: "Cumulus - Démarrage HC intelligent"
+    description: "Démarre en heures creuses si besoin"
+    mode: single
+
+    trigger:
+      # Début des heures creuses
+      - platform: state
+        entity_id: binary_sensor.cumulus_heures_creuses
+        to: 'on'
+        id: debut_hc
+
+      # Check périodique pendant HC
+      - platform: time_pattern
+        minutes: "/30"
+        id: check_periodique
+
+      # Température critique
+      - platform: numeric_state
+        entity_id: sensor.cumulus_temperature_estimee
+        below: 40
+        id: temperature_critique
+
+    condition:
+      - condition: and
+        conditions:
+          # En heures creuses
+          - condition: state
+            entity_id: binary_sensor.cumulus_heures_creuses
+            state: 'on'
+
+          # Cumulus OFF
+          - condition: state
+            entity_id: switch.shellypro1_ece334ee1b64
+            state: 'off'
+
+          # Pas en mode vacances
+          - condition: state
+            entity_id: input_boolean.cumulus_mode_vacances
+            state: 'off'
+
+          # Température insuffisante OU urgence
+          - condition: or
+            conditions:
+              # Besoin normal
+              - condition: template
+                value_template: >
+                  {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+                  {% set target = states('input_number.cumulus_temperature_cible_hc') | float(52) %}
+                  {{ temp < target }}
+
+              # Urgence : très froid ou pas de chauffe récente
+              - condition: template
+                value_template: >
+                  {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+                  {% set hours = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+                  {{ temp < 35 or hours > 48 }}
+
+          # Respect espacement minimal (sauf urgence)
+          - condition: or
+            conditions:
+              - condition: template
+                value_template: >
+                  {% set hours = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+                  {% set min_spacing = states('input_number.cumulus_espacement_minimal_heures') | float(24) %}
+                  {{ hours >= min_spacing }}
+
+              # Override si critique
+              - condition: numeric_state
+                entity_id: sensor.cumulus_temperature_estimee
+                below: 35
+
+    action:
+      # Déterminer l'urgence
+      - variables:
+          is_urgent: >
+            {{ states('sensor.cumulus_temperature_estimee') | float(45) < 35 }}
+          reason: >
+            {% if trigger.id == 'temperature_critique' %}
+              Température critique
+            {% elif trigger.id == 'debut_hc' %}
+              Début heures creuses
+            {% else %}
+              Check périodique HC
+            {% endif %}
+
+      # Log avec contexte
+      - service: logbook.log
+        data:
+          name: "Cumulus HC"
+          message: >
+            Démarrage HC {{ '(URGENT)' if is_urgent else '' }}
+            Raison: {{ reason }} |
+            Température: {{ states('sensor.cumulus_temperature_estimee') }}°C |
+            Dernière chauffe: il y a {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h
+          entity_id: switch.shellypro1_ece334ee1b64
+          domain: automation
+
+      # Notification si urgent
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ is_urgent }}"
+              - condition: state
+                entity_id: input_boolean.cumulus_notifications_actives
+                state: 'on'
+            sequence:
+              - service: notify.notify
+                data:
+                  title: "⚠️ Cumulus - Chauffe urgente"
+                  message: >
+                    Démarrage urgent en HC.
+                    Température: {{ states('sensor.cumulus_temperature_estimee') }}°C
+                    Risque légionelle si < 35°C !
+
+      # Démarrer le cumulus
+      - service: switch.turn_on
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Timer de chauffe HC (généralement plus long)
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_timer_chauffe
+        data:
+          duration: >
+            {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+            {% set target = states('input_number.cumulus_temperature_cible_hc') | float(52) %}
+            {% set delta = target - temp %}
+            {% set minutes = (delta * 4.5) | round(0) %}
+            {{ '{:02d}:{:02d}:00'.format((minutes // 60), (minutes % 60)) }}
+
+      # Incrémenter compteur
+      - service: counter.increment
+        target:
+          entity_id: counter.cumulus_chauffes_jour
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ HEURES CREUSES - ARRÊT                                                  │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_arret_hc
+    alias: "Cumulus - Arrêt HC"
+    description: "Arrête à la fin des heures creuses ou température atteinte"
+    mode: single
+
+    trigger:
+      # Fin heures creuses
+      - platform: state
+        entity_id: binary_sensor.cumulus_heures_creuses
+        to: 'off'
+        id: fin_hc
+
+      # Température atteinte
+      - platform: numeric_state
+        entity_id: sensor.cumulus_temperature_estimee
+        above: input_number.cumulus_temperature_cible_hc
+        for:
+          minutes: 2
+        id: temperature_ok
+
+      # Timer expiré
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.cumulus_timer_chauffe
+        id: timer_expire
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+      - condition: state
+        entity_id: sensor.cumulus_mode_actif
+        state: 'HC'
+
+    action:
+      # Log arrêt
+      - service: logbook.log
+        data:
+          name: "Cumulus HC"
+          message: >
+            Arrêt HC -
+            {% if trigger.id == 'fin_hc' %}Fin heures creuses
+            {% elif trigger.id == 'temperature_ok' %}Température atteinte ({{ states('sensor.cumulus_temperature_estimee') }}°C)
+            {% elif trigger.id == 'timer_expire' %}Timer expiré
+            {% else %}Autre{% endif %}
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Arrêter cumulus
+      - service: switch.turn_off
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Annuler timer
+      - service: timer.cancel
+        target:
+          entity_id: timer.cumulus_timer_chauffe
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SÉCURITÉ - ANTI-LÉGIONELLE                                              │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_securite_anti_legionelle
+    alias: "Cumulus - Sécurité anti-légionelle"
+    description: "Force une chauffe si température trop basse trop longtemps"
+    mode: single
+
+    trigger:
+      # Check quotidien à 14h
+      - platform: time
+        at: "14:00:00"
+
+      # Température très basse
+      - platform: numeric_state
+        entity_id: sensor.cumulus_temperature_estimee
+        below: 35
+        for:
+          hours: 2
+
+    condition:
+      - condition: or
+        conditions:
+          # Température dangereuse
+          - condition: numeric_state
+            entity_id: sensor.cumulus_temperature_estimee
+            below: 35
+
+          # Pas de chauffe depuis 72h
+          - condition: numeric_state
+            entity_id: sensor.cumulus_heures_depuis_derniere_chauffe
+            above: 72
+
+    action:
+      # Notification critique
+      - service: notify.notify
+        data:
+          title: "🚨 ALERTE CUMULUS"
+          message: >
+            RISQUE LÉGIONELLE !
+            Température: {{ states('sensor.cumulus_temperature_estimee') }}°C
+            Dernière chauffe: il y a {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h
+            Chauffe forcée en cours...
+          data:
+            priority: high
+            tag: cumulus_critical
+
+      # Log critique
+      - service: logbook.log
+        data:
+          name: "CUMULUS ALERTE"
+          message: "Chauffe anti-légionelle forcée - Température critique"
+          entity_id: switch.shellypro1_ece334ee1b64
+          domain: automation
+
+      # Forcer chauffe immédiate (override tout)
+      - service: switch.turn_on
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Timer long pour chauffe complète
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_timer_chauffe
+        data:
+          duration: "03:00:00"  # 3h pour montée à 60°C garantie
+
+      # Désactiver mode vacances si actif
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cumulus_mode_vacances
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SÉCURITÉ - PROTECTION SURCHAUFFE                                        │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_protection_surchauffe
+    alias: "Cumulus - Protection surchauffe"
+    description: "Arrête si température excessive ou durée anormale"
+    mode: single
+
+    trigger:
+      # Température excessive (estimation)
+      - platform: numeric_state
+        entity_id: sensor.cumulus_temperature_estimee
+        above: 65
+        id: temperature_excessive
+
+      # Durée chauffe anormale
+      - platform: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        to: 'on'
+        for:
+          hours: 4
+        id: duree_excessive
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+
+    action:
+      # Alerte
+      - service: notify.notify
+        data:
+          title: "⚠️ Cumulus - Surchauffe"
+          message: >
+            Protection activée!
+            {% if trigger.id == 'temperature_excessive' %}
+            Température excessive: {{ states('sensor.cumulus_temperature_estimee') }}°C
+            {% else %}
+            Durée chauffe anormale: > 4 heures
+            {% endif %}
+
+      # Log
+      - service: logbook.log
+        data:
+          name: "Cumulus Sécurité"
+          message: >
+            ARRÊT SÉCURITÉ -
+            {% if trigger.id == 'temperature_excessive' %}Température > 65°C
+            {% else %}Durée > 4h{% endif %}
+          entity_id: switch.shellypro1_ece334ee1b64
+          domain: automation
+
+      # Arrêt immédiat
+      - service: switch.turn_off
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Deadband de sécurité
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.cumulus_verrou_deadband
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_timer_deadband
+        data:
+          duration: "01:00:00"  # 1h de cooldown
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ RESET QUOTIDIEN                                                         │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_reset_quotidien
+    alias: "Cumulus - Reset quotidien"
+    description: "Réinitialise compteurs et verrous chaque jour"
+    mode: single
+
+    trigger:
+      - platform: time
+        at: "00:00:01"
+
+    action:
+      # Reset compteur journalier
+      - service: counter.reset
+        target:
+          entity_id: counter.cumulus_chauffes_jour
+
+      # Reset verrou quotidien si plus de 24h
+      - condition: numeric_state
+        entity_id: sensor.cumulus_heures_depuis_derniere_chauffe
+        above: 24
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cumulus_verrou_chauffe_quotidienne
+
+      # Log
+      - service: logbook.log
+        data:
+          name: "Cumulus"
+          message: "Reset quotidien effectué"
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ MODE VACANCES                                                           │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_mode_vacances
+    alias: "Cumulus - Gestion mode vacances"
+    description: "Arrête tout en mode vacances"
+    mode: restart
+
+    trigger:
+      - platform: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        to: 'on'
+
+    action:
+      # Notification
+      - service: notify.notify
+        data:
+          title: "🏖️ Cumulus - Mode vacances"
+          message: >
+            Mode vacances activé.
+            Le cumulus est désactivé.
+            N'oubliez pas de le réactiver à votre retour !
+
+      # Arrêter si en chauffe
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+      - service: switch.turn_off
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Log
+      - service: logbook.log
+        data:
+          name: "Cumulus"
+          message: "Mode vacances activé - Système en pause"
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ RETOUR DE VACANCES                                                      │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_retour_vacances
+    alias: "Cumulus - Retour de vacances"
+    description: "Réactive et force une chauffe au retour"
+    mode: single
+
+    trigger:
+      - platform: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        to: 'off'
+
+    action:
+      # Notification
+      - service: notify.notify
+        data:
+          title: "🏠 Cumulus - Retour maison"
+          message: >
+            Bon retour !
+            Lancement d'une chauffe complète.
+            Eau chaude disponible dans ~2h30.
+
+      # Forcer une chauffe immédiate
+      - service: switch.turn_on
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Timer chauffe complète
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_timer_chauffe
+        data:
+          duration: "02:30:00"
+
+      # Log
+      - service: logbook.log
+        data:
+          name: "Cumulus"
+          message: "Retour de vacances - Chauffe forcée"
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ SCRIPTS UTILITAIRES                                                     │
+# └─────────────────────────────────────────────────────────────────────────┘
+script:
+  # Test complet du système
+  cumulus_test_systeme:
+    alias: "Test système cumulus"
+    sequence:
+      - service: logbook.log
+        data:
+          name: "Test Cumulus"
+          message: "Démarrage test système..."
+
+      # Vérifier tous les sensors
+      - service: homeassistant.update_entity
+        target:
+          entity_id:
+            - sensor.cumulus_temperature_estimee
+            - sensor.cumulus_puissance_disponible_w
+            - sensor.cumulus_score_sante
+
+      # Flash contacteur (on/off rapide)
+      - service: switch.turn_on
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+      - delay: "00:00:02"
+      - service: switch.turn_off
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      - service: notify.notify
+        data:
+          title: "Test Cumulus"
+          message: >
+            Test terminé!
+            Santé: {{ states('sensor.cumulus_score_sante') }}%
+            Temp: {{ states('sensor.cumulus_temperature_estimee') }}°C
+            Cohérence: {{ states('binary_sensor.cumulus_coherence_ok') }}
+
+  # Reset tous les verrous
+  cumulus_reset_verrous:
+    alias: "Reset verrous cumulus"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.cumulus_verrou_deadband
+            - input_boolean.cumulus_verrou_chauffe_quotidienne
+
+      - service: timer.cancel
+        target:
+          entity_id:
+            - timer.cumulus_timer_deadband
+
+      - service: logbook.log
+        data:
+          name: "Cumulus"
+          message: "Tous les verrous réinitialisés"
+
+  # Export statistiques
+  cumulus_export_stats:
+    alias: "Export stats cumulus"
+    sequence:
+      - service: notify.notify
+        data:
+          title: "📊 Stats Cumulus"
+          message: >
+            STATISTIQUES MENSUELLES
+
+            Chauffes: {{ states('counter.cumulus_chauffes_mois') }}
+            Consommation: {{ states('sensor.cumulus_kwh_mois') }} kWh
+            Coût estimé: {{ states('sensor.cumulus_cout_mois') }}€
+
+            Répartition:
+            - PV: {{ states('sensor.cumulus_pourcentage_pv') }}%
+            - HC: {{ states('sensor.cumulus_pourcentage_hc') }}%
+            - Force: {{ states('sensor.cumulus_pourcentage_force') }}%
+
+            Température moyenne: {{ states('sensor.cumulus_temperature_moyenne') }}°C
+            Autonomie solaire: {{ states('sensor.cumulus_autonomie_solaire') }}%

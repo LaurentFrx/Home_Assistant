@@ -1,0 +1,459 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS WIDGET COMPACT - Pour dashboard principal                          ║
+# ║ Carte minimaliste avec l'essentiel en un coup d'œil                       ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ VERSION 1 : MUSHROOM SIMPLE (compatible UI)                             │
+# └─────────────────────────────────────────────────────────────────────────┘
+type: custom:mushroom-template-card
+entity: sensor.cumulus_temperature_estimee
+primary: Eau Chaude
+secondary: |
+  {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+  {% set litres = states('sensor.cumulus_litres_disponibles') | float(0) %}
+  {% set is_heating = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+
+  {% if is_heating %}
+    🔥 Chauffe en cours
+  {% elif temp >= 55 %}
+    ✅ {{ litres }}L disponibles
+  {% elif temp >= 45 %}
+    ⚠️ {{ (litres/80) | round(0) }} douche{{ 's' if (litres/80) > 1 }}
+  {% else %}
+    ❌ Eau froide
+  {% endif %}
+icon: |
+  {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+  {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+    mdi:fire
+  {% elif temp >= 55 %}
+    mdi:water-check
+  {% elif temp >= 45 %}
+    mdi:water
+  {% else %}
+    mdi:water-alert
+  {% endif %}
+icon_color: |
+  {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+  {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+    orange
+  {% elif temp >= 55 %}
+    green
+  {% elif temp >= 45 %}
+    yellow
+  {% else %}
+    red
+  {% endif %}
+badge_icon: |
+  {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+    mdi:beach
+  {% elif is_state('binary_sensor.cumulus_alerte_active', 'on') %}
+    mdi:alert
+  {% endif %}
+badge_color: |
+  {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+    blue
+  {% elif is_state('binary_sensor.cumulus_alerte_active', 'on') %}
+    red
+  {% endif %}
+tap_action:
+  action: navigate
+  navigation_path: /lovelace/cumulus-simple
+hold_action:
+  action: more-info
+double_tap_action:
+  action: toggle
+  entity_id: switch.shellypro1_ece334ee1b64
+  confirmation:
+    text: Forcer la chauffe maintenant ?
+card_mod:
+  style: |
+    ha-card {
+      background: rgba(var(--rgb-primary-text-color), 0.03);
+      border: 1px solid rgba(var(--rgb-primary-text-color), 0.1);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    :host {
+      --mush-icon-size: 44px;
+    }
+
+---
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ VERSION 2 : STACK VERTICAL DÉTAILLÉ (2 cartes)                          │
+# └─────────────────────────────────────────────────────────────────────────┘
+type: vertical-stack
+cards:
+  # Carte principale
+  - type: custom:mushroom-template-card
+    entity: sensor.cumulus_temperature_estimee
+    primary: |
+      {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+        💧 Eau Chaude - Chauffe 🔥
+      {% else %}
+        💧 Eau Chaude
+      {% endif %}
+    secondary: |
+      {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+      {% set douches = (states('sensor.cumulus_litres_disponibles') | float(0) / 80) | round(0) %}
+
+      {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+        Prête dans {{ states('sensor.cumulus_temps_restant_chauffe') }} min
+      {% elif temp >= 55 %}
+        ✅ OK pour {{ douches }} douches · {{ temp | round(0) }}°C
+      {% elif temp >= 45 %}
+        ⚠️ {{ douches }} douche{{ 's' if douches > 1 }} max · {{ temp | round(0) }}°C
+      {% else %}
+        ❌ Eau froide · {{ temp | round(0) }}°C
+      {% endif %}
+    icon: mdi:water-boiler
+    icon_color: |
+      {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+      {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+        orange
+      {% elif temp >= 55 %}
+        green
+      {% elif temp >= 45 %}
+        yellow
+      {% else %}
+        red
+      {% endif %}
+    tap_action:
+      action: navigate
+      navigation_path: /lovelace/cumulus-simple
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
+            {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+              rgba(255, 107, 107, 0.2), rgba(255, 135, 135, 0.1)
+            {% elif temp >= 55 %}
+              rgba(81, 207, 102, 0.2), rgba(105, 219, 124, 0.1)
+            {% elif temp >= 45 %}
+              rgba(255, 212, 59, 0.2), rgba(250, 176, 5, 0.1)
+            {% else %}
+              rgba(134, 142, 150, 0.2), rgba(173, 181, 189, 0.1)
+            {% endif %}
+          );
+          border: none;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+  # Barre de progression température
+  - type: custom:bar-card
+    entity: sensor.cumulus_temperature_estimee
+    name: ' '
+    icon: none
+    height: 8px
+    min: 20
+    max: 65
+    severity:
+      - from: 0
+        to: 40
+        color: '#ff6b6b'
+      - from: 40
+        to: 50
+        color: '#ffd43b'
+      - from: 50
+        to: 65
+        color: '#51cf66'
+    positions:
+      name: 'off'
+      value: 'off'
+      icon: 'off'
+    card_mod:
+      style: |
+        ha-card {
+          background: transparent;
+          box-shadow: none;
+          margin-top: -20px;
+          margin-bottom: 8px;
+        }
+        bar-card-currentbar {
+          border-radius: 8px;
+        }
+        bar-card-backgroundbar {
+          border-radius: 8px;
+          opacity: 0.2;
+        }
+
+---
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ VERSION 3 : BUTTON-CARD PREMIUM (très personnalisable)                  │
+# └─────────────────────────────────────────────────────────────────────────┘
+type: custom:button-card
+entity: sensor.cumulus_temperature_estimee
+name: Cumulus
+state_display: |
+  [[[
+    const temp = Math.round(entity.state);
+    const is_heating = states['switch.shellypro1_ece334ee1b64'].state === 'on';
+
+    if (is_heating) {
+      return `🔥 ${temp}°C`;
+    } else {
+      return `${temp}°C`;
+    }
+  ]]]
+label: |
+  [[[
+    const litres = states['sensor.cumulus_litres_disponibles']?.state || 0;
+    const douches = Math.floor(litres / 80);
+    const is_heating = states['switch.shellypro1_ece334ee1b64'].state === 'on';
+
+    if (is_heating) {
+      const time_left = states['sensor.cumulus_temps_restant_chauffe']?.state || 0;
+      return `⏱️ ${time_left} min`;
+    } else if (douches >= 2) {
+      return `✅ ${douches} douches`;
+    } else if (douches === 1) {
+      return `⚠️ 1 douche`;
+    } else {
+      return `❌ Froide`;
+    }
+  ]]]
+show_label: true
+show_state: true
+icon: |
+  [[[
+    const temp = parseFloat(entity.state);
+    const is_heating = states['switch.shellypro1_ece334ee1b64'].state === 'on';
+
+    if (is_heating) return 'mdi:fire';
+    if (temp >= 55) return 'mdi:water-check';
+    if (temp >= 45) return 'mdi:water';
+    return 'mdi:water-alert';
+  ]]]
+size: 60%
+tap_action:
+  action: navigate
+  navigation_path: /lovelace/cumulus-simple
+hold_action:
+  action: toggle
+  entity_id: switch.shellypro1_ece334ee1b64
+  confirmation:
+    text: Basculer l'état du cumulus ?
+styles:
+  card:
+    - height: 80px
+    - border-radius: 16px
+    - padding: 8px
+    - background: |
+        [[[
+          const temp = parseFloat(entity.state);
+          const is_heating = states['switch.shellypro1_ece334ee1b64'].state === 'on';
+
+          if (is_heating) {
+            return 'linear-gradient(135deg, #ff6b6b, #ff8787)';
+          } else if (temp >= 55) {
+            return 'linear-gradient(135deg, #51cf66, #69db7c)';
+          } else if (temp >= 45) {
+            return 'linear-gradient(135deg, #ffd43b, #fab005)';
+          } else {
+            return 'linear-gradient(135deg, #868e96, #adb5bd)';
+          }
+        ]]]
+    - box-shadow: 0 4px 12px rgba(0,0,0,0.15)
+  name:
+    - font-size: 14px
+    - color: white
+    - font-weight: 600
+  state:
+    - font-size: 20px
+    - color: white
+    - font-weight: bold
+  label:
+    - font-size: 12px
+    - color: rgba(255,255,255,0.9)
+    - margin-top: 4px
+  icon:
+    - color: rgba(255,255,255,0.95)
+    - animation: |
+        [[[
+          const is_heating = states['switch.shellypro1_ece334ee1b64'].state === 'on';
+          return is_heating ? 'pulse 2s infinite' : 'none';
+        ]]]
+  grid:
+    - grid-template-areas: '"i n s" "i l l"'
+    - grid-template-columns: 60px 1fr auto
+    - grid-template-rows: 1fr 1fr
+custom_fields:
+  notification:
+    card:
+      type: custom:mushroom-chips-card
+      chips:
+        - type: conditional
+          conditions:
+            - entity: input_boolean.cumulus_mode_vacances
+              state: 'on'
+          chip:
+            type: template
+            icon: mdi:beach
+            content: Vacances
+            icon_color: blue
+        - type: conditional
+          conditions:
+            - entity: binary_sensor.cumulus_alerte_active
+              state: 'on'
+          chip:
+            type: template
+            icon: mdi:alert
+            icon_color: red
+      card_mod:
+        style: |
+          ha-card {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: transparent;
+          }
+  progress:
+    card:
+      type: custom:bar-card
+      entity: sensor.cumulus_temperature_estimee
+      height: 4px
+      min: 20
+      max: 65
+      severity:
+        - from: 0
+          to: 40
+          color: 'rgba(255,255,255,0.3)'
+        - from: 40
+          to: 50
+          color: 'rgba(255,255,255,0.5)'
+        - from: 50
+          to: 65
+          color: 'rgba(255,255,255,0.7)'
+      positions:
+        name: 'off'
+        value: 'off'
+        icon: 'off'
+      card_mod:
+        style: |
+          ha-card {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: transparent;
+            box-shadow: none;
+          }
+          bar-card-currentbar {
+            border-radius: 0 0 16px 16px;
+          }
+
+---
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ VERSION 4 : GLANCE CARD ULTRA SIMPLE (natif HA)                        │
+# └─────────────────────────────────────────────────────────────────────────┘
+type: glance
+title: Eau Chaude
+entities:
+  - entity: sensor.cumulus_temperature_estimee
+    name: Température
+  - entity: sensor.cumulus_litres_disponibles
+    name: Volume
+  - entity: sensor.cumulus_derniere_chauffe
+    name: Dernière chauffe
+  - entity: switch.shellypro1_ece334ee1b64
+    name: État
+    tap_action:
+      action: toggle
+      confirmation:
+        text: Basculer l'état du cumulus ?
+show_name: true
+show_icon: true
+show_state: true
+state_color: true
+columns: 4
+
+---
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ VERSION 5 : MINI GRAPH CARD (avec historique)                           │
+# └─────────────────────────────────────────────────────────────────────────┘
+type: custom:mini-graph-card
+entities:
+  - entity: sensor.cumulus_temperature_estimee
+    name: Cumulus
+    show_state: true
+    state_adaptive_color: true
+name: Eau Chaude
+hours_to_show: 24
+points_per_hour: 2
+line_width: 3
+font_size: 75
+height: 100
+show:
+  name: true
+  icon: true
+  state: true
+  graph: line
+  fill: true
+  points: false
+  labels: false
+  legend: false
+  average: false
+  extrema: false
+  name_adaptive_color: true
+  icon_adaptive_color: true
+color_thresholds:
+  - value: 40
+    color: '#ff6b6b'
+  - value: 50
+    color: '#ffd43b'
+  - value: 55
+    color: '#51cf66'
+tap_action:
+  action: navigate
+  navigation_path: /lovelace/cumulus-simple
+card_mod:
+  style: |
+    ha-card {
+      background: linear-gradient(135deg,
+        rgba(var(--rgb-primary-text-color), 0.03),
+        rgba(var(--rgb-primary-text-color), 0.01)
+      );
+      border: 1px solid rgba(var(--rgb-primary-text-color), 0.1);
+    }
+    .name > span {
+      font-weight: 600;
+    }
+    .state {
+      font-size: 1.2em !important;
+      font-weight: bold;
+    }
+    .graph {
+      opacity: 0.8;
+    }
+
+---
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ INTÉGRATION RECOMMANDÉE DANS DASHBOARD                                  │
+# └─────────────────────────────────────────────────────────────────────────┘
+# Pour intégrer dans votre dashboard principal, ajoutez simplement :
+#
+# views:
+#   - title: Accueil
+#     cards:
+#       - !include lovelace_cumulus_widget.yaml
+#
+# Ou copiez directement une des versions ci-dessus dans votre dashboard.
+#
+# PERSONNALISATION :
+# - Modifiez les couleurs dans les gradients
+# - Ajustez les seuils de température
+# - Changez les icônes selon vos préférences
+# - Adaptez les textes et messages
+#
+# TIPS DESIGN :
+# - Version 1 (Mushroom) : Idéale pour cohérence avec autres cartes Mushroom
+# - Version 2 (Stack) : Pour plus de détails visuels
+# - Version 3 (Button-card) : Maximum de personnalisation
+# - Version 4 (Glance) : Ultra simple, natif HA
+# - Version 5 (Mini-graph) : Pour voir l'historique en un coup d'œil
