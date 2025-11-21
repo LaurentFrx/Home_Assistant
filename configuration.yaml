@@ -7,6 +7,7 @@ mobile_app:
 # === Personnalisation de Home Assistant ===
 homeassistant:
   packages:
+    cumulus_input_select: !include packages/cumulus_input_select.yaml
     cumulus_core: !include packages/cumulus/core.yaml
     cumulus_sensors_base: !include packages/cumulus/sensors_base.yaml
     cumulus_sensors_calcul: !include packages/cumulus/sensors_calcul.yaml
@@ -45,6 +46,3 @@ lovelace:
 # === Journalisation ===
 logger:
   default: warning
-
-# === Input Select pour Cumulus ===
-input_select: !include input_select.yaml
