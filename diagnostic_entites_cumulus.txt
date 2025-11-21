@@ -1,0 +1,96 @@
+"""
+Script de diagnostic Cumulus v2 - Identification des entités
+
+Ce script permet d'identifier automatiquement les bonnes entités dans votre installation.
+À exécuter dans Developer Tools > Template
+"""
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RECHERCHE AUTOMATIQUE DES ENTITÉS
+# ═══════════════════════════════════════════════════════════════════════════
+
+{# 1. CONTACTEUR CUMULUS (SWITCH) #}
+{% set switches_shelly = states.switch | selectattr('entity_id', 'search', 'shelly') | map(attribute='entity_id') | list %}
+{% set switches_cumulus = states.switch | selectattr('entity_id', 'search', 'cumulus') | map(attribute='entity_id') | list %}
+{% set switches_water = states.switch | selectattr('entity_id', 'search', 'water|boiler|chauffe') | map(attribute='entity_id') | list %}
+
+═══════════════════════════════════════════════════════════════════════════
+🔌 CONTACTEUR CUMULUS
+═══════════════════════════════════════════════════════════════════════════
+
+Switches Shelly trouvés:
+{% for switch in switches_shelly %}
+  ✓ {{ switch }}
+{% else %}
+  ❌ Aucun switch Shelly trouvé
+{% endfor %}
+
+Switches Cumulus trouvés:
+{% for switch in switches_cumulus %}
+  ✓ {{ switch }}
+{% else %}
+  ❌ Aucun switch Cumulus trouvé
+{% endfor %}
+
+Autres switches eau/chauffe-eau:
+{% for switch in switches_water %}
+  ✓ {{ switch }}
+{% else %}
+  ❌ Aucun trouvé
+{% endfor %}
+
+═══════════════════════════════════════════════════════════════════════════
+📊 IMPORT RÉSEAU (GRID IMPORT)
+═══════════════════════════════════════════════════════════════════════════
+
+{% set import_sensors = states.sensor | selectattr('entity_id', 'search', 'import|grid|linky') | map(attribute='entity_id') | list %}
+{% for sensor in import_sensors %}
+  ✓ {{ sensor }} = {{ states(sensor) }}
+{% else %}
+  ❌ Aucun capteur d'import trouvé
+{% endfor %}
+
+═══════════════════════════════════════════════════════════════════════════
+☀️ PRODUCTION SOLAIRE APS
+═══════════════════════════════════════════════════════════════════════════
+
+{% set aps_sensors = states.sensor | selectattr('entity_id', 'search', 'aps|solar|pv') | map(attribute='entity_id') | list %}
+{% for sensor in aps_sensors %}
+  ✓ {{ sensor }} = {{ states(sensor) }}
+{% else %}
+  ❌ Aucun capteur APS trouvé
+{% endfor %}
+
+═══════════════════════════════════════════════════════════════════════════
+🔋 ÉTAT DE CHARGE SOLARBANK (SOC)
+═══════════════════════════════════════════════════════════════════════════
+
+{% set soc_sensors = states.sensor | selectattr('entity_id', 'search', 'solarbank|battery|soc|charge') | map(attribute='entity_id') | list %}
+{% for sensor in soc_sensors %}
+  ✓ {{ sensor }} = {{ states(sensor) }}
+{% else %}
+  ❌ Aucun capteur SOC trouvé
+{% endfor %}
+
+═══════════════════════════════════════════════════════════════════════════
+⚡ PRODUCTION PV TOTALE
+═══════════════════════════════════════════════════════════════════════════
+
+{% set pv_total_sensors = states.sensor | selectattr('entity_id', 'search', 'pv_total|solar_total|production_total') | map(attribute='entity_id') | list %}
+{% for sensor in pv_total_sensors %}
+  ✓ {{ sensor }} = {{ states(sensor) }}
+{% else %}
+  ❌ Aucun capteur PV total trouvé
+{% endfor %}
+
+═══════════════════════════════════════════════════════════════════════════
+📋 RÉSUMÉ - ENTITÉS À REMPLACER
+═══════════════════════════════════════════════════════════════════════════
+
+Dans les fichiers /config/packages/cumulus/*.yaml, remplacer:
+
+switch.shellypro1_ece334ee1b64 → {{ switches_shelly[0] if switches_shelly else '??? (à identifier)' }}
+sensor.smart_meter_grid_import → {{ (import_sensors | selectattr('contains', 'power') | first) if import_sensors else '??? (à identifier)' }}
+sensor.aps_power_w → {{ (aps_sensors | selectattr('contains', 'power') | first) if aps_sensors else '??? (à identifier)' }}
+sensor.system_sanguinet_etat_de_charge_du_sb → {{ (soc_sensors | first) if soc_sensors else '??? (à identifier)' }}
+sensor.pv_total_entree_sb_aps_w → {{ (pv_total_sensors | first) if pv_total_sensors else '??? (à identifier)' }}

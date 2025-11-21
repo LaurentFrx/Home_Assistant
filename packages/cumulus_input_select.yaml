@@ -1,0 +1,21 @@
+# Package contenant uniquement les input_select du cumulus
+input_select:
+  cumulus_strategie_optimisation:
+    name: "Cumulus - Strategie optimisation"
+    options:
+      - "Economie maximale"
+      - "Confort absolu"
+      - "Preserver batterie"
+      - "Equilibre"
+      - "Personnalise"
+    initial: "Equilibre"
+    icon: mdi:tune-variant
+
+  cumulus_mode_calcul_temperature:
+    name: "Cumulus - Mode calcul temperature"
+    options:
+      - "Estimation simple"
+      - "Estimation adaptative"
+      - "Capteur physique"
+    initial: "Estimation adaptative"
+    icon: mdi:thermometer-lines

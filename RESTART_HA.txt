@@ -1,0 +1,72 @@
+═══════════════════════════════════════════════════════════════════════════
+⚠️  REDÉMARRAGE HOME ASSISTANT REQUIS
+═══════════════════════════════════════════════════════════════════════════
+
+Les input_select ne peuvent pas être chargés avec un simple "Reload".
+Un REDÉMARRAGE COMPLET est nécessaire.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MÉTHODE 1 : Interface Web
+1. Settings > System > Hardware
+2. ⋮ (3 points) > Restart Home Assistant
+3. Confirmer
+4. Attendre 2-3 minutes
+
+MÉTHODE 2 : CLI (si disponible)
+ha core restart
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ APRÈS LE REDÉMARRAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Vérifier dans Developer Tools > States :
+   
+   Chercher : input_select.cumulus
+   ✓ Vous devriez voir :
+     - input_select.cumulus_strategie_optimisation = "Équilibré"
+     - input_select.cumulus_mode_calcul_temperature = "Estimation adaptative"
+
+2. Chercher : sensor.cumulus_temperature
+   ✓ sensor.cumulus_temperature_estimee devrait avoir une valeur (ex: 45)
+   ✓ Plus "unavailable" !
+
+3. Chercher : sensor.cumulus_litres
+   ✓ sensor.cumulus_litres_disponibles devrait avoir une valeur (ex: 150)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 ENTITÉS ATTENDUES APRÈS REDÉMARRAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Input Select (2) :
+✓ input_select.cumulus_strategie_optimisation
+✓ input_select.cumulus_mode_calcul_temperature
+
+Input Number (50+) : ✅ Déjà créés
+Input Boolean (20) : ✅ Déjà créés
+
+Sensors principaux :
+✓ sensor.cumulus_temperature_estimee
+✓ sensor.cumulus_litres_disponibles  
+✓ sensor.cumulus_prochaine_chauffe_prevue
+✓ sensor.cumulus_pv_power_w
+✓ sensor.cumulus_import_reseau_w
+✓ sensor.cumulus_autonomie_solaire
+✓ sensor.cumulus_cout_mois
+✓ Et 40+ autres...
+
+Automations (15+) :
+✓ automation.cumulus_demarrage_pv_intelligent
+✓ automation.cumulus_arret_pv_intelligent
+✓ automation.cumulus_protection_import
+✓ Et 12+ autres...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 SI TOUT EST OK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Passez à la création des dashboards !
+Voir : INSTRUCTIONS_RELOAD.md
+
