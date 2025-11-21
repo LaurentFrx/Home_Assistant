@@ -7,7 +7,12 @@ mobile_app:
 # === Personnalisation de Home Assistant ===
 homeassistant:
   packages:
-    cumulus: !include_dir_merge_named packages/cumulus
+    cumulus_core: !include packages/cumulus/core.yaml
+    cumulus_sensors_base: !include packages/cumulus/sensors_base.yaml
+    cumulus_sensors_calcul: !include packages/cumulus/sensors_calcul.yaml
+    cumulus_sensors_monitoring: !include packages/cumulus/sensors_monitoring.yaml
+    cumulus_automations_pv: !include packages/cumulus/automations_pv.yaml
+    cumulus_automations_hc_safety: !include packages/cumulus/automations_hc_safety.yaml
     carte_batterie: !include packages/carte_batterie.yaml
     git_sync: !include packages/git_sync.yaml
     solaire_economies: !include packages/solaire_economies.yaml
