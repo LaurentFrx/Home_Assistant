@@ -20,10 +20,15 @@ Configuration complète de mon installation Home Assistant pour la gestion intel
 
 ```
 .
-├── packages/              # Configuration modulaire (cumulus, solaire, etc.)
-├── automations/          # Automatisations simples
+├── packages/              # Configuration modulaire
+│   └── cumulus/          # Module cumulus (architecture modulaire - 7 fichiers)
+├── automations/          # Automatisations via UI
+│   └── archive/          # Anciennes versions archivées
 ├── scripts/             # Scripts réutilisables
-├── custom_components/   # Composants personnalisés
+├── custom_components/   # Composants personnalisés (Anker Solix, Solcast)
+├── lovelace/            # Dashboards et cartes
+│   └── cards/           # Cartes Lovelace (2 cartes actives)
+├── docs/                # Documentation complète
 ├── themes/             # Thèmes d'interface
 ├── templates/          # Templates Jinja2
 └── configuration.yaml  # Configuration principale
@@ -39,18 +44,28 @@ Configuration complète de mon installation Home Assistant pour la gestion intel
 ## 📚 Documentation
 
 ### Documentation principale
-- **[docs/README_CUMULUS.md](docs/README_CUMULUS.md)** - Documentation complète du système Cumulus (À CRÉER)
-- **[docs/GUIDE_INSTALLATION.md](docs/GUIDE_INSTALLATION.md)** - Guide d'installation et configuration (À CRÉER)
-- **[docs/GUIDE_UTILISATION.md](docs/GUIDE_UTILISATION.md)** - Guide d'utilisation quotidienne (À CRÉER)
+- **[docs/ETAT_ACTUEL.md](docs/ETAT_ACTUEL.md)** - ✨ État actuel complet du système (NOUVEAU 2025-11-22)
+- **[docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)** - ✨ Guide de style et conventions (NOUVEAU 2025-11-22)
+- **[docs/README_CUMULUS.md](docs/README_CUMULUS.md)** - Documentation complète du système Cumulus
+- **[docs/ARCHITECTURE_TECHNIQUE.md](docs/ARCHITECTURE_TECHNIQUE.md)** - Architecture technique détaillée
+- **[docs/GUIDE_DEPANNAGE.md](docs/GUIDE_DEPANNAGE.md)** - Guide de dépannage
+- **[docs/CLAUDE_PREFERENCES.md](docs/CLAUDE_PREFERENCES.md)** - Règles critiques Home Assistant
+- **[docs/GIT_SYNC_GUIDE.md](docs/GIT_SYNC_GUIDE.md)** - Guide synchronisation Git
+
+### Audits et Revues
+- **[AUDIT_COMPLET_CUMULUS_2025-11-15.md](AUDIT_COMPLET_CUMULUS_2025-11-15.md)** - Audit complet du système (2025-11-15)
+- **[CODE_STYLE_REVIEW.md](CODE_STYLE_REVIEW.md)** - Revue de style de code (2025-11-16)
 
 ### Archive & Historique
-- **[docs/archive/HISTORIQUE_VERSIONS.md](docs/archive/HISTORIQUE_VERSIONS.md)** - Timeline complète des versions (v2025-10-12a à v2025-11-08)
-- **[docs/archive/README.md](docs/archive/README.md)** - Guide de navigation dans l'archive
-- **[docs/archive/bugs/BUGS_CRITIQUES_v2025-10-14d.md](docs/archive/bugs/BUGS_CRITIQUES_v2025-10-14d.md)** - Bugs critiques corrigés (LECTURE ESSENTIELLE)
+- **[docs/archive/](docs/archive/)** - 32 documents archivés
+  - 📋 **changelog/** - Changelogs détaillés (8 fichiers)
+  - 🔴 **bugs/** - Bugs critiques et analyses de risques (2 fichiers)
+  - 🔧 **correctifs/** - Correctifs appliqués (7 fichiers)
+  - 📝 **procedures/** - Guides et checklists (7 fichiers)
+  - 📊 **analyses/** - Analyses techniques (7 fichiers)
+  - 📚 **old_syntheses/** - Anciennes synthèses (1 fichier)
 
-L'archive contient 21 documents organisés par catégorie :
-- 📋 **changelog/** - Changelogs détaillés
-- 🔴 **bugs/** - Bugs critiques et analyses de risques
-- 🔧 **correctifs/** - Correctifs appliqués (7 documents)
-- 📝 **procedures/** - Guides et checklists (5 documents)
-- 📊 **analyses/** - Analyses techniques (6 documents)
+---
+
+**Dernière mise à jour:** 2025-11-22
+**Architecture:** Modulaire v2.0
