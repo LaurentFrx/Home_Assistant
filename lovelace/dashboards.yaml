@@ -25,3 +25,11 @@ lovelace-cumulus-design:
   icon: mdi:waves
   show_in_sidebar: true
   filename: lovelace/lovelace_cumulus_premium.yaml
+
+# Dashboard Test Simple - Pour diagnostic minimal
+lovelace-test-simple:
+  mode: yaml
+  title: Test Simple
+  icon: mdi:alert-circle
+  show_in_sidebar: true
+  filename: lovelace/dashboard_test_simple.yaml
