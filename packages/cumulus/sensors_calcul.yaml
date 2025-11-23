@@ -32,7 +32,8 @@ template:
             {% set available = import_max + aps %}
           {% endif %}
 
-          {{ [0, available, 3000] | sort | list[1] | round(0) }}
+          {% set clamp = [0, available, 3000] | sort %}
+          {{ clamp[1] | round(0) }}
         unit_of_measurement: "W"
         device_class: power
         state_class: measurement
@@ -280,7 +281,8 @@ template:
             {% set score = score - 10 %}
           {% endif %}
 
-          {{ [0, score, 100] | sort | list[1] }}
+          {% set clamp = [0, score, 100] | sort %}
+          {{ clamp[1] }}
         unit_of_measurement: "%"
         icon: >
           {% set score = states('sensor.cumulus_score_sante') | int(0) %}

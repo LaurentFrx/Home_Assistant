@@ -115,7 +115,8 @@ template:
             {% set factor = 1.0 %}
           {% endif %}
 
-          {{ [0, (pv_percent * factor), 100] | sort | list[1] | round(0) }}
+          {% set clamp = [0, (pv_percent * factor), 100] | sort %}
+          {{ clamp[1] | round(0) }}
         unit_of_measurement: "%"
         icon: mdi:leaf
         attributes:
@@ -141,7 +142,8 @@ template:
           {% set chauffe_score = (100 - (chauffes_jour - 1) * 25) if chauffes_jour > 0 else 100 %}
           {% set score = (temp_score * 0.3 + chauffe_score * 0.2 + autonomie * 0.3 + sante * 0.2) %}
 
-          {{ [0, score, 100] | sort | list[1] | round(0) }}
+          {% set clamp = [0, score, 100] | sort %}
+          {{ clamp[1] | round(0) }}
         unit_of_measurement: "%"
         icon: mdi:speedometer
         attributes:
@@ -437,9 +439,13 @@ template:
           {% elif state == 'Normal' %}mdi:circle-outline
           {% else %}mdi:timer-sand{% endif %}
         attributes:
-          details:
-            mode: "{{ states('sensor.cumulus_mode_actif') }}"
-            temperature: "{{ states('sensor.cumulus_temperature_estimee') }}°C"
-            production_pv: "{{ states('sensor.cumulus_pv_power_w') }}W"
-            soc_batterie: "{{ states('sensor.cumulus_soc_batterie') }}%"
-            score_sante: "{{ states('sensor.cumulus_score_sante') }}%"
+          details: >
+            {{
+              {
+                "mode": states('sensor.cumulus_mode_actif'),
+                "temperature": states('sensor.cumulus_temperature_estimee') ~ '°C',
+                "production_pv": states('sensor.cumulus_pv_power_w') ~ 'W',
+                "soc_batterie": states('sensor.cumulus_soc_batterie') ~ '%',
+                "score_sante": states('sensor.cumulus_score_sante') ~ '%'
+              } | tojson
+            }}

@@ -168,7 +168,8 @@ template:
             {% endif %}
 
             {# Limites min/max #}
-            {{ [20, temp_current, 65] | sort | list[1] | round(1) }}
+            {% set clamped = [20, temp_current, 65] | sort %}
+            {{ clamped[1] | round(1) }}
           {% endif %}
         unit_of_measurement: "°C"
         device_class: temperature
@@ -272,7 +273,8 @@ template:
             {% set temp_target = 60 %}
             {% set delta = temp_target - temp_current %}
             {% set minutes = (delta * 4) | round(0) %}  {# ~4min par degré avec 3000W #}
-            {{ [0, minutes, 150] | sort | list[1] }}
+            {% set clamp = [0, minutes, 150] | sort %}
+            {{ clamp[1] }}
           {% else %}
             0
           {% endif %}
@@ -309,9 +311,17 @@ template:
         unique_id: cumulus_fenetre_pv
         state: >
           {% set now_time = now().time() %}
-          {% set start = today_at(states('input_datetime.cumulus_heure_debut_pv')).time() %}
-          {% set end = today_at(states('input_datetime.cumulus_heure_fin_pv')).time() %}
-          {{ start <= now_time <= end }}
+          {% set start_raw = states('input_datetime.cumulus_heure_debut_pv') %}
+          {% set end_raw = states('input_datetime.cumulus_heure_fin_pv') %}
+
+          {# Si heures non définies, on ferme la fenêtre pour éviter erreurs #}
+          {% if start_raw in ['unknown', 'unavailable', 'none'] or end_raw in ['unknown', 'unavailable', 'none'] %}
+            false
+          {% else %}
+            {% set start = today_at(start_raw).time() %}
+            {% set end = today_at(end_raw).time() %}
+            {{ start <= now_time <= end }}
+          {% endif %}
         device_class: running
         icon: >
           {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
