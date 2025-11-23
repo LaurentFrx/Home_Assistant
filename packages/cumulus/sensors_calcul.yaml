@@ -225,18 +225,22 @@ template:
           {% endif %}
         icon: mdi:chart-timeline-variant
         attributes:
-          criteres_decision:
-            strategie: "{{ states('input_select.cumulus_strategie_optimisation') }}"
-            temperature: "{{ states('sensor.cumulus_temperature_estimee') }}°C"
-            prevision_48h: "{{ solar_48h }} kWh"
-            cout_estime: >
-              {% if 'soleil' in states('sensor.cumulus_meilleur_moment_chauffe') %}
-                0€ (solaire)
-              {% elif 'nuit' in states('sensor.cumulus_meilleur_moment_chauffe') %}
-                ~2.50€ (HC)
-              {% else %}
-                ~4.00€ (HP)
-              {% endif %}
+          criteres_decision: >
+            {% set solar_48h_attr = states('sensor.solcast_pv_forecast_previsions_48h') | float(8) %}
+            {{
+              {
+                "strategie": states('input_select.cumulus_strategie_optimisation'),
+                "temperature": states('sensor.cumulus_temperature_estimee') ~ '°C',
+                "prevision_48h": solar_48h_attr ~ ' kWh',
+                "cout_estime":
+                  (
+                    '0€ (solaire)'
+                    if 'soleil' in states('sensor.cumulus_meilleur_moment_chauffe')
+                    else '~2.50€ (HC)' if 'nuit' in states('sensor.cumulus_meilleur_moment_chauffe')
+                    else '~4.00€ (HP)'
+                  )
+              } | tojson
+            }}
 
   # ┌─────────────────────────────────────────────────────────────────────────┐
   # │ SCORES ET DIAGNOSTICS                                                   │

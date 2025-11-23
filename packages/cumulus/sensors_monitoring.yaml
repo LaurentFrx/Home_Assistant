@@ -147,11 +147,15 @@ template:
         unit_of_measurement: "%"
         icon: mdi:speedometer
         attributes:
-          facteurs:
-            temperature_moyenne: "{{ states('sensor.cumulus_temperature_moyenne') }}°C"
-            chauffes_par_jour: "{{ states('counter.cumulus_chauffes_jour') }}"
-            autonomie_solaire: "{{ states('sensor.cumulus_autonomie_solaire') }}%"
-            sante_systeme: "{{ states('sensor.cumulus_score_sante') }}%"
+          facteurs: >
+            {{
+              {
+                "temperature_moyenne": states('sensor.cumulus_temperature_moyenne') ~ '°C',
+                "chauffes_par_jour": states('counter.cumulus_chauffes_jour'),
+                "autonomie_solaire": states('sensor.cumulus_autonomie_solaire') ~ '%',
+                "sante_systeme": states('sensor.cumulus_score_sante') ~ '%'
+              } | tojson
+            }}
 
       # Température moyenne maintenue
       - name: "Cumulus - Température moyenne"
