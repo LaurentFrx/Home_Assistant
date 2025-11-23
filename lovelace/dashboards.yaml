@@ -18,11 +18,11 @@ lovelace-design-test:
   show_in_sidebar: true
   filename: lovelace/dashboard_design_test.yaml
 
-# Dashboard Cumulus Design - Interface moderne avec animations
-test-cumulus-design-v1:
+# Dashboard Whisky - Test
+whisky-dashboard:
   mode: yaml
-  title: Cumulus Design
-  icon: mdi:waves
+  title: Whisky
+  icon: mdi:glass-cocktail
   show_in_sidebar: true
   filename: lovelace/dashboard_cumulus_design.yaml
 

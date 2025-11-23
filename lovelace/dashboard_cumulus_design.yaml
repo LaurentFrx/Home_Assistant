@@ -1,12 +1,12 @@
-title: Cumulus Design
-icon: mdi:waves
+title: Whisky
+icon: mdi:glass-cocktail
 
 views:
-  - title: Cumulus Design
-    path: cumulus-design
-    icon: mdi:waves
+  - title: Whisky
+    path: whisky
+    icon: mdi:glass-cocktail
     cards:
       - type: entities
-        title: Test Cumulus Design
+        title: Dashboard Whisky
         entities:
           - sun.sun
