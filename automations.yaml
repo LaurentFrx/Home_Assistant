@@ -1,0 +1,693 @@
+- id: '1763801076763'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single
+- id: '1763801078193'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single
+- id: '1763801079342'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single
+- id: '1763801079566'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single
+- id: '1763801079767'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single
+- id: '1763801080344'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single
+- id: '1763801180545'
+  alias: Douche matinale - Week-end/Vacances
+  description: Passe en mode confort a 8h00 quand Isa ne va pas au college le matin
+    (week-end, vacances, jours feries)
+  triggers:
+  - at: 08:00:00
+    trigger: time
+  conditions:
+  - condition: state
+    entity_id: input_boolean.sdb_reveil_enable
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: calendar.vacances_scolaires
+      state: 'on'
+    - condition: state
+      entity_id: calendar.jours_feries_en_france
+      state: 'on'
+    - condition: template
+      value_template: "{% set course_start = state_attr('calendar.planning_cours_isa',
+        'start_time') %} {% if course_start is not none and course_start != '' %}\n
+        \ {% set time_part = course_start.split(' ')[1] %}\n  {% set course_hour =
+        time_part.split(':')[0] | int %}\n  {% set course_minute = time_part.split(':')[1]
+        | int %}\n  {% set course_time_minutes = course_hour * 60 + course_minute
+        %}\n  {{ course_time_minutes >= 660 }}\n{% else %}\n  {{ true }}\n{% endif
+        %}\n"
+  - condition: template
+    value_template: '{% set last = this.attributes.last_triggered %} {{ last is none
+      or (as_datetime(last)).date() != now().date() }}
+
+      '
+  actions:
+  - variables:
+      _ce: '{{ states(''input_text.sdb_entity_climate'') | trim }}'
+      _max_retries_boost: 10
+      _max_retries_eco: 6
+  - repeat:
+      sequence:
+      - data:
+          climate_entity: '{{ _ce }}'
+          preset: comfort
+        action: script.sdb_set_preset
+      - delay: 00:00:30
+      until:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          or repeat.index >= _max_retries_boost }}
+
+          '
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+          }}'
+      sequence:
+      - data:
+          name: SDB Boost Week-end/Vacances
+          message: Mode confort confirme
+          entity_id: '{{ _ce }}'
+        action: logbook.log
+      - delay: 02:00:00
+      - repeat:
+          sequence:
+          - data:
+              climate_entity: '{{ _ce }}'
+              preset: eco
+            action: script.sdb_set_preset
+          - delay: 00:00:30
+          until:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              or repeat.index >= _max_retries_eco }}
+
+              '
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''binary_sensor.sdb_preset_confirme'',''on'')
+              }}'
+          sequence:
+          - data:
+              name: SDB Eco Week-end/Vacances
+              message: Mode eco confirme
+              entity_id: '{{ _ce }}'
+            action: logbook.log
+        default:
+        - data:
+            name: SDB Eco Week-end/Vacances
+            message: Mode eco NON confirme apres retries.
+            entity_id: '{{ _ce }}'
+          action: logbook.log
+    default:
+    - data:
+        name: SDB Boost Week-end/Vacances
+        message: Mode confort NON confirme apres retries.
+        entity_id: '{{ _ce }}'
+      action: logbook.log
+  mode: single

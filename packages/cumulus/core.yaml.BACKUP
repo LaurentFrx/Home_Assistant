@@ -321,3 +321,4 @@ timer:
     name: "Cumulus - Timer boost"
     duration: "01:00:00"
     icon: mdi:timer-alert
+entity_id: sensor.
