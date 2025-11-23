@@ -11,7 +11,6 @@ views:
     path: cumulus-design
     icon: mdi:waves
     theme: Mushroom Shadow
-    type: custom:vertical-layout
     cards:
       # ┌─────────────────────────────────────────────────────────────────────────┐
       # │ HERO CARD - EFFET GLASSMORPHISM ANIMÉ                                  │
