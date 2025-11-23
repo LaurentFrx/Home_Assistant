@@ -17,3 +17,11 @@ lovelace-design-test:
   icon: mdi:test-tube
   show_in_sidebar: true
   filename: lovelace/dashboard_design_test.yaml
+
+# Dashboard Cumulus Premium - Design moderne avec animations
+lovelace-cumulus-premium:
+  mode: yaml
+  title: Cumulus Premium
+  icon: mdi:water-boiler
+  show_in_sidebar: true
+  filename: lovelace/lovelace_cumulus_premium.yaml
