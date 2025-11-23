@@ -19,7 +19,7 @@ lovelace-design-test:
   filename: lovelace/dashboard_design_test.yaml
 
 # Dashboard Cumulus Design - Interface moderne avec animations
-cumulus-design:
+test-cumulus-design-v1:
   mode: yaml
   title: Cumulus Design
   icon: mdi:waves
