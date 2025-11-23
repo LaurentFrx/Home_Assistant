@@ -18,7 +18,7 @@ automation:
         entity_id: sensor.cumulus_production_aps_w
         above: input_number.cumulus_seuil_pv_statique_w
         for:
-          seconds: input_number.cumulus_delai_on_secondes
+          seconds: "{{ states('input_number.cumulus_delai_on_secondes') | float(0) }}"
         id: trigger_puissance
 
       # Trigger alternatif : changement conditions
@@ -158,7 +158,7 @@ automation:
         entity_id: sensor.cumulus_production_aps_w
         below: input_number.cumulus_seuil_pv_statique_w
         for:
-          seconds: input_number.cumulus_delai_off_secondes
+          seconds: "{{ states('input_number.cumulus_delai_off_secondes') | float(0) }}"
         id: trigger_production_basse
 
       # SOC trop bas
