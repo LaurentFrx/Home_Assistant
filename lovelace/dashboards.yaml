@@ -18,10 +18,10 @@ lovelace-design-test:
   show_in_sidebar: true
   filename: lovelace/dashboard_design_test.yaml
 
-# Dashboard Cumulus Premium - Design moderne avec animations
-lovelace-cumulus-premium:
+# Dashboard Cumulus Design - Interface moderne avec animations
+lovelace-cumulus-design:
   mode: yaml
-  title: Cumulus Premium
-  icon: mdi:water-boiler
+  title: Cumulus Design
+  icon: mdi:waves
   show_in_sidebar: true
   filename: lovelace/lovelace_cumulus_premium.yaml

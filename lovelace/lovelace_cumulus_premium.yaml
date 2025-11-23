@@ -1,15 +1,15 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ CUMULUS DASHBOARD PREMIUM - ANIMATIONS & EFFETS VISUELS                    ║
+# ║ CUMULUS DASHBOARD DESIGN - ANIMATIONS & EFFETS VISUELS                     ║
 # ║ Version ultra-moderne avec CSS3 animations et glassmorphism                ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-title: Cumulus Premium
-icon: mdi:water-boiler
+title: Cumulus Design
+icon: mdi:waves
 
 views:
-  - title: Cumulus Premium
-    path: cumulus-premium
-    icon: mdi:water-boiler
+  - title: Cumulus Design
+    path: cumulus-design
+    icon: mdi:waves
     theme: Mushroom Shadow
     type: custom:vertical-layout
     cards:
