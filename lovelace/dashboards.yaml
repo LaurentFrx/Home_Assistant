@@ -18,10 +18,18 @@ lovelace-design-test:
   show_in_sidebar: true
   filename: lovelace/dashboard_design_test.yaml
 
-# Dashboard Cumulus Premium - Design moderne avec animations
-lovelace-cumulus-premium:
+# Dashboard Whisky - Test
+lovelace-whisky:
   mode: yaml
-  title: Cumulus Premium
-  icon: mdi:water-boiler
+  title: Whisky
+  icon: mdi:glass-cocktail
   show_in_sidebar: true
-  filename: lovelace/lovelace_cumulus_premium.yaml
+  filename: lovelace/dashboard_whisky.yaml
+
+# Dashboard Test Simple - Pour diagnostic minimal
+lovelace-test-simple:
+  mode: yaml
+  title: Test Simple
+  icon: mdi:alert-circle
+  show_in_sidebar: true
+  filename: lovelace/dashboard_test_simple.yaml

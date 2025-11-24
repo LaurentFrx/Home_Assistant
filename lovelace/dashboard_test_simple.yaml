@@ -1,0 +1,11 @@
+title: Test Simple
+icon: mdi:test-tube
+
+views:
+  - title: Test
+    path: test-simple
+    cards:
+      - type: entities
+        title: Carte de test
+        entities:
+          - sun.sun
