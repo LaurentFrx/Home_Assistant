@@ -1,0 +1,12 @@
+title: Whisky
+icon: mdi:glass-cocktail
+
+views:
+  - title: Whisky
+    path: whisky
+    icon: mdi:glass-cocktail
+    cards:
+      - type: entities
+        title: Dashboard Whisky
+        entities:
+          - sun.sun

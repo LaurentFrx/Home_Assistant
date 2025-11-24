@@ -24,7 +24,7 @@ whisky-dashboard:
   title: Whisky
   icon: mdi:glass-cocktail
   show_in_sidebar: true
-  filename: lovelace/dashboard_cumulus_design.yaml
+  filename: lovelace/dashboard_whisky.yaml
 
 # Dashboard Test Simple - Pour diagnostic minimal
 lovelace-test-simple:
