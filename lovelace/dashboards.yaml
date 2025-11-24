@@ -19,7 +19,7 @@ lovelace-design-test:
   filename: lovelace/dashboard_design_test.yaml
 
 # Dashboard Whisky - Test
-whisky-dashboard:
+lovelace-whisky:
   mode: yaml
   title: Whisky
   icon: mdi:glass-cocktail
