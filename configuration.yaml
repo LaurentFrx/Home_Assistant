@@ -19,6 +19,7 @@ homeassistant:
     solaire_economies: !include packages/solaire_economies.yaml
     salle_de_bain: !include packages/salle_de_bain_douche_isa_college.yaml
     cumulus_v3_dashboard: !include packages/cumulus_v3_dashboard_sensors.yaml
+    portail: !include packages/portail.yaml
   customize:
     climate.thermostat_sdb:
       friendly_name: ""
@@ -30,6 +31,10 @@ homeassistant:
       device_class: energy
       state_class: total_increasing
       unit_of_measurement: kWh
+    switch.portail:
+      device_class: gate  # ou garage_door si tu préfères
+      friendly_name: "Portail"
+
 
 # === Thèmes personnalisés ===
 frontend:

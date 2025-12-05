@@ -1,0 +1,46 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# PORTAIL COULISSANT - Cycle complet pour HomeKit (100s ouverture auto)
+# ═══════════════════════════════════════════════════════════════════════════
+
+input_boolean:
+  portail_open:
+    name: "Portail ouvert"
+    initial: off
+
+cover:
+  - platform: template
+    covers:
+      portail:
+        friendly_name: "Portail"
+        device_class: gate
+        value_template: >
+          {% if is_state('input_boolean.portail_open', 'on') %}
+            open
+          {% else %}
+            closed
+          {% endif %}
+        
+        open_cover:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.portail
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.portail_open
+          - delay: "00:01:40"  # 100 secondes
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.portail_open
+        
+        close_cover:
+          - delay: "00:00:00"
+
+automation:
+  - alias: "Reset état portail au démarrage"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.portail_open

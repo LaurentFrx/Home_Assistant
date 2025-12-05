@@ -1,143 +1,144 @@
 ###############################################################################
-# CUMULUS V3 - THÈME WARM GLASSMORPHISM
+# CUMULUS V3 - THÈME WARM GLASSMORPHISM (corrigé)
 ###############################################################################
 # Description : Thème glassmorphisme aux teintes chaudes (copper, amber, terracotta)
-# Inspiration : Tesla UI + Apple iOS + Material You
 # Usage : Copier dans /config/themes/warm_glassmorphism.yaml
-# Activation : Services → Frontend → Set Theme → Warm Glassmorphism
-# MAJ : 2025-11-25
+# Activation : Paramètres → Tableau de bord → Thème → Warm Glassmorphism
+# MAJ : 2025-11-26
 ###############################################################################
 
 Warm Glassmorphism:
   #=============================================================================
   # COULEURS PRIMAIRES - PALETTE CHAUDE
   #=============================================================================
-  
+
+  # Couleurs Material (important sur les versions récentes de HA)
+  mdc-theme-primary: "#D4915D"
+  mdc-theme-secondary: "#CF9C6B"
+  mdc-theme-accent: "#CF9C6B"
+
   # Accents principaux
-  primary-color: "#D4915D"              # Copper Glow - accent principal
-  accent-color: "#CF9C6B"               # Amber Gold - accent secondaire
-  
+  primary-color: "#D4915D" # Copper Glow - accent principal
+  accent-color: "#CF9C6B" # Amber Gold - accent secondaire
+
   # Couleurs sémantiques
-  success-color: "#8B9A6E"              # Olive Success
-  warning-color: "#DAA520"              # Goldenrod Warning
-  error-color: "#C25D47"                # Terracotta Error
-  info-color: "#7B9EB8"                 # Slate Blue Info
-  
+  success-color: "#8B9A6E" # Olive Success
+  warning-color: "#DAA520" # Goldenrod Warning
+  error-color: "#C25D47" # Terracotta Error
+  info-color: "#7B9EB8" # Slate Blue Info
+
   #=============================================================================
   # BACKGROUNDS - FOND SOMBRE CHALEUREUX
   #=============================================================================
-  
-  primary-background-color: "#1A1512"    # Deep Espresso - fond principal
-  secondary-background-color: "#2D2620"  # Warm Charcoal - fond secondaire
-  
+
+  primary-background-color: "#1A1512" # Deep Espresso - fond principal
+  secondary-background-color: "#2D2620" # Warm Charcoal - fond secondaire
+  background-color: "var(--primary-background-color)"
+
   # Cards glassmorphism
   card-background-color: "rgba(45, 38, 32, 0.55)"
   ha-card-background: "rgba(45, 38, 32, 0.55)"
-  
+
   # Paper et surfaces
   paper-card-background-color: "rgba(45, 38, 32, 0.65)"
-  
-  # Dialogs et modals
-  dialog-backdrop-filter: "blur(25px) saturate(150%)"
-  
+
   #=============================================================================
   # TEXTES - TONS CRÈME CHAUDS
   #=============================================================================
-  
-  primary-text-color: "#E8DED5"          # Cream White - texte principal
-  secondary-text-color: "rgba(232, 222, 213, 0.7)"  # Texte secondaire
+
+  primary-text-color: "#E8DED5" # Cream White - texte principal
+  secondary-text-color: "rgba(232, 222, 213, 0.7)" # Texte secondaire
   text-primary-color: "#E8DED5"
   disabled-text-color: "rgba(232, 222, 213, 0.4)"
-  
-  # Labels
+
+  # Labels / icônes
   paper-item-icon-color: "#CF9C6B"
-  
+
   #=============================================================================
   # SIDEBAR
   #=============================================================================
-  
+
   sidebar-background-color: "rgba(26, 21, 18, 0.95)"
   sidebar-icon-color: "#CF9C6B"
   sidebar-text-color: "#E8DED5"
   sidebar-selected-icon-color: "#E8B88A"
   sidebar-selected-text-color: "#E8B88A"
   sidebar-selected-background-color: "rgba(212, 145, 93, 0.15)"
-  
+
   #=============================================================================
   # HEADER
   #=============================================================================
-  
+
   app-header-background-color: "rgba(26, 21, 18, 0.85)"
   app-header-text-color: "#E8DED5"
-  
+
   #=============================================================================
   # ÉTATS DES ENTITÉS
   #=============================================================================
-  
-  state-icon-color: "#B8A99A"            # Taupe - état inactif
-  state-icon-active-color: "#D4915D"     # Copper - état actif
+
+  state-icon-color: "#B8A99A" # Taupe - état inactif
+  state-icon-active-color: "#D4915D" # Copper - état actif
   state-on-color: "#D4915D"
   state-off-color: "#5A4D42"
-  
+
   # Switch
   switch-checked-color: "#D4915D"
   switch-checked-button-color: "#E8B88A"
   switch-checked-track-color: "rgba(212, 145, 93, 0.5)"
   switch-unchecked-button-color: "#5A4D42"
   switch-unchecked-track-color: "rgba(90, 77, 66, 0.3)"
-  
+
   # Slider
   paper-slider-knob-color: "#D4915D"
   paper-slider-active-color: "#D4915D"
   paper-slider-secondary-color: "rgba(212, 145, 93, 0.3)"
   paper-slider-container-color: "rgba(90, 77, 66, 0.4)"
-  
+
   #=============================================================================
   # CARTES - BORDURES ET OMBRES
   #=============================================================================
-  
+
   ha-card-border-radius: "20px"
   ha-card-border-width: "1px"
   ha-card-border-color: "rgba(207, 156, 107, 0.12)"
   ha-card-box-shadow: "0 8px 32px rgba(0, 0, 0, 0.2)"
-  
+
   #=============================================================================
   # INPUTS ET FORMULAIRES
   #=============================================================================
-  
+
   input-fill-color: "rgba(45, 38, 32, 0.6)"
   input-ink-color: "#E8DED5"
   input-label-ink-color: "rgba(232, 222, 213, 0.7)"
   input-disabled-fill-color: "rgba(45, 38, 32, 0.3)"
   input-disabled-ink-color: "rgba(232, 222, 213, 0.3)"
-  
+
   # Dropdown
   material-background-color: "rgba(45, 38, 32, 0.95)"
   material-secondary-background-color: "rgba(60, 50, 42, 0.95)"
-  
+
   #=============================================================================
   # TABLES ET LISTES
   #=============================================================================
-  
+
   table-row-background-color: "rgba(45, 38, 32, 0.3)"
   table-row-alternative-background-color: "rgba(45, 38, 32, 0.5)"
   data-table-background-color: "transparent"
-  
+
   # Dividers
   divider-color: "rgba(207, 156, 107, 0.1)"
-  
+
   #=============================================================================
   # BADGES ET LABELS
   #=============================================================================
-  
+
   label-badge-background-color: "rgba(212, 145, 93, 0.2)"
   label-badge-text-color: "#E8B88A"
-  
+
   #=============================================================================
   # VARIABLES CUSTOM POUR CARD-MOD
   #=============================================================================
-  
-  # Couleurs warm nommées
+
   warm-copper: "#D4915D"
   warm-amber: "#CF9C6B"
   warm-terracotta: "#C17F59"
@@ -146,15 +147,13 @@ Warm Glassmorphism:
   warm-taupe: "#B8A99A"
   warm-charcoal: "#2D2620"
   warm-espresso: "#1A1512"
-  
-  # RGB pour rgba()
+
   rgb-warm-copper: "212, 145, 93"
   rgb-warm-amber: "207, 156, 107"
   rgb-warm-bronze: "232, 184, 138"
   rgb-warm-cream: "232, 222, 213"
   rgb-warm-charcoal: "45, 38, 32"
-  
-  # Glass effects
+
   glass-blur: "20px"
   glass-blur-heavy: "30px"
   glass-saturation: "150%"
@@ -164,27 +163,25 @@ Warm Glassmorphism:
   glass-bg-popup: "rgba(30, 25, 22, 0.92)"
   glass-border: "rgba(207, 156, 107, 0.12)"
   glass-border-hover: "rgba(207, 156, 107, 0.25)"
-  
-  # Températures (pour visualisations thermiques)
+
   temp-cold: "#4A90D9"
   temp-cool: "#7B9EB8"
   temp-warm: "#8B9A6E"
   temp-hot: "#D4915D"
   temp-very-hot: "#C25D47"
-  
-  # États cumulus
+
   cumulus-off: "#5A4D42"
   cumulus-heating: "#D4915D"
   cumulus-ready: "#8B9A6E"
   cumulus-warning: "#DAA520"
   cumulus-critical: "#C25D47"
-  
+
   #=============================================================================
   # CARD-MOD - STYLES GLOBAUX
   #=============================================================================
-  
+
   card-mod-theme: Warm Glassmorphism
-  
+
   # Style global pour TOUTES les cartes
   card-mod-card-yaml: |
     .: |
@@ -204,7 +201,7 @@ Warm Glassmorphism:
           transform: translateY(-1px);
         }
       }
-  
+
   # Style pour les dialogs more-info
   card-mod-more-info-yaml: |
     $: |
@@ -221,7 +218,7 @@ Warm Glassmorphism:
         border: 1px solid rgba(207, 156, 107, 0.15) !important;
         box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4) !important;
       }
-  
+
   # Style pour les vues
   card-mod-view-yaml: |
     .: |
@@ -240,13 +237,14 @@ Warm Glassmorphism:
         padding-bottom: 100px !important;
         gap: 12px !important;
       }
-  
-  # Style pour la sidebar
+
+  # Style pour la sidebar (ancien + nouveau sélecteur pour compatibilité)
   card-mod-root-yaml: |
     ha-sidebar$: |
       .menu {
         background: rgba(26, 21, 18, 0.95) !important;
         backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
       }
       .mdc-list-item {
         border-radius: 12px !important;
@@ -255,7 +253,16 @@ Warm Glassmorphism:
       .mdc-list-item--activated {
         background: rgba(212, 145, 93, 0.15) !important;
       }
-
-###############################################################################
-# FIN DU THÈME
-###############################################################################
+    ha-drawer$: |
+      .menu {
+        background: rgba(26, 21, 18, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+      }
+      .mdc-list-item {
+        border-radius: 12px !important;
+        margin: 4px 8px !important;
+      }
+      .mdc-list-item--activated {
+        background: rgba(212, 145, 93, 0.15) !important;
+      }

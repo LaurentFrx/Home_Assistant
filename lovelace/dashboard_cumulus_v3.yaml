@@ -1,152 +1,351 @@
 ###############################################################################
-# CUMULUS V3 - DASHBOARD SIMPLIFIÉ
+# CUMULUS V3 - DASHBOARD COMPLET GLASSMORPHISME
 ###############################################################################
 title: Eau Chaude
 views:
   - title: Accueil
     path: accueil
     icon: mdi:water-boiler
+    type: custom:grid-layout
+    layout:
+      grid-template-columns: 1fr
+      grid-gap: 16px
+      padding: 16px
+      max-width: 600px
+      margin: 0 auto
+    theme: Warm Glassmorphism
+    background:
+      opacity: 100
+      alignment: center
+      size: cover
+      repeat: repeat
+      attachment: fixed
+      image:
+        media_content_id: media-source://image_upload/7c04f51aa404210b96af96c127d85c4d
+        media_content_type: image/jpeg
+        metadata:
+          title: Honeycomp.jpeg
+          thumbnail: /api/image/serve/7c04f51aa404210b96af96c127d85c4d/256x256
+          media_class: image
+          navigateIds:
+            - {}
+            - media_content_type: app
+              media_content_id: media-source://image_upload
     cards:
       #=========================================================================
-      # CARTE HÉRO - TEMPÉRATURE
+      # CARTE HÉRO - ÉTAT PRINCIPAL CUMULUS
       #=========================================================================
       - type: custom:button-card
         entity: switch.shellypro1_ece334ee1b64
         name: Eau Chaude
-        icon: mdi:water-boiler
-        show_state: true
-        show_name: true
-        styles:
-          card:
-            - background: "rgba(45, 38, 32, 0.55)"
-            - border-radius: "20px"
-            - padding: "20px"
-            - height: "180px"
-          icon:
-            - width: "50px"
-            - color: "var(--primary-color)"
-          name:
-            - font-size: "1.4rem"
-            - font-weight: "600"
-          state:
-            - font-size: "1rem"
+        show_state: false
+        show_label: true
+        label: |
+          [[[
+            if (entity.state === 'on') {
+              return '🔥 En chauffe';
+            } else {
+              const temp = states['sensor.thermo_cumulus_temperature'].state;
+              if (parseFloat(temp) >= 50) return '✓ Prêt';
+              if (parseFloat(temp) >= 40) return 'Tiède';
+              return '❄️ Froid';
+            }
+          ]]]
+        extra_styles: |
+          @keyframes heating-flame {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(212, 145, 93, 0.8)); }
+            50% { filter: drop-shadow(0 0 20px rgba(232, 184, 138, 1)); }
+          }
         state:
           - value: "on"
             icon: mdi:water-boiler
             styles:
               icon:
                 - color: "#D4915D"
-                - animation: "pulse 2s infinite"
+                - animation: "heating-flame 1.5s ease-in-out infinite"
+              card:
+                - background: "linear-gradient(135deg, rgba(212, 145, 93, 0.25) 0%, rgba(45, 38, 32, 0.6) 100%)"
+                - border: "1px solid rgba(212, 145, 93, 0.4)"
           - value: "off"
             icon: mdi:water-boiler-off
             styles:
               icon:
-                - color: "gray"
-
-      #=========================================================================
-      # TEMPÉRATURE ACTUELLE
-      #=========================================================================
-      - type: custom:button-card
-        entity: sensor.thermo_cumulus_temperature
-        name: Température
-        icon: mdi:thermometer
-        show_state: true
+                - color: "rgba(232, 222, 213, 0.5)"
         styles:
           card:
             - background: "rgba(45, 38, 32, 0.55)"
-            - border-radius: "20px"
-            - padding: "16px"
-          state:
-            - font-size: "2rem"
-            - font-weight: "700"
-            - color: "#E8B88A"
+            - backdrop-filter: "blur(20px) saturate(150%)"
+            - "-webkit-backdrop-filter": "blur(20px) saturate(150%)"
+            - border: "1px solid rgba(207, 156, 107, 0.15)"
+            - border-radius: "24px"
+            - box-shadow: "0 8px 32px rgba(0, 0, 0, 0.25)"
+            - padding: "24px"
+            - height: "200px"
+            - transition: "all 0.3s ease"
+          grid:
+            - grid-template-areas: "'i temp' 'n temp' 'l temp'"
+            - grid-template-columns: "1fr 1fr"
+            - grid-template-rows: "auto auto 1fr"
+          icon:
+            - width: "56px"
+            - height: "56px"
+          name:
+            - font-size: "1.5rem"
+            - font-weight: "600"
+            - color: "#E8DED5"
+            - justify-self: "start"
+            - margin-top: "8px"
+          label:
+            - font-size: "1rem"
+            - color: "rgba(232, 222, 213, 0.7)"
+            - justify-self: "start"
+        custom_fields:
+          temp:
+            card:
+              type: custom:button-card
+              entity: sensor.thermo_cumulus_temperature
+              show_name: false
+              show_icon: false
+              show_state: true
+              show_label: true
+              label: "°C"
+              styles:
+                card:
+                  - background: "transparent"
+                  - box-shadow: "none"
+                  - border: "none"
+                state:
+                  - font-size: "3.5rem"
+                  - font-weight: "700"
+                  - color: "#E8B88A"
+                  - text-shadow: "0 2px 10px rgba(232, 184, 138, 0.3)"
+                label:
+                  - font-size: "1.5rem"
+                  - color: "rgba(232, 222, 213, 0.6)"
+                  - position: "relative"
+                  - top: "-15px"
 
       #=========================================================================
-      # KPIs EN LIGNE
+      # KPIs - 3 CARTES EN LIGNE
       #=========================================================================
       - type: horizontal-stack
         cards:
+          # Douches
           - type: custom:button-card
             entity: sensor.cumulus_v3_douches_disponibles
             name: Douches
             icon: mdi:shower-head
             show_state: true
+            tap_action:
+              action: more-info
             styles:
               card:
                 - background: "rgba(45, 38, 32, 0.55)"
-                - border-radius: "16px"
-                - padding: "12px"
+                - backdrop-filter: "blur(20px)"
+                - "-webkit-backdrop-filter": "blur(20px)"
+                - border: "1px solid rgba(207, 156, 107, 0.12)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+                - padding: "16px"
+                - height: "110px"
               icon:
-                - color: "#CF9C6B"
+                - width: "32px"
+                - color: |
+                    [[[
+                      const d = parseInt(entity.state);
+                      if (d >= 3) return '#8B9A6E';
+                      if (d >= 1) return '#DAA520';
+                      return '#C25D47';
+                    ]]]
+              name:
+                - font-size: "0.8rem"
+                - color: "rgba(232, 222, 213, 0.6)"
+                - margin-top: "8px"
               state:
-                - font-size: "1.5rem"
-                - font-weight: "600"
+                - font-size: "1.8rem"
+                - font-weight: "700"
+                - color: "#E8DED5"
 
+          # Énergie
+          - type: custom:button-card
+            entity: sensor.cumulus_v3_energie_journaliere
+            name: Aujourd'hui
+            icon: mdi:flash
+            show_state: true
+            state_display: |
+              [[[
+                return (parseFloat(entity.state) || 0).toFixed(1);
+              ]]]
+            tap_action:
+              action: navigate
+              navigation_path: "#energie"
+            styles:
+              card:
+                - background: "rgba(45, 38, 32, 0.55)"
+                - backdrop-filter: "blur(20px)"
+                - "-webkit-backdrop-filter": "blur(20px)"
+                - border: "1px solid rgba(207, 156, 107, 0.12)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+                - padding: "16px"
+                - height: "110px"
+              icon:
+                - width: "32px"
+                - color: "#CF9C6B"
+              name:
+                - font-size: "0.8rem"
+                - color: "rgba(232, 222, 213, 0.6)"
+                - margin-top: "8px"
+              state:
+                - font-size: "1.8rem"
+                - font-weight: "700"
+                - color: "#E8DED5"
+
+          # Batterie
           - type: custom:button-card
             entity: sensor.system_sanguinet_etat_de_charge_du_sb
             name: Batterie
-            icon: mdi:battery
             show_state: true
+            state_display: |
+              [[[
+                return entity.state + '%';
+              ]]]
+            icon: |
+              [[[
+                const soc = parseInt(entity.state);
+                if (soc >= 80) return 'mdi:battery-high';
+                if (soc >= 50) return 'mdi:battery-medium';
+                if (soc >= 20) return 'mdi:battery-low';
+                return 'mdi:battery-alert';
+              ]]]
+            tap_action:
+              action: navigate
+              navigation_path: "#energie"
             styles:
               card:
                 - background: "rgba(45, 38, 32, 0.55)"
-                - border-radius: "16px"
-                - padding: "12px"
+                - backdrop-filter: "blur(20px)"
+                - "-webkit-backdrop-filter": "blur(20px)"
+                - border: "1px solid rgba(207, 156, 107, 0.12)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+                - padding: "16px"
+                - height: "110px"
               icon:
-                - color: "#8B9A6E"
+                - width: "32px"
+                - color: |
+                    [[[
+                      const soc = parseInt(entity.state);
+                      if (soc >= 50) return '#8B9A6E';
+                      if (soc >= 20) return '#DAA520';
+                      return '#C25D47';
+                    ]]]
+              name:
+                - font-size: "0.8rem"
+                - color: "rgba(232, 222, 213, 0.6)"
+                - margin-top: "8px"
               state:
-                - font-size: "1.5rem"
-                - font-weight: "600"
+                - font-size: "1.8rem"
+                - font-weight: "700"
+                - color: "#E8DED5"
 
       #=========================================================================
       # GRAPHIQUE TEMPÉRATURE 24H
       #=========================================================================
       - type: custom:apexcharts-card
         graph_span: 24h
+        update_interval: 5min
         header:
           show: true
           title: Température 24h
           show_states: true
           colorize_states: true
+        apex_config:
+          chart:
+            height: 180px
+            background: transparent
+          grid:
+            borderColor: "rgba(207, 156, 107, 0.1)"
+            strokeDashArray: 3
+          xaxis:
+            labels:
+              style:
+                colors: "rgba(232, 222, 213, 0.5)"
+                fontSize: "10px"
+          yaxis:
+            min: 20
+            max: 70
+            tickAmount: 5
+            labels:
+              style:
+                colors: "rgba(232, 222, 213, 0.5)"
+              formatter: |
+                EVAL:function(val) { return val + '°'; }
+          tooltip:
+            theme: dark
+          annotations:
+            yaxis:
+              - y: 45
+                borderColor: "rgba(139, 154, 110, 0.5)"
+                strokeDashArray: 5
+                label:
+                  text: "Confort"
+                  style:
+                    color: "#8B9A6E"
+                    background: "transparent"
         series:
           - entity: sensor.thermo_cumulus_temperature
             name: Température
             type: area
             color: "#D4915D"
-            stroke_width: 2
+            stroke_width: 3
+            opacity: 0.2
+            curve: smooth
+            fill_raw: last
+            group_by:
+              func: avg
+              duration: 15min
+        card_mod:
+          style: |
+            ha-card {
+              background: rgba(45, 38, 32, 0.55) !important;
+              backdrop-filter: blur(20px) saturate(150%) !important;
+              -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+              border: 1px solid rgba(207, 156, 107, 0.12) !important;
+              border-radius: 20px !important;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+            }
+            .apexcharts-title-text {
+              fill: #E8DED5 !important;
+            }
 
       #=========================================================================
-      # CONTRÔLES
+      # BOUTONS ACTIONS
       #=========================================================================
       - type: horizontal-stack
         cards:
-          - type: button
-            entity: switch.shellypro1_ece334ee1b64
+          # Forcer chauffe
+          - type: custom:button-card
             name: Forcer chauffe
             icon: mdi:fire
             tap_action:
-              action: turn-on
-            show_state: false
-
-          - type: button
-            entity: input_boolean.cumulus_v3_mode_vacances
-            name: Vacances
-            icon: mdi:beach
-            tap_action:
-              action: toggle
-
-      #=========================================================================
-      # INFOS SOLAIRE
-      #=========================================================================
-      - type: entities
-        title: Énergie Solaire
-        entities:
-          - entity: sensor.pv_total_entree_sb_aps_w
-            name: Production PV
-            icon: mdi:solar-power
-          - entity: sensor.cumulus_v3_surplus_pv
-            name: Surplus disponible
-            icon: mdi:export
-          - entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
-            name: Prévu aujourd'hui
-            icon: mdi:weather-sunny
+              action: call-service
+              service: switch.turn_on
+              service_data:
+                entity_id: switch.shellypro1_ece334ee1b64
+              haptic: heavy
+            extra_styles: |
+              @keyframes pulse-action {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(0.97); }
+              }
+            styles:
+              card:
+                - background: "linear-gradient(135deg, rgba(212, 145, 93, 0.2) 0%, rgba(193, 127, 89, 0.15) 100%)"
+                - backdrop-filter: "blur(20px)"
+                - "-webkit-backdrop-filter": "blur(20px)"
+                - border: "1px solid rgba(212, 145, 93, 0.25)"
+                - border-radius: "18px"
+                - box-shadow: "0 4px 20px rgba(0, 0, 0, 0.15)"
+                - padding: "18px"
+                - c
