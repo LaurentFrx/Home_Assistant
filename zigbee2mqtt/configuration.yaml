@@ -112,6 +112,8 @@ devices:
     friendly_name: Thermo_ext
   '0xa4c13801966affff':
     friendly_name: Thermo_velos
+  '0xa4c13804ce53ffff':
+    friendly_name: thermo_cumulus
 availability:
   enabled: true
 version: 4

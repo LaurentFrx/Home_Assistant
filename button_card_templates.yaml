@@ -1,0 +1,473 @@
+###############################################################################
+# CUMULUS V3 - TEMPLATES BUTTON-CARD
+###############################################################################
+# Description : Bibliothèque de templates button-card glassmorphisme warm
+# Usage : À inclure via !include ou copier dans configuration.yaml
+# Dépendances : custom:button-card (HACS)
+# MAJ : 2025-11-25
+###############################################################################
+
+button_card_templates:
+
+  #=============================================================================
+  # BASE GLASSMORPHISM - Template parent pour tous les boutons
+  #=============================================================================
+  glass_base:
+    color_type: icon
+    show_state: false
+    show_name: true
+    show_icon: true
+    tap_action:
+      action: toggle
+      haptic: light
+    hold_action:
+      action: more-info
+    double_tap_action:
+      action: none
+    extra_styles: |
+      /* === ANIMATIONS KEYFRAMES === */
+      @keyframes pulse-glow {
+        0%, 100% { 
+          filter: drop-shadow(0 0 4px currentColor);
+          transform: scale(1);
+        }
+        50% { 
+          filter: drop-shadow(0 0 12px currentColor);
+          transform: scale(1.02);
+        }
+      }
+      @keyframes heating-flame {
+        0%, 100% {
+          color: #D4915D;
+          filter: drop-shadow(0 0 6px rgba(212, 145, 93, 0.6));
+        }
+        25% {
+          color: #E8B88A;
+          filter: drop-shadow(0 0 10px rgba(232, 184, 138, 0.7));
+        }
+        50% {
+          color: #CF9C6B;
+          filter: drop-shadow(0 0 14px rgba(207, 156, 107, 0.8));
+        }
+        75% {
+          color: #C17F59;
+          filter: drop-shadow(0 0 10px rgba(193, 127, 89, 0.7));
+        }
+      }
+      @keyframes tap-feedback {
+        0% { transform: scale(1); }
+        50% { transform: scale(0.96); }
+        100% { transform: scale(1); }
+      }
+      @keyframes ripple-warm {
+        0% { box-shadow: 0 0 0 0 rgba(212, 145, 93, 0.4); }
+        70% { box-shadow: 0 0 0 18px rgba(212, 145, 93, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(212, 145, 93, 0); }
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes blink-warning {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+    styles:
+      card:
+        - background: "rgba(45, 38, 32, 0.55)"
+        - backdrop-filter: "blur(20px) saturate(150%)"
+        - -webkit-backdrop-filter: "blur(20px) saturate(150%)"
+        - border: "1px solid rgba(207, 156, 107, 0.12)"
+        - border-radius: "18px"
+        - box-shadow: "0 8px 32px rgba(0, 0, 0, 0.15)"
+        - padding: "16px"
+        - transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+        - animation: "fade-in 0.4s ease-out"
+        - overflow: "hidden"
+        - position: "relative"
+      icon:
+        - width: "42px"
+        - height: "42px"
+        - color: "rgba(232, 222, 213, 0.85)"
+        - transition: "all 0.3s ease"
+      name:
+        - font-size: "0.95rem"
+        - font-weight: "500"
+        - color: "#E8DED5"
+        - margin-top: "8px"
+        - letter-spacing: "0.01em"
+      state:
+        - font-size: "0.85rem"
+        - color: "rgba(232, 222, 213, 0.7)"
+        - margin-top: "4px"
+      grid:
+        - grid-template-areas: "'i' 'n' 's'"
+        - grid-template-rows: "1fr min-content min-content"
+        - grid-template-columns: "1fr"
+
+  #=============================================================================
+  # BOUTON CUMULUS PRINCIPAL - Héro card avec état chauffe
+  #=============================================================================
+  glass_cumulus_hero:
+    template: glass_base
+    show_state: true
+    show_label: true
+    icon: mdi:water-boiler
+    tap_action:
+      action: navigate
+      navigation_path: "#cumulus-details"
+      haptic: medium
+    state:
+      - value: "on"
+        icon: mdi:water-boiler
+        label: "🔥 En chauffe"
+        styles:
+          card:
+            - background: "linear-gradient(135deg, rgba(212, 145, 93, 0.25) 0%, rgba(45, 38, 32, 0.55) 100%)"
+            - border-color: "rgba(212, 145, 93, 0.35)"
+          icon:
+            - color: "#D4915D"
+            - animation: "heating-flame 2s ease-in-out infinite"
+          label:
+            - color: "#E8B88A"
+            - font-weight: "600"
+      - value: "off"
+        icon: mdi:water-boiler-off
+        label: "En veille"
+        styles:
+          icon:
+            - color: "rgba(232, 222, 213, 0.5)"
+          label:
+            - color: "rgba(232, 222, 213, 0.6)"
+    styles:
+      card:
+        - height: "180px"
+        - padding: "20px"
+      icon:
+        - width: "56px"
+        - height: "56px"
+      name:
+        - font-size: "1.3rem"
+        - font-weight: "600"
+        - margin-top: "12px"
+      state:
+        - font-size: "2rem"
+        - font-weight: "700"
+        - color: "#E8B88A"
+        - margin-top: "4px"
+      label:
+        - font-size: "0.9rem"
+        - margin-top: "8px"
+      grid:
+        - grid-template-areas: "'i n' 's s' 'l l'"
+        - grid-template-columns: "auto 1fr"
+        - grid-template-rows: "auto auto auto"
+
+  #=============================================================================
+  # TEMPÉRATURE - Avec couleur dynamique selon valeur
+  #=============================================================================
+  glass_temperature:
+    template: glass_base
+    show_state: true
+    tap_action:
+      action: more-info
+      haptic: light
+    icon: |
+      [[[
+        const temp = parseFloat(entity.state);
+        if (isNaN(temp)) return 'mdi:thermometer-alert';
+        if (temp < 35) return 'mdi:thermometer-low';
+        if (temp < 50) return 'mdi:thermometer';
+        if (temp < 60) return 'mdi:thermometer-high';
+        return 'mdi:thermometer-alert';
+      ]]]
+    styles:
+      icon:
+        - color: |
+            [[[
+              const temp = parseFloat(entity.state);
+              if (isNaN(temp)) return '#C25D47';
+              if (temp < 35) return '#4A90D9';
+              if (temp < 45) return '#7B9EB8';
+              if (temp < 55) return '#8B9A6E';
+              if (temp < 62) return '#D4915D';
+              return '#C25D47';
+            ]]]
+      state:
+        - font-size: "1.6rem"
+        - font-weight: "700"
+        - color: |
+            [[[
+              const temp = parseFloat(entity.state);
+              if (isNaN(temp)) return '#C25D47';
+              if (temp < 35) return '#4A90D9';
+              if (temp < 45) return '#7B9EB8';
+              if (temp < 55) return '#8B9A6E';
+              if (temp < 62) return '#D4915D';
+              return '#C25D47';
+            ]]]
+      card:
+        - background: |
+            [[[
+              const temp = parseFloat(entity.state);
+              if (isNaN(temp)) return 'rgba(194, 93, 71, 0.15)';
+              if (temp < 35) return 'rgba(74, 144, 217, 0.12)';
+              if (temp < 45) return 'rgba(123, 158, 184, 0.12)';
+              if (temp < 55) return 'rgba(139, 154, 110, 0.12)';
+              if (temp < 62) return 'rgba(212, 145, 93, 0.15)';
+              return 'rgba(194, 93, 71, 0.15)';
+            ]]]
+    custom_fields:
+      unit:
+        card:
+          type: markdown
+          content: "°C"
+          card_mod:
+            style: |
+              ha-card {
+                background: transparent !important;
+                box-shadow: none !important;
+                border: none !important;
+                font-size: 0.9rem;
+                color: rgba(232, 222, 213, 0.6);
+              }
+
+  #=============================================================================
+  # KPI COMPACT - Pour statistiques et valeurs
+  #=============================================================================
+  glass_kpi:
+    template: glass_base
+    show_state: true
+    tap_action:
+      action: more-info
+    styles:
+      card:
+        - height: "90px"
+        - padding: "14px"
+      icon:
+        - width: "32px"
+        - height: "32px"
+        - color: "#CF9C6B"
+      name:
+        - font-size: "0.8rem"
+        - color: "rgba(232, 222, 213, 0.7)"
+        - margin-top: "6px"
+      state:
+        - font-size: "1.3rem"
+        - font-weight: "600"
+        - color: "#E8DED5"
+      grid:
+        - grid-template-areas: "'i s' 'n n'"
+        - grid-template-columns: "auto 1fr"
+        - grid-template-rows: "1fr auto"
+
+  #=============================================================================
+  # SWITCH / TOGGLE - Pour les input_boolean
+  #=============================================================================
+  glass_switch:
+    template: glass_base
+    show_state: false
+    tap_action:
+      action: toggle
+      haptic: medium
+    state:
+      - value: "on"
+        styles:
+          card:
+            - background: "linear-gradient(135deg, rgba(139, 154, 110, 0.2) 0%, rgba(45, 38, 32, 0.55) 100%)"
+            - border-color: "rgba(139, 154, 110, 0.3)"
+          icon:
+            - color: "#8B9A6E"
+            - animation: "pulse-glow 3s ease-in-out infinite"
+          name:
+            - color: "#E8DED5"
+      - value: "off"
+        styles:
+          icon:
+            - color: "rgba(232, 222, 213, 0.4)"
+          name:
+            - color: "rgba(232, 222, 213, 0.6)"
+    styles:
+      card:
+        - height: "100px"
+
+  #=============================================================================
+  # NAVIGATION - Pour liens vers sous-vues / pop-ups
+  #=============================================================================
+  glass_nav:
+    template: glass_base
+    show_state: false
+    tap_action:
+      action: navigate
+      haptic: light
+    styles:
+      card:
+        - background: "rgba(45, 38, 32, 0.4)"
+        - cursor: "pointer"
+        - height: "85px"
+      icon:
+        - color: "#CF9C6B"
+      name:
+        - color: "#E8DED5"
+
+  #=============================================================================
+  # ACTION BUTTON - Pour actions ponctuelles (forcer chauffe, etc.)
+  #=============================================================================
+  glass_action:
+    template: glass_base
+    show_state: false
+    tap_action:
+      action: call-service
+      haptic: heavy
+    styles:
+      card:
+        - background: "linear-gradient(135deg, rgba(212, 145, 93, 0.2) 0%, rgba(193, 127, 89, 0.15) 100%)"
+        - border-color: "rgba(212, 145, 93, 0.25)"
+        - cursor: "pointer"
+      icon:
+        - color: "#D4915D"
+      name:
+        - color: "#E8B88A"
+        - font-weight: "600"
+
+  #=============================================================================
+  # DANGER BUTTON - Pour actions critiques (reset, arrêt forcé)
+  #=============================================================================
+  glass_danger:
+    template: glass_base
+    show_state: false
+    confirmation:
+      text: "Êtes-vous sûr ?"
+    styles:
+      card:
+        - background: "linear-gradient(135deg, rgba(194, 93, 71, 0.15) 0%, rgba(45, 38, 32, 0.55) 100%)"
+        - border-color: "rgba(194, 93, 71, 0.25)"
+      icon:
+        - color: "#C25D47"
+      name:
+        - color: "#E8B88A"
+
+  #=============================================================================
+  # INFO CARD - Pour affichage d'informations textuelles
+  #=============================================================================
+  glass_info:
+    template: glass_base
+    show_icon: false
+    show_state: true
+    show_label: true
+    tap_action:
+      action: none
+    styles:
+      card:
+        - padding: "14px 18px"
+        - text-align: "left"
+      name:
+        - font-size: "0.85rem"
+        - color: "rgba(232, 222, 213, 0.6)"
+        - margin: "0"
+        - text-transform: "uppercase"
+        - letter-spacing: "0.05em"
+      state:
+        - font-size: "1.1rem"
+        - font-weight: "500"
+        - color: "#E8DED5"
+        - margin-top: "4px"
+      label:
+        - font-size: "0.8rem"
+        - color: "rgba(232, 222, 213, 0.5)"
+        - margin-top: "2px"
+      grid:
+        - grid-template-areas: "'n' 's' 'l'"
+        - grid-template-rows: "auto auto auto"
+
+  #=============================================================================
+  # STATUS BADGE - Petit indicateur d'état
+  #=============================================================================
+  glass_badge:
+    color_type: icon
+    show_name: false
+    show_state: false
+    tap_action:
+      action: more-info
+    styles:
+      card:
+        - background: "rgba(45, 38, 32, 0.6)"
+        - backdrop-filter: "blur(15px)"
+        - border: "1px solid rgba(207, 156, 107, 0.1)"
+        - border-radius: "50%"
+        - width: "48px"
+        - height: "48px"
+        - padding: "0"
+        - display: "flex"
+        - align-items: "center"
+        - justify-content: "center"
+      icon:
+        - width: "24px"
+        - height: "24px"
+    state:
+      - value: "on"
+        styles:
+          card:
+            - background: "rgba(139, 154, 110, 0.25)"
+            - border-color: "rgba(139, 154, 110, 0.3)"
+          icon:
+            - color: "#8B9A6E"
+      - value: "off"
+        styles:
+          icon:
+            - color: "rgba(232, 222, 213, 0.4)"
+
+  #=============================================================================
+  # SLIDER BUTTON - Pour input_number avec contrôle
+  #=============================================================================
+  glass_slider:
+    template: glass_base
+    show_state: true
+    tap_action:
+      action: more-info
+    hold_action:
+      action: more-info
+    styles:
+      card:
+        - height: "90px"
+      state:
+        - font-size: "1.4rem"
+        - font-weight: "600"
+        - color: "#E8B88A"
+      icon:
+        - color: "#CF9C6B"
+
+  #=============================================================================
+  # CONDITIONAL DISPLAY - Affichage conditionnel selon état
+  #=============================================================================
+  glass_conditional:
+    template: glass_base
+    show_state: true
+    show_label: true
+    state:
+      - value: "unavailable"
+        icon: mdi:alert-circle
+        label: "Indisponible"
+        styles:
+          card:
+            - background: "rgba(194, 93, 71, 0.15)"
+            - border-color: "rgba(194, 93, 71, 0.25)"
+          icon:
+            - color: "#C25D47"
+            - animation: "blink-warning 1.5s ease infinite"
+          label:
+            - color: "#C25D47"
+      - value: "unknown"
+        icon: mdi:help-circle
+        label: "Inconnu"
+        styles:
+          icon:
+            - color: "#DAA520"
+
+###############################################################################
+# FIN DES TEMPLATES
+###############################################################################

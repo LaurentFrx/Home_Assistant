@@ -18,6 +18,7 @@ homeassistant:
     git_sync: !include packages/git_sync.yaml
     solaire_economies: !include packages/solaire_economies.yaml
     salle_de_bain: !include packages/salle_de_bain_douche_isa_college.yaml
+    cumulus_v3_dashboard: !include packages/cumulus_v3_dashboard_sensors.yaml
   customize:
     climate.thermostat_sdb:
       friendly_name: ""
@@ -42,6 +43,9 @@ template: !include_dir_merge_list templates
 # === Dashboards Lovelace ===
 lovelace:
   dashboards: !include lovelace/dashboards.yaml
+
+# === Button Card Templates ===
+button_card_templates: !include button_card_templates.yaml
 
 # === Journalisation ===
 logger:

@@ -1,0 +1,336 @@
+###############################################################################
+# CUMULUS V3 - SENSORS POUR DASHBOARD
+###############################################################################
+# Description : Sensors calculés nécessaires au dashboard (puissance, énergie, KPIs)
+# Usage : Copier dans /config/packages/cumulus_v3_dashboard_sensors.yaml
+# Dépendances : Entités physiques existantes
+# MAJ : 2025-11-25
+###############################################################################
+
+###############################################################################
+# SENSORS TEMPLATE - CALCULS DÉRIVÉS
+###############################################################################
+template:
+  - sensor:
+      #=========================================================================
+      # PUISSANCE INSTANTANÉE (dérivée de l'état du switch)
+      #=========================================================================
+      - name: "Cumulus V3 Puissance"
+        unique_id: cumulus_v3_puissance_w
+        device_class: power
+        state_class: measurement
+        unit_of_measurement: "W"
+        icon: mdi:flash
+        state: >
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            3000
+          {% else %}
+            0
+          {% endif %}
+        availability: >
+          {{ states('switch.shellypro1_ece334ee1b64') not in ['unavailable', 'unknown'] }}
+      
+      #=========================================================================
+      # TEMPÉRATURE FORMATÉE (avec gestion erreurs)
+      #=========================================================================
+      - name: "Cumulus V3 Température"
+        unique_id: cumulus_v3_temperature_c
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-water
+        state: >
+          {% set temp = states('sensor.thermo_cumulus_temperature') %}
+          {% if temp in ['unavailable', 'unknown', 'none'] %}
+            {{ this.state | default(20) }}
+          {% else %}
+            {{ temp | float(20) | round(1) }}
+          {% endif %}
+        availability: >
+          {{ states('sensor.thermo_cumulus_temperature') not in ['unavailable', 'unknown'] }}
+
+      #=========================================================================
+      # SURPLUS PV DISPONIBLE
+      #=========================================================================
+      - name: "Cumulus V3 Surplus PV"
+        unique_id: cumulus_v3_surplus_pv_w
+        device_class: power
+        state_class: measurement
+        unit_of_measurement: "W"
+        icon: mdi:solar-power
+        state: >
+          {% set pv = states('sensor.pv_total_entree_sb_aps_w') | float(0) %}
+          {% set import_grid = states('sensor.smart_meter_grid_import') | float(0) %}
+          {% set surplus = pv - import_grid %}
+          {{ [surplus, 0] | max | round(0) }}
+
+      #=========================================================================
+      # ÉTAT TEXTUEL DU CUMULUS (pour affichage humain)
+      #=========================================================================
+      - name: "Cumulus V3 État"
+        unique_id: cumulus_v3_etat_textuel
+        icon: mdi:water-boiler
+        state: >
+          {% set switch_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+          {% set temp = states('sensor.thermo_cumulus_temperature') | float(0) %}
+          {% set vacances = is_state('input_boolean.cumulus_v3_mode_vacances', 'on') if states('input_boolean.cumulus_v3_mode_vacances') else false %}
+          
+          {% if vacances %}
+            Mode vacances
+          {% elif switch_on %}
+            En chauffe 🔥
+          {% elif temp >= 55 %}
+            Prêt ✓
+          {% elif temp >= 45 %}
+            Tiède
+          {% elif temp >= 35 %}
+            Frais
+          {% else %}
+            Froid ⚠️
+          {% endif %}
+
+      #=========================================================================
+      # DOUCHES DISPONIBLES (estimation)
+      #=========================================================================
+      - name: "Cumulus V3 Douches Disponibles"
+        unique_id: cumulus_v3_douches_disponibles
+        icon: mdi:shower-head
+        unit_of_measurement: "douches"
+        state: >
+          {% set temp = states('sensor.thermo_cumulus_temperature') | float(20) %}
+          {% set temp_min = 38 %}
+          {% set volume = 300 %}
+          {% set litres_douche = 40 %}
+          {% set temp_douche = 38 %}
+          {% set temp_froide = 15 %}
+          
+          {% if temp <= temp_min %}
+            0
+          {% else %}
+            {% set energie_dispo = volume * (temp - temp_min) %}
+            {% set energie_douche = litres_douche * (temp_douche - temp_froide) %}
+            {{ (energie_dispo / energie_douche) | int }}
+          {% endif %}
+
+      #=========================================================================
+      # MESSAGE POUR DASHBOARD FAMILLE
+      #=========================================================================
+      - name: "Cumulus V3 Message Famille"
+        unique_id: cumulus_v3_message_famille
+        icon: mdi:message-text
+        state: >
+          {% set douches = states('sensor.cumulus_v3_douches_disponibles') | int(0) %}
+          {% set temp = states('sensor.thermo_cumulus_temperature') | float(20) %}
+          {% set en_chauffe = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+          {% set vacances = is_state('input_boolean.cumulus_v3_mode_vacances', 'on') if states('input_boolean.cumulus_v3_mode_vacances') else false %}
+          
+          {% if vacances %}
+            Mode vacances activé 🏖️
+          {% elif en_chauffe %}
+            Chauffe en cours... 🔥
+          {% elif douches >= 4 %}
+            Parfait pour toute la famille ✓
+          {% elif douches >= 2 %}
+            OK pour {{ douches }} douches
+          {% elif douches >= 1 %}
+            Juste une douche possible ⚠️
+          {% else %}
+            Eau froide - lancer une chauffe ? ❄️
+          {% endif %}
+
+      #=========================================================================
+      # DURÉE CHAUFFE ACTUELLE (en minutes)
+      #=========================================================================
+      - name: "Cumulus V3 Durée Chauffe"
+        unique_id: cumulus_v3_duree_chauffe_min
+        icon: mdi:timer
+        unit_of_measurement: "min"
+        state: >
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            {% set debut = states.switch.shellypro1_ece334ee1b64.last_changed %}
+            {% set duree = (now() - debut).total_seconds() / 60 %}
+            {{ duree | round(0) }}
+          {% else %}
+            0
+          {% endif %}
+
+      #=========================================================================
+      # PROCHAINE CHAUFFE PRÉVUE (estimation textuelle)
+      #=========================================================================
+      - name: "Cumulus V3 Prochaine Chauffe"
+        unique_id: cumulus_v3_prochaine_chauffe
+        icon: mdi:calendar-clock
+        state: >
+          {% set temp = states('sensor.thermo_cumulus_temperature') | float(50) %}
+          {% set solcast_demain = states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) %}
+          {% set heure = now().hour %}
+          
+          {% if temp >= 55 %}
+            Pas nécessaire
+          {% elif solcast_demain > 10 and heure < 20 %}
+            Demain avec le soleil ☀️
+          {% elif solcast_demain > 5 and heure < 20 %}
+            Demain si soleil suffisant
+          {% else %}
+            Cette nuit en HC 🌙
+          {% endif %}
+
+      #=========================================================================
+      # SOC SOLARBANK FORMATÉ
+      #=========================================================================
+      - name: "Cumulus V3 SOC Batterie"
+        unique_id: cumulus_v3_soc_batterie_pct
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        icon: >
+          {% set soc = states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) %}
+          {% if soc >= 90 %}
+            mdi:battery-high
+          {% elif soc >= 50 %}
+            mdi:battery-medium
+          {% elif soc >= 20 %}
+            mdi:battery-low
+          {% else %}
+            mdi:battery-alert
+          {% endif %}
+        state: >
+          {{ states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) | round(0) }}
+
+      #=========================================================================
+      # APPAREIL PRIORITAIRE ACTIF
+      #=========================================================================
+      - name: "Cumulus V3 Appareil Prioritaire"
+        unique_id: cumulus_v3_appareil_prioritaire
+        icon: mdi:washing-machine
+        state: >
+          {% set lv = states('sensor.lave_vaisselle_power') | float(0) %}
+          {% set ll = states('sensor.lave_linge_power') | float(0) %}
+          
+          {% if lv > 50 and ll > 50 %}
+            Lave-linge + Lave-vaisselle
+          {% elif lv > 50 %}
+            Lave-vaisselle
+          {% elif ll > 50 %}
+            Lave-linge
+          {% else %}
+            Aucun
+          {% endif %}
+
+  #=============================================================================
+  # BINARY SENSORS - ÉTATS BOOLÉENS
+  #=============================================================================
+  - binary_sensor:
+      #=========================================================================
+      # CUMULUS EN CHAUFFE
+      #=========================================================================
+      - name: "Cumulus V3 En Chauffe"
+        unique_id: cumulus_v3_en_chauffe
+        device_class: heat
+        icon: mdi:fire
+        state: >
+          {{ is_state('switch.shellypro1_ece334ee1b64', 'on') }}
+
+      #=========================================================================
+      # TEMPÉRATURE OK (confort)
+      #=========================================================================
+      - name: "Cumulus V3 Température OK"
+        unique_id: cumulus_v3_temperature_ok
+        device_class: heat
+        icon: mdi:thermometer-check
+        state: >
+          {{ states('sensor.thermo_cumulus_temperature') | float(0) >= 45 }}
+
+      #=========================================================================
+      # SURPLUS PV SUFFISANT
+      #=========================================================================
+      - name: "Cumulus V3 Surplus PV OK"
+        unique_id: cumulus_v3_surplus_pv_ok
+        icon: mdi:solar-power
+        state: >
+          {% set surplus = states('sensor.cumulus_v3_surplus_pv') | float(0) %}
+          {% set seuil = 100 %}
+          {{ surplus >= seuil }}
+
+      #=========================================================================
+      # APPAREIL PRIORITAIRE EN COURS
+      #=========================================================================
+      - name: "Cumulus V3 Appareil Prioritaire Actif"
+        unique_id: cumulus_v3_appareil_prioritaire_actif
+        icon: mdi:washing-machine-alert
+        state: >
+          {% set lv = states('sensor.lave_vaisselle_power') | float(0) %}
+          {% set ll = states('sensor.lave_linge_power') | float(0) %}
+          {{ lv > 50 or ll > 50 }}
+
+###############################################################################
+# UTILITY METER - ÉNERGIE JOURNALIÈRE
+###############################################################################
+utility_meter:
+  cumulus_v3_energie_journaliere:
+    source: sensor.cumulus_v3_energie_totale
+    name: "Cumulus V3 Énergie Journalière"
+    cycle: daily
+    
+  cumulus_v3_energie_hebdomadaire:
+    source: sensor.cumulus_v3_energie_totale
+    name: "Cumulus V3 Énergie Hebdomadaire"
+    cycle: weekly
+
+  cumulus_v3_energie_mensuelle:
+    source: sensor.cumulus_v3_energie_totale
+    name: "Cumulus V3 Énergie Mensuelle"
+    cycle: monthly
+
+###############################################################################
+# INTEGRATION - ÉNERGIE TOTALE (Riemann sum)
+###############################################################################
+sensor:
+  - platform: integration
+    source: sensor.cumulus_v3_puissance_w
+    name: "Cumulus V3 Énergie Totale"
+    unique_id: cumulus_v3_energie_totale_kwh
+    unit_prefix: k
+    unit_time: h
+    method: left
+    round: 3
+
+###############################################################################
+# INPUT BOOLEAN - MODES DASHBOARD
+###############################################################################
+input_boolean:
+  cumulus_v3_mode_vacances:
+    name: "Cumulus V3 - Mode vacances"
+    icon: mdi:beach
+
+  cumulus_v3_mode_boost:
+    name: "Cumulus V3 - Mode boost"
+    icon: mdi:rocket-launch
+
+###############################################################################
+# INPUT NUMBER - PARAMÈTRES DASHBOARD
+###############################################################################
+input_number:
+  cumulus_v3_temp_cible:
+    name: "Cumulus V3 - Température cible"
+    min: 45
+    max: 65
+    step: 1
+    initial: 55
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    mode: slider
+
+  cumulus_v3_seuil_pv:
+    name: "Cumulus V3 - Seuil PV minimum"
+    min: 0
+    max: 500
+    step: 25
+    initial: 100
+    unit_of_measurement: "W"
+    icon: mdi:solar-power
+    mode: slider
+
+###############################################################################
+# FIN DU PACKAGE SENSORS
+###############################################################################

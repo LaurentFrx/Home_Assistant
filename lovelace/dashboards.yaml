@@ -33,3 +33,11 @@ lovelace-test-simple:
   icon: mdi:alert-circle
   show_in_sidebar: true
   filename: lovelace/dashboard_test_simple.yaml
+
+# Dashboard Cumulus V3 - Application Eau Chaude Premium
+lovelace-eau-chaude:
+  mode: yaml
+  title: Eau Chaude
+  icon: mdi:water-boiler
+  show_in_sidebar: true
+  filename: lovelace/dashboard_cumulus_v3.yaml

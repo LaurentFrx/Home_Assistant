@@ -1,0 +1,152 @@
+###############################################################################
+# CUMULUS V3 - DASHBOARD SIMPLIFIÉ
+###############################################################################
+title: Eau Chaude
+views:
+  - title: Accueil
+    path: accueil
+    icon: mdi:water-boiler
+    cards:
+      #=========================================================================
+      # CARTE HÉRO - TEMPÉRATURE
+      #=========================================================================
+      - type: custom:button-card
+        entity: switch.shellypro1_ece334ee1b64
+        name: Eau Chaude
+        icon: mdi:water-boiler
+        show_state: true
+        show_name: true
+        styles:
+          card:
+            - background: "rgba(45, 38, 32, 0.55)"
+            - border-radius: "20px"
+            - padding: "20px"
+            - height: "180px"
+          icon:
+            - width: "50px"
+            - color: "var(--primary-color)"
+          name:
+            - font-size: "1.4rem"
+            - font-weight: "600"
+          state:
+            - font-size: "1rem"
+        state:
+          - value: "on"
+            icon: mdi:water-boiler
+            styles:
+              icon:
+                - color: "#D4915D"
+                - animation: "pulse 2s infinite"
+          - value: "off"
+            icon: mdi:water-boiler-off
+            styles:
+              icon:
+                - color: "gray"
+
+      #=========================================================================
+      # TEMPÉRATURE ACTUELLE
+      #=========================================================================
+      - type: custom:button-card
+        entity: sensor.thermo_cumulus_temperature
+        name: Température
+        icon: mdi:thermometer
+        show_state: true
+        styles:
+          card:
+            - background: "rgba(45, 38, 32, 0.55)"
+            - border-radius: "20px"
+            - padding: "16px"
+          state:
+            - font-size: "2rem"
+            - font-weight: "700"
+            - color: "#E8B88A"
+
+      #=========================================================================
+      # KPIs EN LIGNE
+      #=========================================================================
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            entity: sensor.cumulus_v3_douches_disponibles
+            name: Douches
+            icon: mdi:shower-head
+            show_state: true
+            styles:
+              card:
+                - background: "rgba(45, 38, 32, 0.55)"
+                - border-radius: "16px"
+                - padding: "12px"
+              icon:
+                - color: "#CF9C6B"
+              state:
+                - font-size: "1.5rem"
+                - font-weight: "600"
+
+          - type: custom:button-card
+            entity: sensor.system_sanguinet_etat_de_charge_du_sb
+            name: Batterie
+            icon: mdi:battery
+            show_state: true
+            styles:
+              card:
+                - background: "rgba(45, 38, 32, 0.55)"
+                - border-radius: "16px"
+                - padding: "12px"
+              icon:
+                - color: "#8B9A6E"
+              state:
+                - font-size: "1.5rem"
+                - font-weight: "600"
+
+      #=========================================================================
+      # GRAPHIQUE TEMPÉRATURE 24H
+      #=========================================================================
+      - type: custom:apexcharts-card
+        graph_span: 24h
+        header:
+          show: true
+          title: Température 24h
+          show_states: true
+          colorize_states: true
+        series:
+          - entity: sensor.thermo_cumulus_temperature
+            name: Température
+            type: area
+            color: "#D4915D"
+            stroke_width: 2
+
+      #=========================================================================
+      # CONTRÔLES
+      #=========================================================================
+      - type: horizontal-stack
+        cards:
+          - type: button
+            entity: switch.shellypro1_ece334ee1b64
+            name: Forcer chauffe
+            icon: mdi:fire
+            tap_action:
+              action: turn-on
+            show_state: false
+
+          - type: button
+            entity: input_boolean.cumulus_v3_mode_vacances
+            name: Vacances
+            icon: mdi:beach
+            tap_action:
+              action: toggle
+
+      #=========================================================================
+      # INFOS SOLAIRE
+      #=========================================================================
+      - type: entities
+        title: Énergie Solaire
+        entities:
+          - entity: sensor.pv_total_entree_sb_aps_w
+            name: Production PV
+            icon: mdi:solar-power
+          - entity: sensor.cumulus_v3_surplus_pv
+            name: Surplus disponible
+            icon: mdi:export
+          - entity: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+            name: Prévu aujourd'hui
+            icon: mdi:weather-sunny
