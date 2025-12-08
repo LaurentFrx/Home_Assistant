@@ -248,7 +248,7 @@ template:
         unique_id: cumulus_v3_surplus_pv_ok
         icon: mdi:solar-power
         state: >
-          {% set surplus = states('sensor.cumulus_v3_surplus_pv') | float(0) %}
+          {% set surplus = states('sensor.cumulus_v3_surplus_pv_w') | float(0) %}
           {% set seuil = 100 %}
           {{ surplus >= seuil }}
 
