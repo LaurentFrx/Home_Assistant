@@ -20,6 +20,8 @@ homeassistant:
     salle_de_bain: !include packages/salle_de_bain_douche_isa_college.yaml
     cumulus_v3_dashboard: !include packages/cumulus_v3_dashboard_sensors.yaml
     portail: !include packages/portail.yaml
+    climate_salon_corrected: !include packages/climate_salon_corrected.yaml  # ← AJOUTER CETTE LIGNE
+
   customize:
     climate.thermostat_sdb:
       friendly_name: ""

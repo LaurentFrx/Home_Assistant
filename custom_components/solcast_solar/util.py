@@ -2,23 +2,55 @@
 
 # pylint: disable=consider-using-enumerate
 
-from __future__ import annotations
-
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime as dt
 from enum import Enum
 import json
-import logging
 import math
+import re
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .const import (
+    DOMAIN,
+    ESTIMATE,
+    ESTIMATE10,
+    ESTIMATE90,
+    PRIOR_CRASH_EXCEPTION,
+    PRIOR_CRASH_PLACEHOLDERS,
+    PRIOR_CRASH_TRANSLATION_KEY,
+)
 
 if TYPE_CHECKING:
     from . import coordinator
 
-_LOGGER = logging.getLogger(__name__)
+# Status code translation, HTTP and more.
+# A HTTP 418 error is included here for fun. This was introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
+# A HTTP 420 error is a Demolition Man reference previously used by Twitter to indicate rate limiting, seen rarely (and oddly) by this integration.
+# 400-599 = HTTP
+# 900-999 = Integration-specific situation to be potentially handled with retries.
+STATUS_TRANSLATE: dict[int, str] = {
+    200: "Success",
+    400: "Bad request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not found",
+    418: "I'm a teapot",
+    420: "Enhance your calm",
+    429: "Try again later",
+    500: "Internal web server error",
+    501: "Not implemented",
+    502: "Bad gateway",
+    503: "Service unavailable",
+    504: "Gateway timeout",
+    996: "Connection refused",
+    997: "Connect call failed",
+    999: "Prior crash",
+}
 
 
 @dataclass
@@ -35,8 +67,12 @@ class SolcastApiStatus(Enum):
     """The state of the Solcast API."""
 
     OK = 0
-    DATA_INCOMPATIBLE = 1
-    ERROR = 2
+    DATA_CORRUPT = 1
+    DATA_INCOMPATIBLE = 2
+    BUILD_FAILED_FORECASTS = 3
+    BUILD_FAILED_ACTUALS = 4
+    ERROR = 5
+    UNKNOWN = 99
 
 
 class DataCallStatus(Enum):
@@ -65,13 +101,6 @@ class UsageStatus(Enum):
     OK = 0
     ERROR = 1
     UNKNOWN = 99
-
-
-class Api(Enum):
-    """The APIs at Solcast."""
-
-    HOBBYIST = 0
-    ADVANCED = 1
 
 
 class AutoUpdate(int, Enum):
@@ -136,6 +165,81 @@ class JSONDecoder(json.JSONDecoder):
             except:  # noqa: E722
                 result[key] = value
         return result
+
+
+def http_status_translate(status: int) -> str | Any:
+    """Translate HTTP status code to a human-readable translation."""
+
+    return (f"{status}/{STATUS_TRANSLATE[status]}") if STATUS_TRANSLATE.get(status) else status
+
+
+def api_key_last_six(api_key: str) -> str:
+    """Return last six characters of API key."""
+
+    return api_key[-6:]
+
+
+def redact_api_key(api_key: str) -> str:
+    """Obfuscate API key."""
+
+    return "*" * 6 + api_key_last_six(api_key)
+
+
+def redact_msg_api_key(msg: str, api_key: str) -> str:
+    """Obfuscate API key in messages."""
+
+    return (
+        msg.replace("key=" + api_key, "key=" + redact_api_key(api_key))
+        .replace("key': '" + api_key, "key': '" + redact_api_key(api_key))
+        .replace("sites-" + api_key, "sites-" + redact_api_key(api_key))
+        .replace("usage-" + api_key, "usage-" + redact_api_key(api_key))
+    )
+
+
+def redact_lat_lon_simple(s: str) -> str:
+    """Redact latitude and longitude decimal places in a string."""
+
+    return re.sub(r"\.[0-9]+", ".******", s)
+
+
+def redact_lat_lon(s: str) -> str:
+    """Redact latitude and longitude in a string."""
+
+    return re.sub(r"itude\': [0-9\-\.]+", "itude': **.******", s)
+
+
+def forecast_entry_update(forecasts: dict[dt, Any], period_start: dt, pv: float, pv10: float | None = None, pv90: float | None = None):
+    """Update an individual forecast entry."""
+
+    extant = forecasts.get(period_start)
+    if extant:  # Update existing.
+        forecasts[period_start][ESTIMATE] = pv
+        if pv10 is not None:
+            forecasts[period_start][ESTIMATE10] = pv10
+        if pv90 is not None:
+            forecasts[period_start][ESTIMATE90] = pv90
+    elif pv10 is not None:
+        forecasts[period_start] = {
+            "period_start": period_start,
+            "pv_estimate": pv,
+            "pv_estimate10": pv10,
+            "pv_estimate90": pv90,
+        }
+    else:
+        forecasts[period_start] = {
+            "period_start": period_start,
+            "pv_estimate": pv,
+        }
+
+
+def raise_and_record(
+    hass: HomeAssistant, exception: type[IntegrationError], translation_key: str, translation_placeholders: dict | None = None
+) -> None:
+    """Raise and record an exception during initialisation."""
+    hass.data[DOMAIN][PRIOR_CRASH_EXCEPTION] = exception
+    hass.data[DOMAIN][PRIOR_CRASH_TRANSLATION_KEY] = translation_key
+    hass.data[DOMAIN][PRIOR_CRASH_PLACEHOLDERS] = translation_placeholders
+    raise exception(translation_domain=DOMAIN, translation_key=translation_key, translation_placeholders=translation_placeholders)
 
 
 def percentile(data: list[Any], _percentile: float) -> float | int:
