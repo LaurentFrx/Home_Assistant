@@ -1,0 +1,115 @@
+Tech Glassmorphism:
+  ###########################################################################
+  # LIEN AVEC CARD-MOD
+  ###########################################################################
+  card-mod-theme: Tech Glassmorphism
+
+  ###########################################################################
+  # FOND D'ÉCRAN (wallpaper global Lovelace)
+  ###########################################################################
+  # Ajuste l'URL si besoin (résolution différente, autre image, etc.)
+  lovelace-background: >
+    center / cover no-repeat fixed
+    url("/api/image/serve/38f0d3271d7875812f4e2392db808af2/0")
+
+  ###########################################################################
+  # PALETTE DE COULEURS DE BASE (tu peux adapter à ton goût)
+  ###########################################################################
+  primary-color: "#D4915D"
+  accent-color: "#CF9C6B"
+
+  background-color: "#000000"
+  primary-background-color: "#000000"
+  secondary-background-color: "#000000"
+  card-background-color: "rgba(20,20,20,0.25)"
+
+  text-color: "#FFFFFF"
+  primary-text-color: "#FFFFFF"
+  secondary-text-color: "rgba(255,255,255,0.7)"
+
+  # Liens / états
+  disabled-text-color: "rgba(255,255,255,0.4)"
+  divider-color: "rgba(255,255,255,0.12)"
+  app-header-background-color: "rgba(0,0,0,0.6)"
+  app-header-text-color: "#FFFFFF"
+
+  ###########################################################################
+  # STYLE GLASSMORPHISME GÉNÉRIQUE POUR TOUTES LES CARTES
+  # Utilisation : dans une carte, ajouter
+  #   card_mod:
+  #     class: glass
+  #
+  # Fonctionne pour : entities, button-card, apexcharts, markdown, history-graph, etc.
+  ###########################################################################
+  card-mod-card: |
+    /* Style commun à toutes les cartes qui portent la classe "glass" */
+    ha-card.glass {
+      position: relative;
+      overflow: visible;
+      border-radius: 30px;
+      background: linear-gradient(
+        172deg,
+        rgba(140, 140, 140, 0.7) 0%,
+        rgba(0, 0, 0, 0) 60%
+      );
+      box-shadow: 2px 4px 9px rgba(0,0,0,0.8);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(12px);
+      border: none;
+    }
+
+    ha-card.glass::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      padding: 1px;
+      background: linear-gradient(
+        135deg,
+        rgba(170,170,170,0.7) 10%,
+        rgba(0,0,0,0) 50%
+      );
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; /* Chrome / WebKit */
+      mask-composite: exclude;     /* Firefox */
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Couleurs de texte par défaut à l'intérieur des cartes "glass" */
+    ha-card.glass,
+    ha-card.glass .card-header,
+    ha-card.glass .info,
+    ha-card.glass h1,
+    ha-card.glass h2,
+    ha-card.glass h3,
+    ha-card.glass h4,
+    ha-card.glass p,
+    ha-card.glass span {
+      color: rgba(255,255,255,0.9);
+    }
+
+    /* Markdown dans une carte glass */
+    ha-card.glass ha-markdown {
+      color: rgba(255,255,255,0.9) !important;
+    }
+
+    ha-card.glass ha-markdown h2,
+    ha-card.glass ha-markdown h3 {
+      color: #ffffff !important;
+    }
+
+  ###########################################################################
+  # (OPTIONNEL) LÉGÈRES TOUCHES SUR LA VUE COMPLÈTE
+  # Si tu veux renforcer le blur de fond, tu peux activer card-mod-root ci-dessous.
+  ###########################################################################
+  # card-mod-root: |
+  #   .background {
+  #     backdrop-filter: blur(2px);
+  #     -webkit-backdrop-filter: blur(2px);
+  #   }
