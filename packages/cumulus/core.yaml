@@ -1,2 +1,188 @@
-# Insérer ici le contenu de core.yaml
-# (Copié depuis le fichier créé précédemment)
+###############################################################################
+# CUMULUS INTELLIGENT - MODULE CORE
+# Helpers (inputs, timers, counters) utilisés par la pile cumulus-3
+###############################################################################
+
+input_boolean:
+  cumulus_mode_vacances:
+    name: "Cumulus - Mode vacances"
+    initial: false
+    icon: mdi:beach
+
+  cumulus_verrou_deadband:
+    name: "Cumulus - Verrou deadband"
+    initial: false
+    icon: mdi:lock-clock
+
+  cumulus_verrou_chauffe_quotidienne:
+    name: "Cumulus - Verrou chauffe quotidienne"
+    initial: false
+    icon: mdi:lock-check
+
+  cumulus_notifications_actives:
+    name: "Cumulus - Notifications actives"
+    initial: true
+    icon: mdi:bell
+
+  cumulus_force_manuel:
+    name: "Cumulus - Force manuel"
+    initial: false
+    icon: mdi:hand-pointing-up
+
+input_number:
+  cumulus_gradient_refroidissement:
+    name: "Cumulus - Gradient refroidissement"
+    min: 0.1
+    max: 2.0
+    step: 0.1
+    initial: 0.8
+    unit_of_measurement: "°C/h"
+    icon: mdi:trending-down
+
+  cumulus_solarbank_max_w:
+    name: "Cumulus - Puissance max Solarbank"
+    min: 0
+    max: 2000
+    step: 100
+    initial: 1200
+    unit_of_measurement: "W"
+    icon: mdi:battery-charging
+
+  cumulus_talon_maison_w:
+    name: "Cumulus - Talon maison"
+    min: 0
+    max: 1000
+    step: 50
+    initial: 400
+    unit_of_measurement: "W"
+    icon: mdi:home-lightning-bolt
+
+  cumulus_import_max_w:
+    name: "Cumulus - Import max réseau"
+    min: 0
+    max: 2000
+    step: 50
+    initial: 500
+    unit_of_measurement: "W"
+    icon: mdi:transmission-tower-import
+
+  cumulus_seuil_pv_statique_w:
+    name: "Cumulus - Seuil PV statique"
+    min: 0
+    max: 500
+    step: 10
+    initial: 100
+    unit_of_measurement: "W"
+    icon: mdi:solar-power
+
+  cumulus_soc_min:
+    name: "Cumulus - SOC minimum"
+    min: 5
+    max: 50
+    step: 5
+    initial: 10
+    unit_of_measurement: "%"
+    icon: mdi:battery-low
+
+  cumulus_temperature_cible_pv:
+    name: "Cumulus - Température cible PV"
+    min: 45
+    max: 65
+    step: 1
+    initial: 58
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-high
+
+  cumulus_temperature_cible_hc:
+    name: "Cumulus - Température cible HC"
+    min: 40
+    max: 60
+    step: 1
+    initial: 52
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-low
+
+  cumulus_espacement_minimal_heures:
+    name: "Cumulus - Espacement minimal chauffes"
+    min: 1
+    max: 72
+    step: 1
+    initial: 24
+    unit_of_measurement: "h"
+    icon: mdi:hours-24
+
+  cumulus_delai_on_secondes:
+    name: "Cumulus - Délai démarrage"
+    min: 5
+    max: 300
+    step: 5
+    initial: 30
+    unit_of_measurement: "s"
+    icon: mdi:timer-play
+
+  cumulus_delai_off_secondes:
+    name: "Cumulus - Délai arrêt"
+    min: 5
+    max: 300
+    step: 5
+    initial: 60
+    unit_of_measurement: "s"
+    icon: mdi:timer-stop
+
+input_datetime:
+  cumulus_heure_debut_pv:
+    name: "Cumulus - Début fenêtre PV"
+    has_date: false
+    has_time: true
+    initial: "09:00:00"
+    icon: mdi:weather-sunset-up
+
+  cumulus_heure_fin_pv:
+    name: "Cumulus - Fin fenêtre PV"
+    has_date: false
+    has_time: true
+    initial: "17:00:00"
+    icon: mdi:weather-sunset-down
+
+input_text:
+  cumulus_raison_arret:
+    name: "Cumulus - Raison arrêt"
+    initial: "Initialisation"
+    max: 255
+    icon: mdi:text-box
+
+  cumulus_raison_deadband:
+    name: "Cumulus - Raison deadband"
+    initial: "Aucun"
+    max: 255
+    icon: mdi:text-box-outline
+
+  cumulus_historique_chauffes:
+    name: "Cumulus - Historique chauffes"
+    initial: "[]"
+    max: 255
+    icon: mdi:history
+
+timer:
+  cumulus_timer_chauffe:
+    name: "Cumulus - Timer chauffe"
+    duration: "02:30:00"
+    icon: mdi:timer
+
+  cumulus_timer_deadband:
+    name: "Cumulus - Timer deadband"
+    duration: "00:05:00"
+    icon: mdi:timer-sand
+
+counter:
+  cumulus_chauffes_jour:
+    name: "Cumulus - Chauffes du jour"
+    initial: 0
+    step: 1
+    icon: mdi:counter
+
+  cumulus_chauffes_mois:
+    name: "Cumulus - Chauffes du mois"
+    initial: 0
+    step: 1
+    icon: mdi:calendar-month

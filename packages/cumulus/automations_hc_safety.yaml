@@ -455,8 +455,58 @@ automation:
           message: "Retour de vacances - Chauffe forcée"
 
 # ┌─────────────────────────────────────────────────────────────────────────┐
-# │ SCRIPTS UTILITAIRES                                                     │
-# └─────────────────────────────────────────────────────────────────────────┘
+# ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+# ³ ALERTE BESOIN URGENT                                                     ³
+# ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+  - id: cumulus_alerte_besoin_urgent_v3
+    alias: "Cumulus — Alerte besoin urgent"
+    description: "Notification chauffe urgente : temperature basse ou delai depuis derniere chauffe depasse (pile V3)"
+    mode: single
+
+    trigger:
+      - platform: numeric_state
+        id: temp_basse
+        entity_id: sensor.cumulus_temperature_estimee
+        below: 35
+        for:
+          hours: 1
+
+      - platform: numeric_state
+        id: delai_depasse
+        entity_id: sensor.cumulus_heures_depuis_derniere_chauffe
+        above: 48
+
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        state: 'off'
+
+    action:
+      - variables:
+          derniere_chauffe: "{{ states('sensor.cumulus_derniere_chauffe') }}"
+          temp_estimee: "{{ states('sensor.cumulus_temperature_estimee') }}"
+          temp_physique: "{{ states('sensor.thermo_cumulus_temperature') }}"
+          heures_depuis: "{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) | round(1) }}"
+          raison: >
+            {% if trigger.id == 'temp_basse' %}
+              Temperature estimee trop basse depuis au moins 1 heure.
+            {% elif trigger.id == 'delai_depasse' %}
+              Trop longtemps sans chauffe (delai depuis la derniere chauffe depasse).
+            {% else %}
+              Besoin de chauffe urgent detecte.
+            {% endif %}
+
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Chauffe urgente"
+          message: >
+            {{ raison }}
+            Derniere chauffe : {{ derniere_chauffe }}
+            Depuis la derniere chauffe : {{ heures_depuis }} h
+            Temperature estimee : {{ temp_estimee }} °C
+            Temperature sonde : {{ temp_physique }} °C
+          notification_id: cumulus_alerte_urgent
+
 script:
   # Test complet du système
   cumulus_test_systeme:

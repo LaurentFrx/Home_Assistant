@@ -718,38 +718,6 @@
       message: Verrou désactivé par forçage manuel
       entity_id: input_boolean.cumulus_override
 - id: cumulus_alerte_besoin_urgent
-  alias: Cumulus — Alerte besoin urgent
-  mode: single
-  trigger:
-  - platform: state
-    entity_id: binary_sensor.cumulus_besoin_chauffe_urgente
-    to: 'on'
-    for:
-      hours: 1
-  condition:
-  - condition: state
-    entity_id: input_boolean.cumulus_mode_vacances
-    state: 'off'
-  action:
-  - variables:
-      derniere_chauffe: "\n\n{% set ts = state_attr('input_datetime.cumulus_derniere_chauffe_complete',\
-        \ 'timestamp') %}\n\n\n{% if ts is not none and ts > 0 %}\n\n\n  {{ ts | timestamp_custom('%d/%m\
-        \ %H:%M') }}\n\n\n{% else %}\n\n\n  Jamais\n\n\n\n{% endif %}"
-  - service: persistent_notification.create
-    data:
-      title: Cumulus - Chauffe Urgente
-      message: '
-        Délai max {{ states(''input_number.cumulus_espacement_max_h'') }}h dépassé.
-
-        Dernière chauffe : {{ derniere_chauffe }}
-
-        Température : {{ states(''sensor.cumulus_temperature_physique_c'') }}°C
-
-        '
-      notification_id: cumulus_alerte_urgent
-  description: 'Notification proactive quand eau chaude insuffisante. Permet intervention
-    avant rupture service. Valeur: Évite inconfort (douche froide) + alerte anticipée.
-    KPI: Délai moyen alerte avant T°min critique.'
 - id: cumulus_log_refus_demarrage
   alias: Cumulus — Log refus démarrage
   description: Notifie quand PV suffisant mais cumulus ne démarre pas
