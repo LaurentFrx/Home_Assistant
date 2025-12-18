@@ -1,0 +1,8 @@
+hello_world:
+  module: hello
+  class: HelloWorld
+
+cumulus_5_couches:
+  module: cumulus_5_couches
+  class: Cumulus5Couches
+
