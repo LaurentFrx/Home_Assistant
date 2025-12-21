@@ -434,6 +434,24 @@ cards:
             red
           {% endif %}
 
+  - type: entities
+    title: "⚡ Conditions PV / HC & verrous"
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: binary_sensor.cumulus_incoherence
+        name: Cohérence
+      - entity: binary_sensor.cumulus_chauffe_reelle
+        name: Chauffe réelle
+      - entity: binary_sensor.cumulus_conditions_pv_ok
+        name: Conditions PV OK
+      - entity: binary_sensor.cumulus_conditions_hc_ok
+        name: Conditions HC OK
+      - entity: input_boolean.cumulus_verrou_deadband
+        name: Verrou deadband
+      - entity: input_boolean.cumulus_verrou_chauffe_quotidienne
+        name: Verrou chauffe quotidienne
+
   # ┌─────────────────────────────────────────────────────────────────────────┐
   # │ SECTION 4 : CONFIGURATION & RÉGLAGES                                    │
   # └─────────────────────────────────────────────────────────────────────────┘

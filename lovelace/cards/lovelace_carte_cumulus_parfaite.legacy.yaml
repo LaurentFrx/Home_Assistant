@@ -294,71 +294,86 @@ cards:
 
   - type: markdown
     content: |
-      {% set interdit = is_state('input_boolean.cumulus_interdit', 'on') %}
-      {% set vacances = is_state('input_boolean.cumulus_vacances', 'on') %}
-      {% set verrou = is_state('input_boolean.cumulus_verrou_jour', 'on') %}
-      {% set temp_ok = is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}
+      {% set interdit = is_state('input_boolean.cumulus_interdit_depart','on') or is_state('input_boolean.cumulus_interdit','on') %}
+      {% set vacances = is_state('input_boolean.cumulus_mode_vacances','on') or is_state('input_boolean.cumulus_vacances','on') %}
+      {% set verrou = is_state('input_boolean.cumulus_verrou_jour','on') %}
+      {% set temp_ok = is_state('input_boolean.cumulus_temp_atteinte_aujourdhui','on') or is_state('input_boolean.temp_atteinte_aujourdhui','on') %}
       {% set deadband = is_state('binary_sensor.cumulus_deadband_actif', 'on') %}
-      {% set appareil = is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+      {% set prioritaire = is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
       {% set override = is_state('input_boolean.cumulus_override', 'on') %}
-      {% set cumulus_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
       {% set fenetre_pv = is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
-      {% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') %}
-      {% set pv = states('sensor.cumulus_pv_power_w') | float(0) %}
+      {% set en_hc = is_state('binary_sensor.cumulus_en_hc', 'on') or is_state('binary_sensor.heures_creuses', 'on') or is_state('binary_sensor.cumulus_heures_creuses', 'on') %}
+      {% set pv = states('sensor.pv_total_entree_sb_aps_w') | float(states('sensor.cumulus_pv_power_w') | float(0)) %}
       {% set seuil_pv = states('sensor.cumulus_seuil_pv_dynamique_w') | float(100) %}
       {% set besoin_urgent = is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+      {% set cumulus_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+
+      {# Puissance cumulus (fallback) #}
+      {% set p_cumulus_w = states('sensor.shellypro1_ece334ee1b64_power') | float(states('sensor.cumulus_power_w') | float(0)) %}
+
+      {# Chauffe réelle : privilégier binary_sensor si présent, sinon seuil puissance #}
+      {% set bs_chauffe = states('binary_sensor.cumulus_chauffe_reelle') %}
+      {% set chauffe_reelle = (bs_chauffe not in ['unknown','unavailable','none'] and is_state('binary_sensor.cumulus_chauffe_reelle','on'))
+         or (bs_chauffe in ['unknown','unavailable','none'] and p_cumulus_w >= 2000) %}
+
+      {# Heures creuses affichage (fallback) #}
+      {% set hc_start = states('input_datetime.cumulus_hc_debut') %}
+      {% if hc_start in ['unknown','unavailable','none'] %}{% set hc_start = states('input_datetime.cumulus_heures_creuses_debut') %}{% endif %}
+      {% set hc_end = states('input_datetime.cumulus_hc_fin') %}
+      {% if hc_end in ['unknown','unavailable','none'] %}{% set hc_end = states('input_datetime.cumulus_heures_creuses_fin') %}{% endif %}
+      {% set hc_start = hc_start[0:5] if hc_start not in ['unknown','unavailable','none',''] else '?' %}
+      {% set hc_end = hc_end[0:5] if hc_end not in ['unknown','unavailable','none',''] else '?' %}
 
       ### État actuel
-      {% if cumulus_on %}
+      {% if cumulus_on and chauffe_reelle %}
       ## 🔥 **EN CHAUFFE**
+      Résistances actives ({{ p_cumulus_w | int }} W)  
       {% if fenetre_pv %}Mode solaire actif{% else %}Mode réseau actif{% endif %}
+      {% elif cumulus_on %}
+      ## 🟢 **ALIMENTÉ - STANDBY**
+      Température maintenue
       {% elif override %}
       ## 🚀 **OVERRIDE ACTIF**
-      Démarrage forcé
+      Démarrage forcé en attente
+      {% elif interdit %}
+      ## ⛔ **INTERDIT**
+      Départ / interdiction active
+      {% elif vacances %}
+      ## 🧳 **VACANCES**
+      Mode vacances actif
+      {% elif verrou %}
+      ## 🔒 **VERROU JOUR**
+      Chauffe bloquée aujourd’hui
       {% else %}
-      ## 💤 **AU REPOS**
-      En attente des conditions
+      ## 💤 **ARRÊT**
       {% endif %}
 
-      ---
-
-      ### Blocages actifs
-      {% if interdit %}❌ **Interdit** : Mode maintenance actif{% endif %}
-      {% if vacances %}🏖️ **Vacances** : Mode économie activé{% endif %}
-      {% if verrou %}📅 **Verrou journalier** : Déjà chauffé aujourd'hui{% endif %}
-      {% if temp_ok %}🌡️ **Température OK** : Objectif atteint{% endif %}
-      {% if deadband %}⏱️ **Deadband** : Temporisation sécurité{% endif %}
-      {% if appareil %}⚡ **Appareil prioritaire** : Lave-linge/vaisselle en cours{% endif %}
-
-      {% if not interdit and not vacances and not verrou and not temp_ok and not deadband and not appareil %}
-      ✅ **Aucun blocage** — Prêt à démarrer
-      {% endif %}
-
-      ---
-
-      ### Conditions de démarrage
-
-      **Mode Solaire (PV)**
-      {% if fenetre_pv %}✅ Dans fenêtre PV{% else %}⏰ Hors fenêtre PV{% endif %}
-      {% if pv >= seuil_pv %}✅ PV suffisant ({{ pv | int }}W){% else %}⚠️ PV insuffisant ({{ pv | int }}W < {{ seuil_pv | int }}W){% endif %}
-
-      **Mode Heures Creuses**
-      {% if en_hc %}✅ En heures creuses{% else %}⏰ Hors heures creuses{% endif %}
-      {% if besoin_urgent %}🔴 Besoin urgent détecté{% else %}✅ Pas d'urgence{% endif %}
-
-      ---
+      ### Conditions (diagnostic)
+      - PV : **{{ pv | int }} W** / seuil : **{{ seuil_pv | int }} W**
+      - HC : **{{ 'ON' if en_hc else 'OFF' }}**
+      - Deadband : **{{ 'ON' if deadband else 'OFF' }}**
+      - Prioritaire : **{{ 'ON' if prioritaire else 'OFF' }}**
+      - Temp OK : **{{ 'ON' if temp_ok else 'OFF' }}**
+      - Besoin urgent : **{{ 'ON' if besoin_urgent else 'OFF' }}**
 
       ### Prochaine action prévue
-      {% if temp_ok %}
-      ☀️ **Demain** — Chauffe solaire si météo favorable
-      {% elif fenetre_pv and not verrou %}
+      {% if interdit %}
+      ⛔ **Aucune** — Interdiction active
+      {% elif vacances %}
+      🧳 **Aucune** — Mode vacances
+      {% elif verrou %}
+      🔒 **Aucune** — Verrou jour actif
+      {% elif temp_ok %}
+      ✅ **Aucune** — Température atteinte aujourd’hui
+      {% elif besoin_urgent %}
+      🚨 **Maintenant** — Besoin urgent
+      {% elif fenetre_pv and not prioritaire %}
       ☀️ **Aujourd'hui** — Attente production solaire suffisante
       {% elif is_state('binary_sensor.cumulus_meteo_favorable_demain', 'on') %}
       ☀️ **Demain** — Météo favorable prévue ({{ states('sensor.cumulus_solcast_forecast_tomorrow') }} kWh)
       {% else %}
-      🌙 **Cette nuit** — Heures creuses ({{ states('input_datetime.cumulus_heures_creuses_debut')[0:5] }}-{{ states('input_datetime.cumulus_heures_creuses_fin')[0:5] }})
+      🌙 **Cette nuit** — Heures creuses ({{ hc_start }}-{{ hc_end }})
       {% endif %}
-
   # ==================== MÉTÉO ET PRÉVISIONS ==================== #
   - type: custom:mushroom-title-card
     title: ☀️ Prévisions solaires
