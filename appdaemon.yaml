@@ -1,0 +1,8 @@
+appdaemon:
+  time_zone: Europe/Paris
+
+apps:
+  cumulus_5_couches:
+    module: cumulus_5_couches
+    class: Cumulus5Couches
+

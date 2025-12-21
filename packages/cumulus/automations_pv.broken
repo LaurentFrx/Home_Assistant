@@ -1,0 +1,476 @@
+# ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+# Ôòæ CUMULUS INTELLIGENT - AUTOMATIONS MODE PV                                  Ôòæ
+# Ôòæ Gestion intelligente du chauffage solaire                                  Ôòæ
+# ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+automation:
+  # ÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ
+  # Ôöé D+ëMARRAGE PV INTELLIGENT                                                Ôöé
+  # ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ
+  - id: cumulus_demarrage_pv_intelligent
+    alias: "Cumulus - D+®marrage PV intelligent"
+    description: "D+®marre le cumulus quand conditions PV optimales"
+    mode: restart  # Red+®marre si retriggered pendant le d+®lai
+
+    trigger:
+      # Trigger principal : puissance APS suffisante
+      - platform: numeric_state
+        entity_id: sensor.cumulus_production_aps_w
+        above: input_number.cumulus_seuil_pv_statique_w
+        for:
+          seconds: "{{ states('input_number.cumulus_delai_on_secondes') | float(0) }}"
+        id: trigger_puissance
+
+      # Trigger alternatif : changement conditions
+      - platform: state
+        entity_id: binary_sensor.cumulus_conditions_pv_ok
+        to: 'on'
+        for:
+          seconds: 30
+        id: trigger_conditions
+
+      # Trigger boost : batterie pleine
+      - platform: numeric_state
+        entity_id: sensor.cumulus_soc_batterie
+        above: 95
+        for:
+          minutes: 5
+        id: trigger_soc_full
+
+    condition:
+      # Toutes les conditions doivent +¬tre remplies
+      - condition: and
+        conditions:
+          # Cumulus pas d+®j+á ON
+          - condition: state
+            entity_id: switch.shellypro1_ece334ee1b64
+            state: 'off'
+
+          # Dans la fen+¬tre PV
+          - condition: state
+            entity_id: binary_sensor.cumulus_fenetre_pv
+            state: 'on'
+
+          # Pas en mode vacances
+          - condition: state
+            entity_id: input_boolean.cumulus_mode_vacances
+            state: 'off'
+
+          # Pas de verrou deadband
+          - condition: state
+            entity_id: input_boolean.cumulus_verrou_deadband
+            state: 'off'
+
+          # Conditions sp+®cifiques selon trigger
+          - condition: or
+            conditions:
+              # Si trigger puissance : v+®rifier aussi SOC
+              - condition: and
+                conditions:
+                  - condition: trigger
+                    id: trigger_puissance
+                  - condition: numeric_state
+                    entity_id: sensor.cumulus_soc_batterie
+                    above: input_number.cumulus_soc_min
+
+              # Si trigger conditions : tout est d+®j+á v+®rifi+®
+              - condition: trigger
+                id: trigger_conditions
+
+              # Si trigger SOC full : v+®rifier puissance minimale
+              - condition: and
+                conditions:
+                  - condition: trigger
+                    id: trigger_soc_full
+                  - condition: numeric_state
+                    entity_id: sensor.cumulus_production_aps_w
+                    above: 50  # Minimum 50W si batterie pleine
+
+    action:
+      # Log du d+®marrage avec contexte
+      - service: logbook.log
+        data:
+          name: "Cumulus PV"
+          message: >
+            D+®marrage PV -
+            Trigger: {{ trigger.id }} |
+            APS: {{ states('sensor.cumulus_production_aps_w') }}W |
+            SOC: {{ states('sensor.cumulus_soc_batterie') }}% |
+            Seuil: {{ states('input_number.cumulus_seuil_pv_statique_w') }}W
+          entity_id: switch.shellypro1_ece334ee1b64
+          domain: automation
+
+      # Notification si activ+®es
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.cumulus_notifications_actives
+                state: 'on'
+            sequence:
+              - service: notify.notify
+                data:
+                  title: "ÔÿÇ´©Å Cumulus - D+®marrage solaire"
+                  message: >
+                    Le cumulus d+®marre en mode solaire.
+                    Production: {{ states('sensor.cumulus_pv_power_w') }}W
+                    Batterie: {{ states('sensor.cumulus_soc_batterie') }}%
+
+      # Enregistrer la raison du d+®marrage
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.cumulus_raison_arret
+        data:
+          value: "D+®marrage PV +á {{ now().strftime('%H:%M') }}"
+
+      # D+ëMARRER LE CUMULUS
+      - service: switch.turn_on
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Attendre confirmation
+      - wait_template: "{{ is_state('switch.shellypro1_ece334ee1b64', 'on') }}"
+        timeout: '00:00:10'
+        continue_on_timeout: false
+
+      # D+®marrer le timer de chauffe
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_timer_chauffe
+        data:
+          duration: '02:30:00'
+
+      # Incr+®menter compteur
+      - service: counter.increment
+        target:
+          entity_id: counter.cumulus_chauffes_jour
+
+  # ÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ
+  # Ôöé ARR+èT PV INTELLIGENT                                                    Ôöé
+  # ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ
+  - id: cumulus_arret_pv_intelligent
+    alias: "Cumulus - Arr+¬t PV intelligent"
+    description: "Arr+¬te le cumulus si conditions PV insuffisantes"
+    mode: single
+
+    trigger:
+      # Production insuffisante
+      - platform: numeric_state
+        entity_id: sensor.cumulus_production_aps_w
+        below: input_number.cumulus_seuil_pv_statique_w
+        for:
+          seconds: "{{ states('input_number.cumulus_delai_off_secondes') | float(0) }}"
+        id: trigger_production_basse
+
+      # SOC trop bas
+      - platform: numeric_state
+        entity_id: sensor.cumulus_soc_batterie
+        below: input_number.cumulus_soc_min
+        for:
+          seconds: 30
+        id: trigger_soc_bas
+
+      # Fin fen+¬tre PV
+      - platform: state
+        entity_id: binary_sensor.cumulus_fenetre_pv
+        to: 'off'
+        id: trigger_fin_fenetre
+
+      # Temp+®rature atteinte
+      - platform: numeric_state
+        entity_id: sensor.cumulus_temperature_estimee
+        above: input_number.cumulus_temperature_cible_pv
+        for:
+          minutes: 5
+        id: trigger_temperature_ok
+
+    condition:
+      # Cumulus doit +¬tre ON et en mode PV
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+      - condition: state
+        entity_id: sensor.cumulus_mode_actif
+        state: 'PV'
+
+    action:
+      # D+®terminer la raison de l'arr+¬t
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.cumulus_raison_arret
+        data:
+          value: >
+            {% if trigger.id == 'trigger_production_basse' %}
+              Production insuffisante ({{ states('sensor.cumulus_production_aps_w') }}W)
+            {% elif trigger.id == 'trigger_soc_bas' %}
+              SOC batterie trop bas ({{ states('sensor.cumulus_soc_batterie') }}%)
+            {% elif trigger.id == 'trigger_fin_fenetre' %}
+              Fin de la fen+¬tre PV
+            {% elif trigger.id == 'trigger_temperature_ok' %}
+              Temp+®rature cible atteinte ({{ states('sensor.cumulus_temperature_estimee') }}-¦C)
+            {% else %}
+              Arr+¬t PV - raison inconnue
+            {% endif %}
+
+      # Log
+      - service: logbook.log
+        data:
+          name: "Cumulus PV"
+          message: "Arr+¬t - {{ states('input_text.cumulus_raison_arret') }}"
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Activer deadband si n+®cessaire
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.id in ['trigger_production_basse', 'trigger_soc_bas'] }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.cumulus_verrou_deadband
+              - service: input_text.set_value
+                target:
+                  entity_id: input_text.cumulus_raison_deadband
+                data:
+                  value: "{{ states('input_text.cumulus_raison_arret') }}"
+              - service: timer.start
+                target:
+                  entity_id: timer.cumulus_timer_deadband
+
+      # ARR+èTER LE CUMULUS
+      - service: switch.turn_off
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Arr+¬ter le timer
+      - service: timer.cancel
+        target:
+          entity_id: timer.cumulus_timer_chauffe
+
+  # ÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ
+  # Ôöé LIMITEUR IMPORT R+ëSEAU                                                  Ôöé
+  # ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ
+  - id: cumulus_limiteur_import_reseau
+    alias: "Cumulus - Limiteur import r+®seau"
+    description: "Arr+¬te le cumulus si import r+®seau excessif"
+    mode: single
+
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.cumulus_import_reseau_w
+        above: input_number.cumulus_import_max_w
+        for:
+          seconds: 5  # R+®action rapide pour limiter import
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+      - condition: state
+        entity_id: sensor.cumulus_mode_actif
+        state: 'PV'
+
+    action:
+      # Log urgence
+      - service: logbook.log
+        data:
+          name: "Cumulus Limiteur"
+          message: >
+            URGENCE - Import excessif: {{ states('sensor.cumulus_import_reseau_w') }}W
+            (max: {{ states('input_number.cumulus_import_max_w') }}W)
+          entity_id: switch.shellypro1_ece334ee1b64
+          domain: automation
+
+      # Arr+¬t imm+®diat
+      - service: switch.turn_off
+        target:
+          entity_id: switch.shellypro1_ece334ee1b64
+
+      # Deadband prolong+®
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.cumulus_verrou_deadband
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.cumulus_raison_deadband
+        data:
+          value: "Import r+®seau excessif"
+      - service: timer.start
+        target:
+          entity_id: timer.cumulus_timer_deadband
+        data:
+          duration: '00:10:00'  # 10 minutes de deadband
+
+  # ÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ
+  # Ôöé OPTIMISATION APPAREILS PRIORITAIRES                                     Ôöé
+  # ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ
+  - id: cumulus_gestion_appareils_prioritaires
+    alias: "Cumulus - Gestion appareils prioritaires"
+    description: "Suspend le cumulus si appareils prioritaires actifs"
+    mode: restart
+
+    trigger:
+      # Lave-linge d+®marre
+      - platform: numeric_state
+        entity_id: sensor.lave_linge_power
+        above: 100
+        id: lave_linge_on
+
+      # Lave-vaisselle d+®marre
+      - platform: numeric_state
+        entity_id: sensor.lave_vaisselle_power
+        above: 100
+        id: lave_vaisselle_on
+
+      # Appareils s'arr+¬tent
+      - platform: numeric_state
+        entity_id: sensor.lave_linge_power
+        below: 10
+        for:
+          minutes: 2
+        id: lave_linge_off
+
+      - platform: numeric_state
+        entity_id: sensor.lave_vaisselle_power
+        below: 10
+        for:
+          minutes: 2
+        id: lave_vaisselle_off
+
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cumulus_fenetre_pv
+        state: 'on'
+
+    action:
+      - choose:
+          # Si appareil prioritaire d+®marre et cumulus ON
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.id in ['lave_linge_on', 'lave_vaisselle_on'] }}"
+              - condition: state
+                entity_id: switch.shellypro1_ece334ee1b64
+                state: 'on'
+              - condition: state
+                entity_id: sensor.cumulus_mode_actif
+                state: 'PV'
+            sequence:
+              # V+®rifier si puissance insuffisante
+              - condition: template
+                value_template: >
+                  {% set pv_total = states('sensor.cumulus_pv_power_w') | float(0) %}
+                  {% set appareil = 2000 if 'linge' in trigger.id else 2500 %}
+                  {{ pv_total < (3000 + appareil - 500) }}  # 500W de marge
+
+              # Suspendre cumulus
+              - service: logbook.log
+                data:
+                  name: "Cumulus Priorit+®"
+                  message: >
+                    Suspension pour {{ 'lave-linge' if 'linge' in trigger.id else 'lave-vaisselle' }}
+              - service: switch.turn_off
+                target:
+                  entity_id: switch.shellypro1_ece334ee1b64
+              - service: input_text.set_value
+                target:
+                  entity_id: input_text.cumulus_raison_arret
+                data:
+                  value: "Priorit+® {{ 'lave-linge' if 'linge' in trigger.id else 'lave-vaisselle' }}"
+
+          # Si appareils s'arr+¬tent et conditions OK
+          - conditions:
+              - condition: template
+                value_template: "{{ trigger.id in ['lave_linge_off', 'lave_vaisselle_off'] }}"
+              - condition: state
+                entity_id: switch.shellypro1_ece334ee1b64
+                state: 'off'
+              - condition: state
+                entity_id: binary_sensor.cumulus_conditions_pv_ok
+                state: 'on'
+            sequence:
+              # V+®rifier qu'aucun autre appareil n'est actif
+              - condition: template
+                value_template: >
+                  {% set linge = states('sensor.lave_linge_power') | float(0) %}
+                  {% set vaisselle = states('sensor.lave_vaisselle_power') | float(0) %}
+                  {{ linge < 10 and vaisselle < 10 }}
+
+              # Red+®marrer cumulus
+              - service: logbook.log
+                data:
+                  name: "Cumulus Priorit+®"
+                  message: "Reprise apr+¿s arr+¬t appareils prioritaires"
+              - service: switch.turn_on
+                target:
+                  entity_id: switch.shellypro1_ece334ee1b64
+
+  # ÔöîÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÉ
+  # Ôöé RESET DEADBAND                                                          Ôöé
+  # ÔööÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÿ  - id: cumulus_log_refus_demarrage_pv_v3
+    alias: "Cumulus - Log refus demarrage PV"
+    description: "Log et notification quand les conditions PV sont OK mais que le cumulus reste arrete a cause d un verrou ou d un mode."
+    mode: single
+    initial_state: "off"
+
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_conditions_pv_ok
+        to: "on"
+        for: "00:15:00"
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        state: "off"
+
+    action:
+      - variables:
+          raison: >
+            {% set r = states('input_text.cumulus_raison_arret') %}
+            {% if r in ['unknown', 'unavailable', ''] %}
+              Non renseignee
+            {% else %}
+              {{ r }}
+            {% endif %}
+          temp_estimee: "{{ states('sensor.cumulus_temperature_estimee') }}"
+          soc_batterie: "{{ states('sensor.cumulus_soc_batterie') }}"
+          pv_power: "{{ states('sensor.cumulus_pv_power_w') }}"
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Refus demarrage PV"
+          message: >
+            Conditions PV OK depuis au moins 15 minutes mais le cumulus reste OFF.
+            Raison: {{ raison }}.
+            Temp estimee: {{ temp_estimee }} degC
+            SOC batterie: {{ soc_batterie }} %
+            Puissance PV: {{ pv_power }} W
+          notification_id: cumulus_log_refus_demarrage_pv
+
+  - id: cumulus_reset_deadband
+    alias: "Cumulus - Reset deadband"
+    description: "R+®initialise le verrou deadband apr+¿s temporisation"
+    mode: single
+
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.cumulus_timer_deadband
+
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cumulus_verrou_deadband
+
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.cumulus_raison_deadband
+        data:
+          value: "Aucun"
+
+      - service: logbook.log
+        data:
+          name: "Cumulus Deadband"
+          message: "Verrou deadband r+®initialis+®"
