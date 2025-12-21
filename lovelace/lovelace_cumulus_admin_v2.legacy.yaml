@@ -1,0 +1,689 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ DASHBOARD CUMULUS - VERSION ADMIN/TECHNIQUE                                ║
+# ║ Monitoring complet, diagnostics, configuration avancée                     ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+title: Cumulus Admin
+path: cumulus-admin
+icon: mdi:wrench
+theme: Mushroom Shadow
+type: custom:vertical-layout
+
+cards:
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ EN-TÊTE - VUE D'ENSEMBLE SYSTÈME                                        │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:button-card
+    name: Système Cumulus - Monitoring
+    label: |
+      [[[
+        const uptime = states['sensor.cumulus_uptime']?.state || 'N/A';
+        const version = states['sensor.cumulus_version']?.state || '2.0';
+        const health = states['sensor.cumulus_score_sante']?.state || 0;
+        return `Version ${version} · Santé ${health}% · Uptime ${uptime}`;
+      ]]]
+    show_label: true
+    styles:
+      card:
+        - height: 80px
+        - background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        - border-radius: 20px
+      name:
+        - font-size: 1.5rem
+        - color: white
+        - font-weight: 600
+      label:
+        - color: rgba(255,255,255,0.8)
+        - font-size: 0.9rem
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION 1 : ÉTAT TEMPS RÉEL                                             │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-title-card
+    title: 🔍 État Temps Réel
+    subtitle: Monitoring instantané du système
+
+  - type: horizontal-stack
+    cards:
+      # État Cumulus
+      - type: custom:mushroom-entity-card
+        entity: switch.shellypro1_ece334ee1b64
+        name: Contacteur
+        icon: mdi:power
+        icon_color: |
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+        primary_info: name
+        secondary_info: state
+        tap_action:
+          action: toggle
+
+      # Puissance instantanée
+      - type: custom:mushroom-template-card
+        primary: Puissance
+        secondary: |
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            3000 W
+          {% else %}
+            0 W
+          {% endif %}
+        icon: mdi:flash
+        icon_color: |
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            orange
+          {% else %}
+            grey
+          {% endif %}
+
+      # Mode actif
+      - type: custom:mushroom-template-card
+        primary: Mode
+        secondary: |
+          {% set mode = states('sensor.cumulus_mode_actif') %}
+          {% if mode == 'PV' %}
+            ☀️ Solaire
+          {% elif mode == 'HC' %}
+            🌙 Heures Creuses
+          {% elif mode == 'FORCE' %}
+            🔥 Forcé
+          {% else %}
+            ⏸️ Arrêt
+          {% endif %}
+        icon: mdi:auto-mode
+        icon_color: |
+          {% set mode = states('sensor.cumulus_mode_actif') %}
+          {% if mode == 'PV' %}
+            yellow
+          {% elif mode == 'HC' %}
+            blue
+          {% elif mode == 'FORCE' %}
+            red
+          {% else %}
+            grey
+          {% endif %}
+
+  # Graphique production solaire temps réel
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Production Solaire & Import Réseau
+      show_states: true
+      colorize_states: true
+    graph_span: 3h
+    update_interval: 30s
+    yaxis:
+      - id: power
+        apex_config:
+          title:
+            text: Puissance (W)
+    series:
+      - entity: sensor.pv_total_entree_sb_aps_w
+        name: Production PV
+        color: '#ffd43b'
+        type: area
+        opacity: 0.3
+        stroke_width: 2
+        yaxis_id: power
+        group_by:
+          func: avg
+          duration: 1min
+      - entity: sensor.smart_meter_grid_import
+        name: Import Réseau
+        color: '#ff6b6b'
+        type: line
+        stroke_width: 2
+        yaxis_id: power
+        transform: 'return x < 0 ? 0 : x;'
+        group_by:
+          func: avg
+          duration: 1min
+      - entity: sensor.cumulus_puissance_disponible_w
+        name: Disponible Cumulus
+        color: '#51cf66'
+        type: line
+        stroke_width: 3
+        yaxis_id: power
+        group_by:
+          func: avg
+          duration: 1min
+    apex_config:
+      chart:
+        height: 250
+      grid:
+        show: true
+        borderColor: '#90A4AE20'
+      tooltip:
+        enabled: true
+        shared: true
+      legend:
+        position: top
+    card_mod:
+      style: |
+        ha-card {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION 2 : ANALYSE TEMPÉRATURE & CHAUFFES                              │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-title-card
+    title: 🌡️ Analyse Thermique
+    subtitle: Évolution température et historique chauffes
+
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Température Cumulus (48h)
+      show_states: true
+    graph_span: 48h
+    yaxis:
+      - id: temp
+        min: 20
+        max: 70
+        apex_config:
+          title:
+            text: Température (°C)
+      - id: state
+        opposite: true
+        min: 0
+        max: 1
+        show: false
+    series:
+      - entity: sensor.cumulus_temperature_estimee
+        name: Température
+        color: '#ff6b6b'
+        type: line
+        stroke_width: 3
+        yaxis_id: temp
+        group_by:
+          func: avg
+          duration: 10min
+      - entity: sensor.cumulus_temperature_consigne
+        name: Consigne
+        color: '#339af0'
+        type: line
+        stroke_width: 1
+        stroke_dash_array: 5
+        yaxis_id: temp
+      - entity: switch.shellypro1_ece334ee1b64
+        name: Chauffes
+        color: '#ffd43b'
+        type: area
+        opacity: 0.2
+        yaxis_id: state
+        transform: 'return x === "on" ? 1 : 0;'
+        show:
+          in_header: false
+    apex_config:
+      chart:
+        height: 300
+      annotations:
+        yaxis:
+          - y: 55
+            borderColor: '#51cf66'
+            strokeDashArray: 5
+            label:
+              text: Optimal
+              style:
+                color: '#51cf66'
+          - y: 45
+            borderColor: '#ffa94d'
+            strokeDashArray: 5
+            label:
+              text: Minimum
+              style:
+                color: '#ffa94d'
+    card_mod:
+      style: |
+        ha-card {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+
+  # Tableau historique des chauffes
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: 📊 Historique Chauffes (7 derniers jours)
+      secondary: "{{ states('sensor.cumulus_nombre_chauffes_semaine') }} chauffes · {{ states('sensor.cumulus_kwh_semaine') }} kWh"
+      icon: mdi:table
+    entities:
+      - type: custom:flex-table-card
+        entities:
+          - sensor.cumulus_historique_chauffes
+        columns:
+          - name: Date
+            data: date
+            align: left
+            modify: |
+              if (x) {
+                const d = new Date(x);
+                return d.toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
+              }
+              return '-';
+          - name: Heure
+            data: time
+            align: center
+          - name: Durée
+            data: duration
+            align: center
+            suffix: ' min'
+          - name: Mode
+            data: mode
+            align: center
+            modify: |
+              if (x === 'PV') return '☀️ PV';
+              if (x === 'HC') return '🌙 HC';
+              if (x === 'FORCE') return '🔥 Force';
+              return x;
+          - name: kWh
+            data: energy
+            align: right
+            suffix: ' kWh'
+            modify: 'parseFloat(x).toFixed(1)'
+          - name: Coût
+            data: cost
+            align: right
+            prefix: '€'
+            modify: 'parseFloat(x).toFixed(2)'
+        card_mod:
+          style: |
+            ha-card {
+              background: rgba(255,255,255,0.05);
+              border: 1px solid rgba(255,255,255,0.1);
+            }
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION 3 : AUTOMATIONS & LOGIQUE                                       │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-title-card
+    title: ⚙️ Automations & Logique
+    subtitle: État des automatismes et conditions
+
+  - type: grid
+    columns: 2
+    cards:
+      # Automation PV
+      - type: custom:mushroom-template-card
+        primary: Automation PV
+        secondary: |
+          {% set last = state_attr('automation.cumulus_demarrage_pv', 'last_triggered') %}
+          {% if last %}
+            Dernier: {{ relative_time(last) }}
+          {% else %}
+            Jamais déclenchée
+          {% endif %}
+        icon: mdi:solar-power
+        icon_color: |
+          {% if is_state('automation.cumulus_demarrage_pv', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+        badge_icon: |
+          {% set count = state_attr('automation.cumulus_demarrage_pv', 'current') %}
+          {% if count and count > 0 %}
+            mdi:play
+          {% endif %}
+        badge_color: orange
+        tap_action:
+          action: more-info
+          entity: automation.cumulus_demarrage_pv
+
+      # Automation HC
+      - type: custom:mushroom-template-card
+        primary: Automation HC
+        secondary: |
+          {% set last = state_attr('automation.cumulus_demarrage_hc', 'last_triggered') %}
+          {% if last %}
+            Dernier: {{ relative_time(last) }}
+          {% else %}
+            Jamais déclenchée
+          {% endif %}
+        icon: mdi:moon-waning-crescent
+        icon_color: |
+          {% if is_state('automation.cumulus_demarrage_hc', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+        tap_action:
+          action: more-info
+          entity: automation.cumulus_demarrage_hc
+
+      # Limiteur Import
+      - type: custom:mushroom-template-card
+        primary: Limiteur Import
+        secondary: |
+          {% if is_state('automation.cumulus_limiteur_import', 'on') %}
+            Actif · Seuil {{ states('input_number.cumulus_import_max_w') }}W
+          {% else %}
+            Désactivé
+          {% endif %}
+        icon: mdi:shield-check
+        icon_color: |
+          {% if is_state('automation.cumulus_limiteur_import', 'on') %}
+            green
+          {% else %}
+            grey
+          {% endif %}
+
+      # Verrous Système
+      - type: custom:mushroom-template-card
+        primary: Verrous
+        secondary: |
+          {% set deadband = is_state('input_boolean.cumulus_verrou_deadband', 'on') %}
+          {% set daily = is_state('input_boolean.cumulus_verrou_chauffe_quotidienne', 'on') %}
+          {% if deadband or daily %}
+            ⚠️ {{ 'Deadband' if deadband }}{{ ' + ' if deadband and daily }}{{ 'Quotidien' if daily }}
+          {% else %}
+            ✅ Aucun verrou actif
+          {% endif %}
+        icon: mdi:lock
+        icon_color: |
+          {% set deadband = is_state('input_boolean.cumulus_verrou_deadband', 'on') %}
+          {% set daily = is_state('input_boolean.cumulus_verrou_chauffe_quotidienne', 'on') %}
+          {% if deadband or daily %}
+            orange
+          {% else %}
+            green
+          {% endif %}
+
+  # Conditions détaillées
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: 🔍 Conditions Détaillées
+      secondary: Analyse des conditions de démarrage
+      icon: mdi:format-list-checks
+    entities:
+      - type: custom:mushroom-template-card
+        primary: Conditions PV
+        secondary: |
+          ✓ Production: {{ states('sensor.cumulus_production_aps_w') }}W / {{ states('input_number.cumulus_seuil_pv_dynamique_w') }}W
+          ✓ Import: {{ states('sensor.cumulus_import_reseau_w') }}W < {{ states('input_number.cumulus_import_max_w') }}W
+          ✓ SOC: {{ states('sensor.system_sanguinet_etat_de_charge_du_sb') }}% > {{ states('input_number.cumulus_soc_min') }}%
+          ✓ Fenêtre: {{ 'OUI' if is_state('binary_sensor.cumulus_fenetre_pv', 'on') else 'NON' }}
+          ✓ Verrous: {{ 'LIBRE' if is_state('binary_sensor.cumulus_conditions_ok', 'on') else 'BLOQUÉ' }}
+        multiline_secondary: true
+        icon: mdi:solar-panel
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_conditions_pv_ok', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+
+      - type: custom:mushroom-template-card
+        primary: Conditions HC
+        secondary: |
+          ✓ Heures Creuses: {{ 'OUI' if is_state('binary_sensor.heures_creuses', 'on') else 'NON' }}
+          ✓ Besoin eau: {{ states('sensor.cumulus_temperature_estimee') }}°C < {{ states('input_number.cumulus_temperature_cible_hc') }}°C
+          ✓ Dernière chauffe: il y a {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h
+          ✓ Mode vacances: {{ 'ACTIF' if is_state('input_boolean.cumulus_mode_vacances', 'on') else 'INACTIF' }}
+        multiline_secondary: true
+        icon: mdi:moon-waning-crescent
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_conditions_hc_ok', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+
+  - type: entities
+    title: "⚡ Conditions PV / HC & verrous"
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: binary_sensor.cumulus_incoherence
+        name: Cohérence
+      - entity: binary_sensor.cumulus_chauffe_reelle
+        name: Chauffe réelle
+      - entity: binary_sensor.cumulus_conditions_pv_ok
+        name: Conditions PV OK
+      - entity: binary_sensor.cumulus_conditions_hc_ok
+        name: Conditions HC OK
+      - entity: input_boolean.cumulus_verrou_deadband
+        name: Verrou deadband
+      - entity: input_boolean.cumulus_verrou_chauffe_quotidienne
+        name: Verrou chauffe quotidienne
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION 4 : CONFIGURATION & RÉGLAGES                                    │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-title-card
+    title: 🎛️ Configuration
+    subtitle: Paramètres et réglages fins
+
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: ⚡ Seuils Puissance
+      secondary: Réglages déclenchement et protection
+      icon: mdi:tune
+    entities:
+      - entity: input_number.cumulus_seuil_pv_statique_w
+        name: Seuil PV de base
+      - entity: input_number.cumulus_seuil_pv_dynamique_w
+        name: Seuil PV dynamique
+      - entity: input_number.cumulus_import_max_w
+        name: Import max autorisé
+      - entity: input_number.cumulus_talon_maison_w
+        name: Talon consommation maison
+      - entity: input_number.cumulus_solarbank_max_w
+        name: Puissance max Solarbank
+
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: 🌡️ Températures
+      secondary: Consignes et objectifs
+      icon: mdi:thermometer
+    entities:
+      - entity: input_number.cumulus_temperature_cible_pv
+        name: Cible PV (°C)
+      - entity: input_number.cumulus_temperature_cible_hc
+        name: Cible HC (°C)
+      - entity: input_number.cumulus_temperature_minimale
+        name: Minimum absolu (°C)
+      - entity: input_number.cumulus_gradient_refroidissement
+        name: Gradient refroidissement (°C/h)
+
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: ⏱️ Temporisations
+      secondary: Délais et fenêtres horaires
+      icon: mdi:timer-settings
+    entities:
+      - entity: input_number.cumulus_delai_on_secondes
+        name: Délai démarrage (sec)
+      - entity: input_number.cumulus_delai_off_secondes
+        name: Délai arrêt (sec)
+      - entity: input_datetime.cumulus_heure_debut_pv
+        name: Début fenêtre PV
+      - entity: input_datetime.cumulus_heure_fin_pv
+        name: Fin fenêtre PV
+      - entity: input_number.cumulus_espacement_minimal_heures
+        name: Espacement min chauffes (h)
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION 5 : DIAGNOSTIC & SANTÉ                                          │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-title-card
+    title: 🏥 Diagnostic Système
+    subtitle: Santé et cohérence
+
+  - type: custom:button-card
+    name: Score de Santé Global
+    label: |
+      [[[
+        const score = states['sensor.cumulus_score_sante']?.state || 0;
+        const details = states['sensor.cumulus_diagnostic_details']?.state || '';
+        return `${score}% · ${details}`;
+      ]]]
+    icon: |
+      [[[
+        const score = states['sensor.cumulus_score_sante']?.state || 0;
+        if (score >= 80) return 'mdi:check-circle';
+        if (score >= 60) return 'mdi:alert';
+        return 'mdi:alert-circle';
+      ]]]
+    show_label: true
+    styles:
+      card:
+        - height: 100px
+        - background: |
+            [[[
+              const score = states['sensor.cumulus_score_sante']?.state || 0;
+              if (score >= 80) return 'linear-gradient(135deg, #51cf66 0%, #69db7c 100%)';
+              if (score >= 60) return 'linear-gradient(135deg, #ffd43b 0%, #fab005 100%)';
+              return 'linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%)';
+            ]]]
+      name:
+        - font-size: 1.3rem
+        - color: white
+      label:
+        - color: rgba(255,255,255,0.9)
+      icon:
+        - color: white
+        - width: 50px
+
+  # Tests diagnostiques
+  - type: grid
+    columns: 3
+    cards:
+      - type: custom:mushroom-template-card
+        primary: Cohérence
+        secondary: |
+          {% if is_state('binary_sensor.cumulus_coherence_ok', 'on') %}
+            ✅ OK
+          {% else %}
+            ❌ Erreur
+          {% endif %}
+        icon: mdi:check-network
+        icon_color: |
+          {% if is_state('binary_sensor.cumulus_coherence_ok', 'on') %}
+            green
+          {% else %}
+            red
+          {% endif %}
+
+      - type: custom:mushroom-template-card
+        primary: Sensors
+        secondary: |
+          {% set unavail = states.sensor | selectattr('entity_id', 'match', 'cumulus') | selectattr('state', 'eq', 'unavailable') | list | count %}
+          {% if unavail == 0 %}
+            ✅ Tous OK
+          {% else %}
+            ⚠️ {{ unavail }} indispo
+          {% endif %}
+        icon: mdi:resistor-nodes
+        icon_color: |
+          {% set unavail = states.sensor | selectattr('entity_id', 'match', 'cumulus') | selectattr('state', 'eq', 'unavailable') | list | count %}
+          {% if unavail == 0 %}
+            green
+          {% else %}
+            orange
+          {% endif %}
+
+      - type: custom:mushroom-template-card
+        primary: Automations
+        secondary: |
+          {% set off = states.automation | selectattr('entity_id', 'match', 'cumulus') | selectattr('state', 'eq', 'off') | list | count %}
+          {% if off == 0 %}
+            ✅ Actives
+          {% else %}
+            ⚠️ {{ off }} inactives
+          {% endif %}
+        icon: mdi:robot
+        icon_color: |
+          {% set off = states.automation | selectattr('entity_id', 'match', 'cumulus') | selectattr('state', 'eq', 'off') | list | count %}
+          {% if off == 0 %}
+            green
+          {% else %}
+            orange
+          {% endif %}
+
+  # Logs système
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: 📝 Logs Système
+      secondary: Derniers événements
+      icon: mdi:text-box-outline
+    entities:
+      - type: custom:logbook-card
+        entity: switch.shellypro1_ece334ee1b64
+        max_items: 10
+        collapse: 2
+        card_mod:
+          style: |
+            ha-card {
+              background: rgba(255,255,255,0.05);
+              border: 1px solid rgba(255,255,255,0.1);
+            }
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION 6 : ACTIONS RAPIDES ADMIN                                       │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-title-card
+    title: 🚀 Actions Rapides
+    subtitle: Commandes administrateur
+
+  - type: grid
+    columns: 3
+    cards:
+      - type: custom:button-card
+        name: Reset Verrous
+        icon: mdi:lock-reset
+        tap_action:
+          action: call-service
+          service: script.cumulus_reset_verrous
+          confirmation:
+            text: Réinitialiser tous les verrous ?
+        styles:
+          card:
+            - height: 80px
+            - background: 'linear-gradient(135deg, #339af0 0%, #74c0fc 100%)'
+          name:
+            - color: white
+            - font-size: 0.9rem
+          icon:
+            - color: white
+
+      - type: custom:button-card
+        name: Test Système
+        icon: mdi:test-tube
+        tap_action:
+          action: call-service
+          service: script.cumulus_test_systeme
+        styles:
+          card:
+            - height: 80px
+            - background: 'linear-gradient(135deg, #51cf66 0%, #69db7c 100%)'
+          name:
+            - color: white
+            - font-size: 0.9rem
+          icon:
+            - color: white
+
+      - type: custom:button-card
+        name: Export Stats
+        icon: mdi:download
+        tap_action:
+          action: call-service
+          service: script.cumulus_export_stats
+        styles:
+          card:
+            - height: 80px
+            - background: 'linear-gradient(135deg, #ffd43b 0%, #fab005 100%)'
+          name:
+            - color: white
+            - font-size: 0.9rem
+          icon:
+            - color: white

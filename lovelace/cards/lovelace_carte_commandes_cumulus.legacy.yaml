@@ -1,0 +1,1119 @@
+###############################################################################
+# CARTE LOVELACE COMMANDES CUMULUS — Design moderne avec button-card
+# Version: 2025-10-16a — Carte de commandes complète et interactive
+###############################################################################
+
+type: vertical-stack
+cards:
+  # ==================== EN-TÊTE PRINCIPAL ==================== #
+  - type: custom:button-card
+    name: "🎛️ Commandes Cumulus"
+    styles:
+      card:
+        - background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+        - border-radius: 20px
+        - padding: 20px
+        - box-shadow: 0 8px 16px rgba(0,0,0,0.2)
+      name:
+        - color: white
+        - font-size: 28px
+        - font-weight: bold
+        - text-shadow: 2px 2px 4px rgba(0,0,0,0.3)
+
+  # ==================== STATUT GLOBAL EN TEMPS RÉEL ==================== #
+  - type: custom:button-card
+    entity: binary_sensor.cumulus_chauffe_reelle
+    name: "État Cumulus"
+    show_state: true
+    custom_fields:
+      info: |
+        [[[
+          const temp = states['sensor.cumulus_temperature_physique_c'].state;
+          const litres = states['sensor.cumulus_eau_chaude_disponible_40c_litres'].state;
+          const heures = states['sensor.cumulus_heures_depuis_derniere_chauffe'].state;
+          const conso = states['sensor.cumulus_consommation_reelle_w'].state;
+          if (entity.state === 'on') {
+            return '🌡️ ' + temp + '°C | 💧 ' + litres + 'L | ⚡ ' + conso + 'W';
+          } else {
+            return '🌡️ ' + temp + '°C | 💧 ' + litres + 'L | ⏱️ ' + heures + 'h';
+          }
+        ]]]
+    styles:
+      card:
+        - background: |
+            [[[
+              if (entity.state === 'on') {
+                return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+              } else {
+                return 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+              }
+            ]]]
+        - border-radius: 15px
+        - padding: 20px
+        - box-shadow: 0 6px 12px rgba(0,0,0,0.15)
+      name:
+        - color: white
+        - font-size: 24px
+        - font-weight: bold
+        - text-shadow: 1px 1px 2px rgba(0,0,0,0.3)
+      state:
+        - color: white
+        - font-size: 18px
+      custom_fields:
+        info:
+          - color: rgba(255,255,255,0.9)
+          - font-size: 14px
+          - margin-top: 8px
+
+  # ==================== CONTRÔLE DIRECT SWITCH CUMULUS ==================== #
+  - type: custom:button-card
+    entity: switch.shellypro1_ece334ee1b64
+    name: "⚡ CONTACTEUR CUMULUS"
+    show_state: true
+    state:
+      - value: "on"
+        styles:
+          card:
+            - background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)
+          icon:
+            - animation: pulse 1.5s infinite
+      - value: "off"
+        styles:
+          card:
+            - background: linear-gradient(135deg, #232526 0%, #414345 100%)
+    tap_action:
+      action: toggle
+      confirmation:
+        text: "Voulez-vous vraiment modifier l'état du contacteur cumulus ?"
+    styles:
+      card:
+        - border-radius: 15px
+        - padding: 20px
+        - box-shadow: 0 6px 12px rgba(0,0,0,0.15)
+        - transition: all 0.3s ease
+      name:
+        - color: white
+        - font-size: 20px
+        - font-weight: bold
+      state:
+        - color: rgba(255,255,255,0.9)
+        - font-size: 16px
+        - margin-top: 5px
+      icon:
+        - color: white
+        - width: 40px
+        - height: 40px
+
+  # ==================== MODES DE FONCTIONNEMENT ==================== #
+  - type: custom:button-card
+    name: "🎮 MODES DE FONCTIONNEMENT"
+    styles:
+      card:
+        - background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)
+        - border-radius: 15px
+        - padding: 15px
+        - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+      name:
+        - color: white
+        - font-size: 20px
+        - font-weight: bold
+        - text-shadow: 1px 1px 2px rgba(0,0,0,0.2)
+
+  - type: horizontal-stack
+    cards:
+      # Override Manuel
+      - type: custom:button-card
+        entity: input_boolean.cumulus_override
+        name: "OVERRIDE"
+        icon: mdi:hand-pointing-up
+        show_state: true
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%)
+                - animation: pulse 1s infinite
+              icon:
+                - animation: bounce 1s infinite
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        tap_action:
+          action: toggle
+          confirmation:
+            text: "Activer le forçage manuel ? Cela démarrera le cumulus immédiatement."
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 14px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 35px
+          state:
+            - color: rgba(255,255,255,0.9)
+            - font-size: 12px
+        extra_styles: |
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+          }
+
+      # Interdit Départ
+      - type: custom:button-card
+        entity: input_boolean.cumulus_interdit_depart
+        name: "INTERDIT"
+        icon: mdi:hand-back-right-off
+        show_state: true
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        tap_action:
+          action: toggle
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 14px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 35px
+          state:
+            - color: rgba(255,255,255,0.9)
+            - font-size: 12px
+
+      # Mode Vacances
+      - type: custom:button-card
+        entity: input_boolean.cumulus_mode_vacances
+        name: "VACANCES"
+        icon: mdi:beach
+        show_state: true
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        tap_action:
+          action: toggle
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 14px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 35px
+          state:
+            - color: rgba(255,255,255,0.9)
+            - font-size: 12px
+
+  - type: horizontal-stack
+    cards:
+      # Autoriser HC
+      - type: custom:button-card
+        entity: input_boolean.cumulus_autoriser_hc
+        name: "HEURES CREUSES"
+        icon: mdi:clock-time-eight
+        show_state: true
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #3498db 0%, #2980b9 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        tap_action:
+          action: toggle
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 14px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 35px
+          state:
+            - color: rgba(255,255,255,0.9)
+            - font-size: 12px
+
+      # Verrou Jour
+      - type: custom:button-card
+        entity: input_boolean.cumulus_verrou_jour
+        name: "VERROU JOUR"
+        icon: mdi:lock-check
+        show_state: true
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #e67e22 0%, #d35400 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #27ae60 0%, #229954 100%)
+        tap_action:
+          action: toggle
+          confirmation:
+            text: "Modifier le verrou journalier ?"
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 14px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 35px
+          state:
+            - color: rgba(255,255,255,0.9)
+            - font-size: 12px
+
+      # Température Atteinte
+      - type: custom:button-card
+        entity: input_boolean.cumulus_temp_atteinte_aujourdhui
+        name: "TEMP. MAX"
+        icon: mdi:thermometer-check
+        show_state: true
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        tap_action:
+          action: toggle
+          confirmation:
+            text: "Modifier l'état de température atteinte ?"
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 14px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 35px
+          state:
+            - color: rgba(255,255,255,0.9)
+            - font-size: 12px
+
+  # ==================== INDICATEURS D'ÉTAT ==================== #
+  - type: custom:button-card
+    name: "📊 INDICATEURS D'ÉTAT"
+    styles:
+      card:
+        - background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)
+        - border-radius: 15px
+        - padding: 15px
+        - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+      name:
+        - color: "#333"
+        - font-size: 20px
+        - font-weight: bold
+
+  - type: horizontal-stack
+    cards:
+      # Fenêtre PV
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_fenetre_pv
+        name: "FENÊTRE PV"
+        icon: mdi:sun-clock
+        show_state: false
+        custom_fields:
+          info: |
+            [[[
+              const debut = states['input_datetime.cumulus_plage_pv_debut'].state.substring(0,5);
+              const fin = states['input_datetime.cumulus_plage_pv_fin'].state.substring(0,5);
+              return debut + ' - ' + fin;
+            ]]]
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #f6d365 0%, #fda085 100%)
+              icon:
+                - animation: rotate 3s infinite linear
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 13px
+            - font-weight: bold
+          custom_fields:
+            info:
+              - color: rgba(255,255,255,0.9)
+              - font-size: 11px
+              - margin-top: 5px
+          icon:
+            - color: white
+            - width: 30px
+        extra_styles: |
+          @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+
+      # En Heures Creuses
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_en_hc
+        name: "HEURES CREUSES"
+        icon: mdi:clock-time-eight-outline
+        show_state: false
+        custom_fields:
+          info: |
+            [[[
+              const debut = states['input_datetime.cumulus_heures_creuses_debut'].state.substring(0,5);
+              const fin = states['input_datetime.cumulus_heures_creuses_fin'].state.substring(0,5);
+              return debut + ' - ' + fin;
+            ]]]
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 13px
+            - font-weight: bold
+          custom_fields:
+            info:
+              - color: rgba(255,255,255,0.9)
+              - font-size: 11px
+              - margin-top: 5px
+          icon:
+            - color: white
+            - width: 30px
+
+      # Deadband
+      - type: custom:button-card
+        entity: timer.cumulus_deadband_ui
+        name: "DEADBAND"
+        icon: mdi:timer-sand
+        show_state: false
+        custom_fields:
+          info: |
+            [[[
+              if (entity.state === 'active') {
+                return '⏳ Actif';
+              } else {
+                return '✅ Inactif';
+              }
+            ]]]
+        state:
+          - value: "active"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)
+              icon:
+                - animation: flip 1s infinite
+          - value: "idle"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #27ae60 0%, #229954 100%)
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 13px
+            - font-weight: bold
+          custom_fields:
+            info:
+              - color: rgba(255,255,255,0.9)
+              - font-size: 11px
+              - margin-top: 5px
+          icon:
+            - color: white
+            - width: 30px
+        extra_styles: |
+          @keyframes flip {
+            0%, 100% { transform: rotateY(0); }
+            50% { transform: rotateY(180deg); }
+          }
+
+  - type: horizontal-stack
+    cards:
+      # Appareils Prioritaires
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_appareil_prioritaire_actif
+        name: "APPAREILS"
+        icon: mdi:home-lightning-bolt-outline
+        show_state: false
+        custom_fields:
+          info: |
+            [[[
+              const ll = states['binary_sensor.cumulus_lave_linge_actif'].state === 'on';
+              const lv = states['binary_sensor.cumulus_lave_vaisselle_actif'].state === 'on';
+              if (ll && lv) return '🔵 LL + LV';
+              if (ll) return '🔵 Lave-linge';
+              if (lv) return '🔵 Lave-vaiss.';
+              return '✅ Aucun';
+            ]]]
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)
+              icon:
+                - animation: shake 0.5s infinite
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #27ae60 0%, #229954 100%)
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 13px
+            - font-weight: bold
+          custom_fields:
+            info:
+              - color: rgba(255,255,255,0.9)
+              - font-size: 11px
+              - margin-top: 5px
+          icon:
+            - color: white
+            - width: 30px
+        extra_styles: |
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+          }
+
+      # Besoin Urgent
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_besoin_chauffe_urgente
+        name: "BESOIN URGENT"
+        icon: mdi:alert-circle
+        show_state: false
+        custom_fields:
+          info: |
+            [[[
+              const heures = parseFloat(states['sensor.cumulus_heures_depuis_derniere_chauffe'].state);
+              const max = parseFloat(states['input_number.cumulus_espacement_max_h'].state);
+              return heures.toFixed(0) + 'h / ' + max.toFixed(0) + 'h';
+            ]]]
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%)
+              icon:
+                - animation: pulse 1s infinite
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #27ae60 0%, #229954 100%)
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 13px
+            - font-weight: bold
+          custom_fields:
+            info:
+              - color: rgba(255,255,255,0.9)
+              - font-size: 11px
+              - margin-top: 5px
+          icon:
+            - color: white
+            - width: 30px
+
+      # Capacité Suffisante
+      - type: custom:button-card
+        entity: binary_sensor.cumulus_capacite_suffisante
+        name: "CAPACITÉ"
+        icon: mdi:water-check
+        show_state: false
+        custom_fields:
+          info: |
+            [[[
+              const dispo = parseFloat(states['sensor.cumulus_eau_chaude_disponible_40c_litres'].state);
+              const besoin = parseFloat(states['sensor.cumulus_besoin_journalier_litres'].state);
+              return dispo.toFixed(0) + 'L / ' + besoin.toFixed(0) + 'L';
+            ]]]
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)
+              icon:
+                - animation: pulse 1s infinite
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 15px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 13px
+            - font-weight: bold
+          custom_fields:
+            info:
+              - color: rgba(255,255,255,0.9)
+              - font-size: 11px
+              - margin-top: 5px
+          icon:
+            - color: white
+            - width: 30px
+
+  # ==================== CONTRÔLE DES AUTOMATIONS ==================== #
+  - type: custom:button-card
+    name: "🤖 GESTION DES AUTOMATIONS"
+    styles:
+      card:
+        - background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)
+        - border-radius: 15px
+        - padding: 15px
+        - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+      name:
+        - color: white
+        - font-size: 20px
+        - font-weight: bold
+        - text-shadow: 1px 1px 2px rgba(0,0,0,0.2)
+
+  - type: horizontal-stack
+    cards:
+      # ON PV
+      - type: custom:button-card
+        entity: automation.cumulus_on_pv_automatique
+        name: "ON PV"
+        icon: mdi:solar-power
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #f6d365 0%, #fda085 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Limiteur Import
+      - type: custom:button-card
+        entity: automation.cumulus_limiteur_import
+        name: "LIMITEUR"
+        icon: mdi:flash-alert
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Sécurité SOC
+      - type: custom:button-card
+        entity: automation.cumulus_securite_soc_bas
+        name: "SOC BAS"
+        icon: mdi:battery-alert
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+  - type: horizontal-stack
+    cards:
+      # Fin Chauffe Universelle
+      - type: custom:button-card
+        entity: automation.cumulus_fin_chauffe_universelle
+        name: "FIN UNIV."
+        icon: mdi:check-circle
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Arrêt Appareil
+      - type: custom:button-card
+        entity: automation.cumulus_arret_si_appareil_demarre
+        name: "ARRÊT APP."
+        icon: mdi:stop-circle
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Redémarrage
+      - type: custom:button-card
+        entity: automation.cumulus_redemarrage_si_appareil_arrete
+        name: "REDÉMARR."
+        icon: mdi:restart
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #3498db 0%, #2980b9 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+  - type: horizontal-stack
+    cards:
+      # ON HC
+      - type: custom:button-card
+        entity: automation.cumulus_on_debut_hc_intelligent
+        name: "ON HC"
+        icon: mdi:clock-start
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # OFF HC
+      - type: custom:button-card
+        entity: automation.cumulus_off_fin_hc
+        name: "OFF HC"
+        icon: mdi:clock-end
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Reset Daily
+      - type: custom:button-card
+        entity: automation.cumulus_reset_daily_et_override
+        name: "RESET"
+        icon: mdi:calendar-refresh
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+  - type: horizontal-stack
+    cards:
+      # Détection Externe
+      - type: custom:button-card
+        entity: automation.cumulus_detection_chauffe_externe
+        name: "DÉT. EXT."
+        icon: mdi:radar
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Alerte Urgent
+      - type: custom:button-card
+        entity: automation.cumulus_alerte_besoin_urgent
+        name: "ALERTE"
+        icon: mdi:bell-alert
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+      # Log Refus
+      - type: custom:button-card
+        entity: automation.cumulus_log_refus_demarrage
+        name: "LOG REFUS"
+        icon: mdi:file-document
+        show_state: false
+        tap_action:
+          action: toggle
+        state:
+          - value: "on"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #f6d365 0%, #fda085 100%)
+          - value: "off"
+            styles:
+              card:
+                - background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)
+                - opacity: 0.6
+        styles:
+          card:
+            - border-radius: 12px
+            - padding: 12px
+            - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+          name:
+            - color: white
+            - font-size: 12px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 28px
+
+  # ==================== ACTIONS RAPIDES ==================== #
+  - type: custom:button-card
+    name: "⚡ ACTIONS RAPIDES"
+    styles:
+      card:
+        - background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%)
+        - border-radius: 15px
+        - padding: 15px
+        - box-shadow: 0 4px 8px rgba(0,0,0,0.1)
+      name:
+        - color: white
+        - font-size: 20px
+        - font-weight: bold
+        - text-shadow: 1px 1px 2px rgba(0,0,0,0.2)
+
+  - type: horizontal-stack
+    cards:
+      # Forcer Démarrage
+      - type: custom:button-card
+        name: "FORCER ON"
+        icon: mdi:power
+        tap_action:
+          action: call-service
+          service: input_boolean.turn_on
+          service_data:
+            entity_id: input_boolean.cumulus_override
+          confirmation:
+            text: "Forcer le démarrage immédiat du cumulus ?"
+        styles:
+          card:
+            - background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%)
+            - border-radius: 12px
+            - padding: 20px
+            - box-shadow: 0 6px 12px rgba(0,0,0,0.15)
+          name:
+            - color: white
+            - font-size: 16px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 40px
+
+      # Réinitialiser Verrous
+      - type: custom:button-card
+        name: "RESET VERROUS"
+        icon: mdi:lock-open
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.cumulus_reset_verrous
+          confirmation:
+            text: "Réinitialiser tous les verrous ?"
+        styles:
+          card:
+            - background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)
+            - border-radius: 12px
+            - padding: 20px
+            - box-shadow: 0 6px 12px rgba(0,0,0,0.15)
+          name:
+            - color: white
+            - font-size: 16px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 40px
+
+      # Forcer Arrêt
+      - type: custom:button-card
+        name: "FORCER OFF"
+        icon: mdi:power-off
+        tap_action:
+          action: call-service
+          service: switch.turn_off
+          service_data:
+            entity_id: switch.shellypro1_ece334ee1b64
+          confirmation:
+            text: "Forcer l'arrêt immédiat du cumulus ?"
+        styles:
+          card:
+            - background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)
+            - border-radius: 12px
+            - padding: 20px
+            - box-shadow: 0 6px 12px rgba(0,0,0,0.15)
+          name:
+            - color: white
+            - font-size: 16px
+            - font-weight: bold
+          icon:
+            - color: white
+            - width: 40px
+
+  # ==================== FOOTER INFO ==================== #
+  - type: markdown
+    content: |
+      <div style="text-align: center; color: #95a5a6; font-size: 11px; padding: 10px;">
+      🎛️ Carte Commandes Cumulus v2025-10-16a | Claude Code
+      </div>

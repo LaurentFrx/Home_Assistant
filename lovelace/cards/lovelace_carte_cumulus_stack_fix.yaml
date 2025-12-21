@@ -1,0 +1,186 @@
+###############################################################################
+# CARTE LOVELACE STACK-IN-CARD — Correction du contour dégradé
+# Version: 2025-11-20 — Ajustement du masque pour le halo extérieur
+###############################################################################
+
+type: custom:stack-in-card
+card_mod:
+  style: |
+    :host {
+      display: block !important;
+      overflow: visible !important;
+      position: relative !important;
+    }
+    ha-card {
+      position: relative;
+      z-index: 0;
+      border-radius: 30px !important;
+      border: 1px solid rgba(255, 255, 255, 0.18) !important;
+      background: linear-gradient(172deg, rgba(140, 140, 140, 0.7) 0%, rgba(0, 0, 0, 0) 60%) !important;
+      background-clip: padding-box;
+      backdrop-filter: blur(6px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+      will-change: transform;
+      padding: 8px !important;
+    }
+cards:
+  - type: custom:button-card
+    show_name: false
+    show_icon: false
+    show_state: false
+    card_mod:
+      style: |
+        :host {
+          display: block !important;
+          overflow: visible !important;
+          position: relative !important;
+        }
+    styles:
+      card:
+        - position: relative
+        - z-index: 0
+        - border-radius: 30px
+        - border: 1px solid rgba(255, 255, 255, 0.18)
+        - padding: 12px 16px
+        - background: >-
+            linear-gradient(172deg, rgba(140, 140, 140, 0.7) 0%, rgba(0, 0, 0,
+            0) 60%)
+        - background-clip: padding-box
+        - backdrop-filter: blur(6px)
+        - "-webkit-backdrop-filter": blur(8px)
+        - box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.16) inset
+        - will-change: transform
+      grid:
+        - grid-template-areas: "'content'"
+      custom_fields:
+        content:
+          - width: 100%
+    custom_fields:
+      content: |
+        [[[
+          const pvWindow = states['binary_sensor.cumulus_fenetre_pv']?.state === 'on';
+          const pvPower = Number(states['sensor.pv_total_entree_sb_aps_w']?.state) || 0;
+          const pvSeuil = Number(states['sensor.cumulus_seuil_pv_dynamique_w']?.state) || 1000;
+          const pvPct = Math.min(100, Math.max(0, (pvPower / pvSeuil) * 100));
+          const pvColor = pvWindow ? '#22c55e' : (pvPct >= 80 ? '#eab308' : '#64748b');
+          
+          return `
+            <div style="display:flex;align-items:center;gap:12px;">
+              <ha-icon icon="mdi:solar-power" style="--mdc-icon-size:24px;color:${pvColor};"></ha-icon>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:600;color:white;">Mode Solaire</div>
+                <div style="background:rgba(255,255,255,0.15);border-radius:6px;height:6px;margin-top:6px;overflow:hidden;">
+                  <div style="width:${pvPct}%;height:100%;background:${pvColor};border-radius:6px;"></div>
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:3px;">${Math.round(pvPower)}W / ${Math.round(pvSeuil)}W</div>
+              </div>
+              <ha-icon icon="mdi:play" 
+                       style="--mdc-icon-size:24px;padding:8px;background:rgba(34,197,94,0.3);border-radius:50%;color:#22c55e;cursor:pointer;"></ha-icon>
+            </div>
+          `;
+        ]]]
+  - type: custom:button-card
+    show_name: false
+    show_icon: false
+    show_state: false
+    card_mod:
+      style: |
+        :host {
+          display: block !important;
+          overflow: visible !important;
+          position: relative !important;
+        }
+    styles:
+      card:
+        - position: relative
+        - z-index: 0
+        - border-radius: 30px
+        - border: 1px solid rgba(255, 255, 255, 0.18)
+        - padding: 12px 16px
+        - background: >-
+            linear-gradient(172deg, rgba(140, 140, 140, 0.7) 0%, rgba(0, 0, 0,
+            0) 60%)
+        - background-clip: padding-box
+        - backdrop-filter: blur(6px)
+        - "-webkit-backdrop-filter": blur(8px)
+        - box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.16) inset
+        - will-change: transform
+      grid:
+        - grid-template-areas: "'content'"
+      custom_fields:
+        content:
+          - width: 100%
+    custom_fields:
+      content: |
+        [[[
+          const enHC = states['binary_sensor.cumulus_en_hc']?.state === 'on';
+          const hcAutorise = states['input_boolean.cumulus_autoriser_hc']?.state === 'on';
+          const hcExcept = states['input_boolean.cumulus_chauffe_hc_exceptionnelle']?.state === 'on';
+          const hcColor = enHC ? '#3b82f6' : '#64748b';
+          
+          return `
+            <div style="display:flex;align-items:center;gap:12px;">
+              <ha-icon icon="mdi:clock-outline" style="--mdc-icon-size:24px;color:${hcColor};"></ha-icon>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:600;color:white;">Heures Creuses</div>
+                <div style="background:rgba(255,255,255,0.15);border-radius:6px;height:6px;margin-top:6px;overflow:hidden;">
+                  <div style="width:${enHC ? 100 : 0}%;height:100%;background:${hcColor};border-radius:6px;"></div>
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:3px;">${enHC ? 'En cours' : 'Hors période'} • ${hcAutorise ? 'Auto' : 'Bloqué'}</div>
+              </div>
+              <ha-icon icon="mdi:lightning-bolt" 
+                       style="--mdc-icon-size:24px;padding:8px;background:${hcExcept ? 'rgba(234,179,8,0.3)' : 'rgba(255,255,255,0.1)'};border-radius:50%;color:${hcExcept ? '#eab308' : 'rgba(255,255,255,0.4)'};cursor:pointer;"></ha-icon>
+              <ha-icon icon="${hcAutorise ? 'mdi:check-circle' : 'mdi:close-circle'}" 
+                       style="--mdc-icon-size:24px;padding:8px;background:${hcAutorise ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'};border-radius:50%;color:${hcAutorise ? '#22c55e' : '#ef4444'};cursor:pointer;"></ha-icon>
+            </div>
+          `;
+        ]]]
+  - type: custom:button-card
+    show_name: false
+    show_icon: false
+    show_state: false
+    card_mod:
+      style: |
+        :host {
+          display: block !important;
+          overflow: visible !important;
+          position: relative !important;
+        }
+    styles:
+      card:
+        - position: relative
+        - z-index: 0
+        - border-radius: 30px
+        - border: 1px solid rgba(255, 255, 255, 0.18)
+        - padding: 12px 16px
+        - background: >-
+            linear-gradient(172deg, rgba(140, 140, 140, 0.7) 0%, rgba(0, 0, 0,
+            0) 60%)
+        - background-clip: padding-box
+        - backdrop-filter: blur(6px)
+        - "-webkit-backdrop-filter": blur(8px)
+        - box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.16) inset
+        - will-change: transform
+      grid:
+        - grid-template-areas: "'content'"
+      custom_fields:
+        content:
+          - width: 100%
+    custom_fields:
+      content: |
+        [[[
+          const vacances = states['input_boolean.cumulus_mode_vacances']?.state === 'on';
+          const vacColor = vacances ? '#f97316' : 'rgba(255,255,255,0.5)';
+          
+          return `
+            <div style="display:flex;align-items:center;gap:12px;">
+              <ha-icon icon="mdi:beach" style="--mdc-icon-size:24px;color:${vacColor};"></ha-icon>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:600;color:white;">Mode Vacances</div>
+              </div>
+              <ha-icon icon="${vacances ? 'mdi:toggle-switch' : 'mdi:toggle-switch-off'}" 
+                       style="--mdc-icon-size:36px;color:${vacColor};cursor:pointer;"></ha-icon>
+            </div>
+          `;
+        ]]]
