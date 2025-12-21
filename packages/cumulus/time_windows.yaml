@@ -1,0 +1,99 @@
+###############################################################################
+# CUMULUS - FENÊTRES HORAIRES (SOURCE UNIQUE HC/PV)
+# Helpers éditables + capteurs canoniques pour les plages horaires
+###############################################################################
+
+input_boolean:
+  cumulus_hc_enable:
+    name: "Cumulus - HC actif"
+    icon: mdi:clock-check
+    initial: true
+
+input_datetime:
+  cumulus_hc_debut:
+    name: "Cumulus - Début HC"
+    has_date: false
+    has_time: true
+    initial: "00:10:00"
+    icon: mdi:clock-start
+
+  cumulus_hc_fin:
+    name: "Cumulus - Fin HC"
+    has_date: false
+    has_time: true
+    initial: "08:00:00"
+    icon: mdi:clock-end
+
+template:
+  - binary_sensor:
+      # HC cumulus - source unique (gère le passage minuit)
+      - name: "Cumulus en HC"
+        unique_id: cumulus_en_hc
+        availability: >
+          {{ states('input_datetime.cumulus_hc_debut') not in ['unknown','unavailable','none']
+             and states('input_datetime.cumulus_hc_fin') not in ['unknown','unavailable','none'] }}
+        state: >
+          {% set enabled = is_state('input_boolean.cumulus_hc_enable','on') %}
+          {% if not enabled %}false{% else %}
+            {% set start = states('input_datetime.cumulus_hc_debut') %}
+            {% set end = states('input_datetime.cumulus_hc_fin') %}
+            {% set now_t = now().time() %}
+            {% set start_t = today_at(start).time() %}
+            {% set end_t = today_at(end).time() %}
+            {% if end_t > start_t %}
+              {{ start_t <= now_t and now_t < end_t }}
+            {% else %}
+              {{ now_t >= start_t or now_t < end_t }}
+            {% endif %}
+          {% endif %}
+        icon: >
+          {% if is_state('binary_sensor.cumulus_en_hc','on') %}mdi:clock-time-eight-outline
+          {% else %}mdi:clock-time-eight{% endif %}
+        attributes:
+          hc_enabled: "{{ is_state('input_boolean.cumulus_hc_enable','on') }}"
+          window_start: "{{ states('input_datetime.cumulus_hc_debut') }}"
+          window_end: "{{ states('input_datetime.cumulus_hc_fin') }}"
+
+  - sensor:
+      # Plage HC lisible
+      - name: "Cumulus HC plages"
+        unique_id: cumulus_hc_plages
+        state: >
+          {% set start = states('input_datetime.cumulus_hc_debut') %}
+          {% set end = states('input_datetime.cumulus_hc_fin') %}
+          {% if start in ['unknown','unavailable','none'] or end in ['unknown','unavailable','none'] %}
+            Indéfini
+          {% else %}
+            {{ start[0:5] }}-{{ end[0:5] }}
+          {% endif %}
+        attributes:
+          enabled: "{{ is_state('input_boolean.cumulus_hc_enable','on') }}"
+          windows: >
+            {% set start = states('input_datetime.cumulus_hc_debut') %}
+            {% set end = states('input_datetime.cumulus_hc_fin') %}
+            {% if start in ['unknown','unavailable','none'] or end in ['unknown','unavailable','none'] %}
+              []
+            {% else %}
+              [ { "start": "{{ start[0:5] }}", "end": "{{ end[0:5] }}" } ]
+            {% endif %}
+
+      # Plage PV lisible (canonique, ne renomme pas les helpers existants)
+      - name: "Cumulus PV plage"
+        unique_id: cumulus_pv_plage
+        state: >
+          {% set start = states('input_datetime.cumulus_heure_debut_pv') %}
+          {% set end = states('input_datetime.cumulus_heure_fin_pv') %}
+          {% if start in ['unknown','unavailable','none'] or end in ['unknown','unavailable','none'] %}
+            Indéfini
+          {% else %}
+            {{ start[0:5] }}-{{ end[0:5] }}
+          {% endif %}
+        attributes:
+          windows: >
+            {% set start = states('input_datetime.cumulus_heure_debut_pv') %}
+            {% set end = states('input_datetime.cumulus_heure_fin_pv') %}
+            {% if start in ['unknown','unavailable','none'] or end in ['unknown','unavailable','none'] %}
+              []
+            {% else %}
+              [ { "start": "{{ start[0:5] }}", "end": "{{ end[0:5] }}" } ]
+            {% endif %}

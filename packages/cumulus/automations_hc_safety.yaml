@@ -455,8 +455,182 @@ automation:
           message: "Retour de vacances - Chauffe forcée"
 
 # ┌─────────────────────────────────────────────────────────────────────────┐
-# │ SCRIPTS UTILITAIRES                                                     │
+# ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+# ³ ALERTE BESOIN URGENT                                                     ³
+# ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+  - id: cumulus_alerte_besoin_urgent_v3
+    alias: "Cumulus — Alerte besoin urgent"
+    description: "Notification chauffe urgente : temperature basse ou delai depuis derniere chauffe depasse (pile V3)"
+    mode: single
+
+    trigger:
+      - platform: numeric_state
+        id: temp_basse
+        entity_id: sensor.cumulus_temperature_estimee
+        below: 35
+        for:
+          hours: 1
+
+      - platform: numeric_state
+        id: delai_depasse
+        entity_id: sensor.cumulus_heures_depuis_derniere_chauffe
+        above: 48
+
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        state: 'off'
+
+    action:
+      - variables:
+          derniere_chauffe: "{{ states('sensor.cumulus_derniere_chauffe') }}"
+          temp_estimee: "{{ states('sensor.cumulus_temperature_estimee') }}"
+          temp_physique: "{{ states('sensor.thermo_cumulus_temperature') }}"
+          heures_depuis: "{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) | round(1) }}"
+          raison: >
+            {% if trigger.id == 'temp_basse' %}
+              Temperature estimee trop basse depuis au moins 1 heure.
+            {% elif trigger.id == 'delai_depasse' %}
+              Trop longtemps sans chauffe (delai depuis la derniere chauffe depasse).
+            {% else %}
+              Besoin de chauffe urgent detecte.
+            {% endif %}
+
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Chauffe urgente"
+          message: >
+            {{ raison }}
+            Derniere chauffe : {{ derniere_chauffe }}
+            Depuis la derniere chauffe : {{ heures_depuis }} h
+            Temperature estimee : {{ temp_estimee }} degC
+            Temperature sonde : {{ temp_physique }} degC
+          notification_id: cumulus_alerte_urgent
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ ALERTE SANTÉ SYSTÈME DEGRADÉE                                          │
 # └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_alerte_sante_systeme_degradee_v3
+    alias: "Cumulus — Alerte santé système dégradée"
+    description: "Alerte si le score de sante reste bas pendant 1 heure"
+    mode: single
+    initial_state: "off"
+
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.cumulus_score_sante
+        below: 70
+        for:
+          hours: 1
+
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        state: 'off'
+
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Santé système dégradée"
+          message: >
+            Score actuel: {{ states('sensor.cumulus_score_sante') }}%.
+            Derniere chauffe: {{ states('sensor.cumulus_derniere_chauffe') }}.
+            Depuis la derniere chauffe: {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }} h.
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ ALERTE ENTITÉ CRITIQUE INDISPONIBLE                                    │
+# └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_alerte_entite_critique_indisponible_v3
+    alias: "Cumulus — Alerte entité critique indisponible"
+    description: "Alerte si un capteur critique devient indisponible pendant une chauffe"
+    mode: single
+    initial_state: "off"
+
+    trigger:
+      - platform: template
+        value_template: >
+          {% set entites = [
+            'sensor.cumulus_import_reseau_w',
+            'sensor.cumulus_pv_power_w',
+            'sensor.cumulus_soc_batterie',
+            'sensor.thermo_cumulus_temperature'
+          ] %}
+          {% for e in entites %}
+            {% if states(e) in ['unavailable', 'unknown', 'none'] %}
+              {{ true }}
+            {% endif %}
+          {% endfor %}
+        for:
+          minutes: 1
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+
+    action:
+      - variables:
+          entites_en_defaut: >
+            {% set entites = [
+              'sensor.cumulus_import_reseau_w',
+              'sensor.cumulus_pv_power_w',
+              'sensor.cumulus_soc_batterie',
+              'sensor.thermo_cumulus_temperature'
+            ] %}
+            {% set defaults = entites | select('in', ['sensor.cumulus_import_reseau_w','sensor.cumulus_pv_power_w','sensor.cumulus_soc_batterie','sensor.thermo_cumulus_temperature']) | list %}
+            {% set ko = [] %}
+            {% for e in defaults %}
+              {% if states(e) in ['unavailable', 'unknown', 'none'] %}
+                {% set _ = ko.append(e) %}
+              {% endif %}
+            {% endfor %}
+            {{ ko }}
+          temp_estimee: "{{ states('sensor.cumulus_temperature_estimee') }}"
+          import_reseau: "{{ states('sensor.cumulus_import_reseau_w') }}"
+          pv: "{{ states('sensor.cumulus_pv_power_w') }}"
+          soc: "{{ states('sensor.cumulus_soc_batterie') }}"
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Capteur critique indisponible"
+          message: >
+            Les entites suivantes sont indisponibles pendant une chauffe :
+            {{ entites_en_defaut | join(', ') if entites_en_defaut|length > 0 else 'Aucune listable' }}.
+            Valeurs utiles - Temp estimée: {{ temp_estimee }} °C, Import: {{ import_reseau }} W, PV: {{ pv }} W, SOC: {{ soc }}%.
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ ALERTE COHÉRENCE OFF                                                   │
+# └─────────────────────────────────────────────────────────────────────────┘
+  - id: cumulus_alerte_coherence_off_v3
+    alias: "Cumulus — Alerte cohérence OFF"
+    description: "Alerte si le capteur de coherence reste a off pendant 10 minutes"
+    mode: single
+    initial_state: "off"
+
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_coherence_ok
+        to: 'off'
+        for:
+          minutes: 10
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: 'on'
+
+    action:
+      - variables:
+          temp_estimee: "{{ states('sensor.cumulus_temperature_estimee') }}"
+          import_reseau: "{{ states('sensor.cumulus_import_reseau_w') }}"
+          pv: "{{ states('sensor.cumulus_pv_power_w') }}"
+          soc: "{{ states('sensor.cumulus_soc_batterie') }}"
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Incoherence detectee"
+          message: >
+            binary_sensor.cumulus_coherence_ok est a off depuis au moins 10 minutes.
+            Valeurs actuelles: Temp estimée {{ temp_estimee }} °C, Import {{ import_reseau }} W, PV {{ pv }} W, SOC {{ soc }}%.
+
 script:
   # Test complet du système
   cumulus_test_systeme:
