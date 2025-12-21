@@ -1,0 +1,639 @@
+###############################################################################
+# DASHBOARD CUMULUS UTILISATEUR FINAL — Interface simplifiée et élégante
+# Destiné à une utilisatrice non-technique
+# Version: 2025-10-09b — Version corrigée - Utilise les sensors existants
+###############################################################################
+
+type: vertical-stack
+cards:
+  # ==================== 1. CARTE PRINCIPALE - ÉTAT CUMULUS ==================== #
+  - type: custom:button-card
+    entity: switch.shellypro1_ece334ee1b64
+    name: Cumulus
+    show_state: false
+    show_label: true
+    label: >-
+      [[[
+        const temp_atteinte = states['input_boolean.temp_atteinte_aujourdhui'].state === 'on';
+        const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+        const interdit = states['input_boolean.cumulus_interdit'].state === 'on';
+        const derniere = states['input_datetime.cumulus_derniere_chauffe_complete'].state;
+
+        if (interdit) return '🔒 VERROUILLÉ';
+        if (chauffe) return '🔥 EN CHAUFFE';
+        if (temp_atteinte) return '✅ PRÊT • Dernière chauffe: ' + derniere;
+        return '💤 ARRÊTÉ • Dernière chauffe: ' + derniere;
+      ]]]
+    styles:
+      card:
+        - height: 120px
+        - border-radius: 16px
+        - padding: 16px
+        - box-shadow: 0 2px 8px rgba(0,0,0,.15)
+        - background: >-
+            [[[
+              const interdit = states['input_boolean.cumulus_interdit'].state === 'on';
+              const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+              const temp_atteinte = states['input_boolean.temp_atteinte_aujourdhui'].state === 'on';
+              if (interdit) return 'linear-gradient(135deg, rgba(156,163,175,.10), rgba(6,182,212,.04))';
+              if (chauffe) return 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))';
+              if (temp_atteinte) return 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))';
+              return 'linear-gradient(135deg, rgba(14,165,233,.14), rgba(6,182,212,.06))';
+            ]]]
+      grid:
+        - grid-template-areas: '"led n" "led l"'
+        - grid-template-columns: 48px 1fr
+        - grid-template-rows: 1fr 1fr
+      custom_fields:
+        led:
+          - width: 40px
+          - height: 40px
+          - border-radius: 50%
+          - margin-top: 10px
+          - box-shadow: >-
+              [[[
+                const interdit = states['input_boolean.cumulus_interdit'].state === 'on';
+                const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+                const temp_atteinte = states['input_boolean.temp_atteinte_aujourdhui'].state === 'on';
+                if (interdit) return '0 0 12px rgba(156,163,175,.5)';
+                if (chauffe) return '0 0 12px rgba(239,68,68,.8)';
+                if (temp_atteinte) return '0 0 12px rgba(34,197,94,.8)';
+                return '0 0 12px rgba(14,165,233,.5)';
+              ]]]
+          - background: >-
+              [[[
+                const interdit = states['input_boolean.cumulus_interdit'].state === 'on';
+                const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+                const temp_atteinte = states['input_boolean.temp_atteinte_aujourdhui'].state === 'on';
+                if (interdit) return '#9ca3af';
+                if (chauffe) return '#ef4444';
+                if (temp_atteinte) return '#22c55e';
+                return '#0ea5e9';
+              ]]]
+      name:
+        - font-weight: 800
+        - font-size: 1.8rem
+        - color: var(--primary-text-color)
+        - justify-self: start
+        - margin-left: 8px
+      label:
+        - font-weight: 600
+        - font-size: 0.9rem
+        - color: var(--secondary-text-color)
+        - justify-self: start
+        - margin-left: 8px
+        - margin-top: -8px
+    custom_fields:
+      led: >-
+        [[[
+          return '';
+        ]]]
+    tap_action:
+      action: none
+    hold_action:
+      action: more-info
+
+  # ==================== 2. JAUGE - EAU DISPONIBLE ==================== #
+  - type: vertical-stack
+    cards:
+      # Titre avec message contextuel
+      - type: markdown
+        content: >
+          {% set temp_ok = is_state('input_boolean.temp_atteinte_aujourdhui', 'on') %}
+          {% set capacite_ok = is_state('binary_sensor.cumulus_capacite_suffisante', 'on') %}
+          {% set litres = states('sensor.cumulus_litres_disponibles_estimes') | float(0) %}
+
+          {% if temp_ok %}
+          ## ✅ Eau chaude prête
+          {% elif capacite_ok %}
+          ## 👍 Suffisante pour aujourd'hui
+          {% else %}
+          ## ⚠️ Niveau bas
+          {% endif %}
+
+          **{{ litres | round(0) }} litres** d'eau à 40°C disponibles
+        card_mod:
+          style: |
+            ha-card {
+              border-radius: 16px 16px 0 0;
+              padding: 12px 16px 4px 16px;
+              box-shadow: none;
+              margin-bottom: 0;
+            }
+
+      # Jauge semi-circulaire
+      - type: gauge
+        entity: sensor.cumulus_litres_disponibles_estimes
+        name: Eau chaude disponible
+        min: 0
+        max: 300
+        needle: true
+        segments:
+          - from: 0
+            color: "#ef4444"
+          - from: 150
+            color: "#f59e0b"
+          - from: 250
+            color: "#eab308"
+          - from: 400
+            color: "#22c55e"
+        card_mod:
+          style: |
+            ha-card {
+              border-radius: 0 0 16px 16px;
+              padding: 8px 16px 16px 16px;
+              box-shadow: 0 1px 6px rgba(0,0,0,.12);
+              margin-top: 0;
+            }
+
+  # ==================== 3. INFORMATIONS ESSENTIELLES (3 colonnes) ==================== #
+  - type: horizontal-stack
+    cards:
+      # Température
+      - type: custom:button-card
+        entity: sensor.cumulus_temperature_estimee
+        name: Température
+        show_state: true
+        show_icon: true
+        icon: mdi:thermometer
+        styles:
+          card:
+            - height: 100px
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: >-
+                [[[
+                  const temp = parseFloat(states['sensor.cumulus_temperature_estimee'].state);
+                  if (temp >= 55) return 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))';
+                  if (temp >= 45) return 'linear-gradient(135deg, rgba(245,158,11,.14), rgba(6,182,212,.06))';
+                  if (temp >= 35) return 'linear-gradient(135deg, rgba(234,179,8,.14), rgba(6,182,212,.06))';
+                  return 'linear-gradient(135deg, rgba(14,165,233,.14), rgba(6,182,212,.06))';
+                ]]]
+          grid:
+            - grid-template-areas: '"i" "n" "s"'
+            - grid-template-rows: 1fr auto auto
+          icon:
+            - width: 32px
+            - color: >-
+                [[[
+                  const temp = parseFloat(states['sensor.cumulus_temperature_estimee'].state);
+                  if (temp >= 55) return '#ef4444';
+                  if (temp >= 45) return '#f59e0b';
+                  if (temp >= 35) return '#eab308';
+                  return '#0ea5e9';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: 0.86rem
+            - color: var(--secondary-text-color)
+            - margin-top: 4px
+          state:
+            - font-weight: 800
+            - font-size: 1.4rem
+            - color: var(--primary-text-color)
+            - margin-top: 2px
+        tap_action:
+          action: more-info
+
+      # Dernière chauffe
+      - type: custom:button-card
+        entity: sensor.cumulus_heures_depuis_derniere_chauffe
+        name: Dernière chauffe
+        show_state: false
+        show_label: true
+        show_icon: true
+        icon: mdi:clock-outline
+        label: >-
+          [[[
+            const heures = parseFloat(states['sensor.cumulus_heures_depuis_derniere_chauffe'].state);
+            if (heures >= 24) {
+              const jours = Math.floor(heures / 24);
+              return jours + (jours === 1 ? ' jour' : ' jours');
+            }
+            return Math.round(heures) + 'h';
+          ]]]
+        styles:
+          card:
+            - height: 100px
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: >-
+                [[[
+                  const heures = parseFloat(states['sensor.cumulus_heures_depuis_derniere_chauffe'].state);
+                  if (heures >= 48) return 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))';
+                  if (heures >= 24) return 'linear-gradient(135deg, rgba(245,158,11,.14), rgba(6,182,212,.06))';
+                  return 'linear-gradient(135deg, rgba(34,197,94,.14), rgba(6,182,212,.06))';
+                ]]]
+          grid:
+            - grid-template-areas: '"i" "n" "l"'
+            - grid-template-rows: 1fr auto auto
+          icon:
+            - width: 32px
+            - color: >-
+                [[[
+                  const heures = parseFloat(states['sensor.cumulus_heures_depuis_derniere_chauffe'].state);
+                  if (heures >= 48) return '#ef4444';
+                  if (heures >= 24) return '#f59e0b';
+                  return '#22c55e';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: 0.86rem
+            - color: var(--secondary-text-color)
+            - margin-top: 4px
+          label:
+            - font-weight: 800
+            - font-size: 1.4rem
+            - color: var(--primary-text-color)
+            - margin-top: 2px
+        tap_action:
+          action: none
+
+      # Mode actuel
+      - type: custom:button-card
+        name: Mode actuel
+        show_state: false
+        show_label: true
+        show_icon: true
+        icon: >-
+          [[[
+            const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+            const fenetre_pv = states['binary_sensor.cumulus_fenetre_pv'].state === 'on';
+            if (chauffe && fenetre_pv) return 'mdi:white-balance-sunny';
+            if (chauffe) return 'mdi:flash';
+            return 'mdi:pause-circle-outline';
+          ]]]
+        label: >-
+          [[[
+            const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+            const fenetre_pv = states['binary_sensor.cumulus_fenetre_pv'].state === 'on';
+            if (chauffe && fenetre_pv) return '☀️ Solaire';
+            if (chauffe) return '⚡ Réseau';
+            return '⏸️ Arrêt';
+          ]]]
+        styles:
+          card:
+            - height: 100px
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+            - background: >-
+                [[[
+                  const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+                  const fenetre_pv = states['binary_sensor.cumulus_fenetre_pv'].state === 'on';
+                  if (chauffe && fenetre_pv) return 'linear-gradient(135deg, rgba(245,158,11,.14), rgba(6,182,212,.06))';
+                  if (chauffe) return 'linear-gradient(135deg, rgba(239,68,68,.14), rgba(6,182,212,.06))';
+                  return 'linear-gradient(135deg, rgba(156,163,175,.10), rgba(6,182,212,.04))';
+                ]]]
+          grid:
+            - grid-template-areas: '"i" "n" "l"'
+            - grid-template-rows: 1fr auto auto
+          icon:
+            - width: 32px
+            - color: >-
+                [[[
+                  const chauffe = states['binary_sensor.cumulus_chauffe_reelle'].state === 'on';
+                  const fenetre_pv = states['binary_sensor.cumulus_fenetre_pv'].state === 'on';
+                  if (chauffe && fenetre_pv) return '#f59e0b';
+                  if (chauffe) return '#ef4444';
+                  return '#9ca3af';
+                ]]]
+          name:
+            - font-weight: 700
+            - font-size: 0.86rem
+            - color: var(--secondary-text-color)
+            - margin-top: 4px
+          label:
+            - font-weight: 800
+            - font-size: 1.2rem
+            - color: var(--primary-text-color)
+            - margin-top: 2px
+        tap_action:
+          action: none
+
+  # ==================== 4. PROCHAINE CHAUFFE ==================== #
+  - type: custom:button-card
+    name: 📅 Prochaine chauffe
+    show_state: false
+    show_label: true
+    show_icon: false
+    label: >-
+      [[[
+        const temp_ok = states['input_boolean.temp_atteinte_aujourdhui'].state === 'on';
+        const temps_ok = states['binary_sensor.cumulus_temps_suffisant_fenetre_pv'].state === 'on';
+        const meteo_demain = states['binary_sensor.cumulus_meteo_favorable_demain'].state === 'on';
+
+        if (temp_ok) return 'Demain en journée si soleil ☀️';
+        if (temps_ok) return 'Possible aujourd\'hui avec le soleil 🌤️';
+        if (meteo_demain) return 'Demain avec le soleil ☀️';
+        return 'Cette nuit (heures creuses) 🌙';
+      ]]]
+    styles:
+      card:
+        - height: 80px
+        - border-radius: 16px
+        - padding: 16px
+        - box-shadow: 0 1px 6px rgba(0,0,0,.12)
+        - background: 'linear-gradient(135deg, rgba(14,165,233,.14), rgba(6,182,212,.06))'
+      grid:
+        - grid-template-areas: '"n" "l"'
+        - grid-template-rows: auto 1fr
+      name:
+        - font-weight: 800
+        - font-size: 1.05rem
+        - color: '#0ea5e9'
+        - justify-self: start
+      label:
+        - font-weight: 600
+        - font-size: 0.95rem
+        - color: var(--primary-text-color)
+        - justify-self: start
+        - margin-top: 6px
+    tap_action:
+      action: none
+
+  # ==================== 5. ALERTES CONDITIONNELLES ==================== #
+
+  # Alerte 1 : Pas de chauffe depuis 48h
+  - type: conditional
+    conditions:
+      - condition: numeric_state
+        entity: sensor.cumulus_heures_depuis_derniere_chauffe
+        above: 48
+    card:
+      type: custom:button-card
+      name: ⚠️ Attention
+      show_state: false
+      show_label: true
+      show_icon: true
+      icon: mdi:alert-circle
+      label: >-
+        [[[
+          const heures = Math.round(parseFloat(states['sensor.cumulus_heures_depuis_derniere_chauffe'].state));
+          const temp = Math.round(parseFloat(states['sensor.cumulus_temperature_estimee'].state));
+          const litres = Math.round(parseFloat(states['sensor.cumulus_litres_disponibles_estimes'].state));
+          return `Pas de chauffe depuis ${heures}h<br>Température: ${temp}°C • Disponible: ${litres}L`;
+        ]]]
+      styles:
+        card:
+          - height: 100px
+          - border-radius: 16px
+          - padding: 16px
+          - box-shadow: 0 2px 8px rgba(239,68,68,.3)
+          - background: 'linear-gradient(135deg, rgba(239,68,68,.18), rgba(6,182,212,.08))'
+          - border: 2px solid rgba(239,68,68,.3)
+        grid:
+          - grid-template-areas: '"i n" "i l"'
+          - grid-template-columns: 48px 1fr
+          - grid-template-rows: auto 1fr
+        icon:
+          - width: 36px
+          - color: '#ef4444'
+        name:
+          - font-weight: 800
+          - font-size: 1.2rem
+          - color: '#ef4444'
+          - justify-self: start
+          - margin-left: 8px
+        label:
+          - font-weight: 600
+          - font-size: 0.88rem
+          - color: var(--primary-text-color)
+          - justify-self: start
+          - margin-left: 8px
+          - margin-top: 4px
+          - white-space: normal
+          - line-height: 1.4
+      tap_action:
+        action: none
+
+  # Alerte 2 : Niveau bas
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: binary_sensor.cumulus_capacite_suffisante
+        state: 'off'
+      - condition: state
+        entity: input_boolean.temp_atteinte_aujourdhui
+        state: 'off'
+    card:
+      type: custom:button-card
+      name: 💡 Conseil
+      show_state: false
+      show_label: true
+      show_icon: true
+      icon: mdi:lightbulb-alert
+      label: Pensez à espacer les douches aujourd'hui
+      styles:
+        card:
+          - height: 90px
+          - border-radius: 16px
+          - padding: 16px
+          - box-shadow: 0 2px 8px rgba(245,158,11,.3)
+          - background: 'linear-gradient(135deg, rgba(245,158,11,.18), rgba(6,182,212,.08))'
+          - border: 2px solid rgba(245,158,11,.3)
+        grid:
+          - grid-template-areas: '"i n" "i l"'
+          - grid-template-columns: 48px 1fr
+          - grid-template-rows: auto 1fr
+        icon:
+          - width: 36px
+          - color: '#f59e0b'
+        name:
+          - font-weight: 800
+          - font-size: 1.2rem
+          - color: '#f59e0b'
+          - justify-self: start
+          - margin-left: 8px
+        label:
+          - font-weight: 600
+          - font-size: 0.9rem
+          - color: var(--primary-text-color)
+          - justify-self: start
+          - margin-left: 8px
+          - margin-top: 4px
+      tap_action:
+        action: none
+
+  # ==================== 6. ACTION D'URGENCE ==================== #
+  - type: conditional
+    conditions:
+      - condition: numeric_state
+        entity: sensor.cumulus_litres_disponibles_estimes
+        below: 200
+    card:
+      type: custom:button-card
+      name: 🔥 Forcer une chauffe maintenant
+      show_state: false
+      show_icon: true
+      icon: mdi:fire-alert
+      styles:
+        card:
+          - height: 80px
+          - border-radius: 16px
+          - padding: 16px
+          - box-shadow: 0 2px 8px rgba(239,68,68,.4)
+          - background: 'linear-gradient(135deg, rgba(239,68,68,.22), rgba(220,38,38,.14))'
+          - border: 2px solid #ef4444
+        grid:
+          - grid-template-areas: '"i n"'
+          - grid-template-columns: 40px 1fr
+        icon:
+          - width: 32px
+          - color: '#ffffff'
+          - background: '#ef4444'
+          - border-radius: 50%
+          - padding: 8px
+        name:
+          - font-weight: 800
+          - font-size: 1.15rem
+          - color: '#ef4444'
+          - justify-self: start
+          - margin-left: 12px
+      tap_action:
+        action: toggle
+        confirmation:
+          text: Êtes-vous sûre de vouloir forcer la chauffe ? Cela utilisera l'électricité du réseau.
+      entity: input_boolean.cumulus_override
+
+  # ==================== 7. INDICATEURS VISUELS (3 colonnes) ==================== #
+  - type: glance
+    columns: 3
+    show_name: true
+    show_state: false
+    entities:
+      - entity: binary_sensor.cumulus_chauffe_reelle
+        name: En chauffe
+        icon: mdi:flash
+      - entity: binary_sensor.cumulus_meteo_favorable_aujourdhui
+        name: Soleil OK
+        icon: mdi:weather-sunny
+      - entity: binary_sensor.cumulus_capacite_suffisante
+        name: Quantité OK
+        icon: mdi:check-circle
+    card_mod:
+      style: |
+        ha-card {
+          border-radius: 16px;
+          padding: 8px;
+          box-shadow: 0 1px 6px rgba(0,0,0,.12);
+        }
+
+  # ==================== 8. SECTION DÉTAILS PLIABLE ==================== #
+  - type: entities
+    title: 📊 Détails techniques
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.cumulus_temperature_estimee
+        name: Température actuelle
+        icon: mdi:thermometer
+      - entity: sensor.cumulus_litres_disponibles_estimes
+        name: Eau disponible (40°C)
+        icon: mdi:water-thermometer
+      - entity: sensor.cumulus_heures_depuis_derniere_chauffe
+        name: Heures depuis dernière chauffe
+        icon: mdi:clock-outline
+      - entity: sensor.cumulus_besoin_journalier_litres
+        name: Besoin journalier
+        icon: mdi:account-water
+      - type: divider
+      - entity: sensor.cumulus_pv_power_w
+        name: Production solaire (brute)
+        icon: mdi:solar-power
+      - entity: sensor.cumulus_pv_effectif_w
+        name: Production solaire (effective)
+        icon: mdi:solar-power-variant
+      - entity: sensor.cumulus_soc_solarbank_pct
+        name: Batterie
+        icon: mdi:battery
+      - type: divider
+      - entity: input_boolean.cumulus_vacances
+        name: Mode vacances
+        icon: mdi:beach
+      - entity: input_boolean.cumulus_interdit
+        name: Maintenance
+        icon: mdi:hand-back-right-off
+    card_mod:
+      style: |
+        ha-card {
+          border-radius: 16px;
+          padding: 0;
+          box-shadow: 0 1px 6px rgba(0,0,0,.12);
+        }
+
+  # ==================== 9. EXPLICATION PV EFFECTIF ==================== #
+  - type: markdown
+    content: |
+      ### ℹ️ Production solaire
+
+      **Production brute** : Puissance totale produite par les panneaux
+      **Production effective** : Puissance réellement utilisable pour le cumulus
+
+      La production effective prend en compte :
+      - 📊 L'efficacité de l'onduleur APS ({{ (states('input_number.cumulus_alpha_aps') | float * 100) | round(0) }}%)
+      - ☁️ Les conditions météo (facteur de charge : {{ (states('sensor.cumulus_capacity_factor') | float * 100) | round(0) }}%)
+
+      Le cumulus démarre quand la **production effective** dépasse {{ states('sensor.cumulus_seuil_pv_dynamique_w') }}W.
+    card_mod:
+      style: |
+        ha-card {
+          border-radius: 16px;
+          padding: 12px;
+          box-shadow: 0 1px 6px rgba(0,0,0,.12);
+          background: linear-gradient(135deg, rgba(255,193,7,.08), rgba(6,182,212,.04));
+        }
+
+  # ==================== 10. GRAPHIQUES HISTORIQUES ==================== #
+  - type: custom:mushroom-title-card
+    title: 📈 Historique 24h
+    subtitle: ""
+
+  - type: history-graph
+    title: Température de l'eau
+    hours_to_show: 24
+    refresh_interval: 300
+    entities:
+      - entity: sensor.cumulus_temperature_estimee
+        name: Température
+    card_mod:
+      style: |
+        ha-card {
+          border-radius: 16px;
+          padding: 12px;
+          box-shadow: 0 1px 6px rgba(0,0,0,.12);
+        }
+
+  - type: history-graph
+    title: Eau chaude disponible
+    hours_to_show: 24
+    refresh_interval: 300
+    entities:
+      - entity: sensor.cumulus_litres_disponibles_estimes
+        name: Litres disponibles
+    card_mod:
+      style: |
+        ha-card {
+          border-radius: 16px;
+          padding: 12px;
+          box-shadow: 0 1px 6px rgba(0,0,0,.12);
+        }
+
+  - type: history-graph
+    title: Production solaire (brute vs effective)
+    hours_to_show: 24
+    refresh_interval: 300
+    entities:
+      - entity: sensor.cumulus_pv_power_w
+        name: PV brute
+      - entity: sensor.cumulus_pv_effectif_w
+        name: PV effective
+    card_mod:
+      style: |
+        ha-card {
+          border-radius: 16px;
+          padding: 12px;
+          box-shadow: 0 1px 6px rgba(0,0,0,.12);
+        }

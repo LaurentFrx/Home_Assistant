@@ -1,0 +1,391 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ DASHBOARD CUMULUS - VERSION UTILISATEUR ULTRA-SIMPLE                       ║
+# ║ Priorité : Interface intuitive pour utilisateur non-technique               ║
+# ║ Objectif : Savoir si eau chaude OK et pouvoir forcer chauffe si besoin     ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+title: Eau Chaude
+path: cumulus-simple
+icon: mdi:water-boiler
+theme: Mushroom Shadow
+type: custom:vertical-layout
+badges: []
+
+cards:
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ CARTE PRINCIPALE - ÉTAT EAU CHAUDE                                      │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:button-card
+    name: |
+      [[[
+        // Titre simple et clair
+        return '💧 Eau Chaude';
+      ]]]
+    label: |
+      [[[
+        // Message principal en langage naturel
+        const temp = states['sensor.cumulus_temperature_estimee']?.state || 45;
+        const litres = states['sensor.cumulus_litres_disponibles']?.state || 0;
+        const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+
+        if (is_heating) {
+          const time_remaining = states['sensor.cumulus_temps_restant_chauffe']?.state || 120;
+          const heures = Math.floor(time_remaining / 60);
+          const minutes = time_remaining % 60;
+          if (heures > 0) {
+            return `🔥 Chauffe en cours... Prête dans ${heures}h${minutes > 0 ? minutes + 'min' : ''}`;
+          } else {
+            return `🔥 Chauffe en cours... Prête dans ${minutes} minutes`;
+          }
+        }
+
+        // Calcul nombre de douches disponibles
+        const douches = Math.floor(litres / 80); // 80L par douche moyenne
+
+        if (temp >= 55 && douches >= 3) {
+          return '✅ Parfait pour toute la famille';
+        } else if (temp >= 50 && douches >= 2) {
+          return '✅ Prête pour 2-3 douches';
+        } else if (temp >= 45 && douches >= 1) {
+          return '⚠️ OK pour 1 douche';
+        } else if (temp >= 40) {
+          return '⚠️ Eau tiède - Chauffe recommandée';
+        } else {
+          return '❌ Eau froide - Chauffer maintenant';
+        }
+      ]]]
+    state_display: |
+      [[[
+        // Info secondaire : température et volume
+        const temp = Math.round(states['sensor.cumulus_temperature_estimee']?.state || 45);
+        const litres = Math.round(states['sensor.cumulus_litres_disponibles']?.state || 0);
+        return `🌡️ ${temp}°C · ${litres} litres disponibles`;
+      ]]]
+    icon: |
+      [[[
+        const temp = states['sensor.cumulus_temperature_estimee']?.state || 45;
+        const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+
+        if (is_heating) return 'mdi:fire';
+        if (temp >= 55) return 'mdi:water-check';
+        if (temp >= 45) return 'mdi:water';
+        return 'mdi:water-alert';
+      ]]]
+    entity: sensor.cumulus_temperature_estimee
+    show_state: false
+    show_label: true
+    size: 25%
+    styles:
+      card:
+        - height: 180px
+        - border-radius: 25px
+        - background: |
+            [[[
+              const temp = states['sensor.cumulus_temperature_estimee']?.state || 45;
+              const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+
+              if (is_heating) {
+                return 'linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%)';
+              } else if (temp >= 55) {
+                return 'linear-gradient(135deg, #51cf66 0%, #69db7c 100%)';
+              } else if (temp >= 45) {
+                return 'linear-gradient(135deg, #ffd43b 0%, #fab005 100%)';
+              } else {
+                return 'linear-gradient(135deg, #868e96 0%, #adb5bd 100%)';
+              }
+            ]]]
+        - box-shadow: 0 8px 32px rgba(0,0,0,0.1)
+      name:
+        - font-size: 1.8rem
+        - font-weight: 600
+        - color: white
+        - margin-bottom: 8px
+      label:
+        - font-size: 1.2rem
+        - font-weight: 500
+        - color: rgba(255,255,255,0.95)
+        - line-height: 1.4
+        - margin-bottom: 4px
+      state:
+        - font-size: 0.95rem
+        - color: rgba(255,255,255,0.8)
+        - font-weight: 400
+      icon:
+        - color: rgba(255,255,255,0.9)
+        - animation: |
+            [[[
+              const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+              return is_heating ? 'pulse 2s infinite' : 'none';
+            ]]]
+      grid:
+        - grid-template-areas: '"i n" "i l" "i s"'
+        - grid-template-columns: 80px 1fr
+        - padding: 20px
+    custom_fields:
+      animation_style: |
+        [[[
+          return `
+            <style>
+              @keyframes pulse {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.1); opacity: 0.8; }
+                100% { transform: scale(1); opacity: 1; }
+              }
+            </style>
+          `;
+        ]]]
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ PROCHAINE CHAUFFE INTELLIGENTE                                          │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-template-card
+    primary: 🔮 Prochaine chauffe
+    secondary: |
+      {% set next_heat = states('sensor.cumulus_prochaine_chauffe_prevue') %}
+      {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
+      {% set solar_tomorrow = states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) %}
+
+      {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+        En cours maintenant 🔥
+      {% elif next_heat == 'unknown' %}
+        {% if solar_tomorrow > 5 %}
+          Demain avec le soleil ☀️ (~{{ solar_tomorrow | round(1) }} kWh prévu)
+        {% else %}
+          Cette nuit en heures creuses 🌙
+        {% endif %}
+      {% else %}
+        {{ next_heat }}
+      {% endif %}
+    icon: mdi:clock-outline
+    icon_color: |
+      {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+        orange
+      {% else %}
+        blue
+      {% endif %}
+    tap_action:
+      action: more-info
+      entity: sensor.cumulus_prochaine_chauffe_prevue
+    card_mod:
+      style: |
+        ha-card {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          margin-bottom: 12px;
+        }
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ ACTIONS RAPIDES                                                         │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: horizontal-stack
+    cards:
+      # Bouton Forcer Chauffe
+      - type: custom:button-card
+        name: |
+          [[[
+            const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+            return is_heating ? '⏸️ Arrêter chauffe' : '🔥 Forcer maintenant';
+          ]]]
+        icon: none
+        tap_action:
+          action: call-service
+          service: |
+            [[[
+              const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+              return is_heating ? 'switch.turn_off' : 'switch.turn_on';
+            ]]]
+          service_data:
+            entity_id: switch.shellypro1_ece334ee1b64
+          confirmation:
+            text: |
+              [[[
+                const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+                return is_heating ?
+                  'Voulez-vous vraiment arrêter la chauffe en cours ?' :
+                  'Lancer une chauffe complète maintenant (environ 2h) ?';
+              ]]]
+        styles:
+          card:
+            - height: 60px
+            - border-radius: 15px
+            - background: |
+                [[[
+                  const is_heating = states['switch.shellypro1_ece334ee1b64']?.state === 'on';
+                  return is_heating ?
+                    'linear-gradient(135deg, #868e96 0%, #adb5bd 100%)' :
+                    'linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%)';
+                ]]]
+            - box-shadow: 0 4px 15px rgba(0,0,0,0.1)
+            - border: none
+          name:
+            - font-size: 1.1rem
+            - font-weight: 600
+            - color: white
+          state:
+            - color: rgba(255,255,255,0.8)
+            - font-size: 0.9rem
+
+      # Bouton Mode Vacances
+      - type: custom:button-card
+        name: |
+          [[[
+            const vacances = states['input_boolean.cumulus_mode_vacances']?.state === 'on';
+            return vacances ? '🏠 Retour maison' : '🏖️ Mode vacances';
+          ]]]
+        icon: none
+        entity: input_boolean.cumulus_mode_vacances
+        tap_action:
+          action: toggle
+          confirmation:
+            text: |
+              [[[
+                const vacances = states['input_boolean.cumulus_mode_vacances']?.state === 'on';
+                return vacances ?
+                  'Désactiver le mode vacances et reprendre les chauffes normales ?' :
+                  'Activer le mode vacances ? (Arrêt des chauffes automatiques)';
+              ]]]
+        state_color: false
+        show_state: false
+        styles:
+          card:
+            - height: 60px
+            - border-radius: 15px
+            - background: |
+                [[[
+                  const vacances = states['input_boolean.cumulus_mode_vacances']?.state === 'on';
+                  return vacances ?
+                    'linear-gradient(135deg, #339af0 0%, #74c0fc 100%)' :
+                    'linear-gradient(135deg, #868e96 0%, #adb5bd 100%)';
+                ]]]
+            - box-shadow: 0 4px 15px rgba(0,0,0,0.1)
+            - border: none
+          name:
+            - font-size: 1.1rem
+            - font-weight: 600
+            - color: white
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ STRATÉGIE D'ÉCONOMIE (simple)                                           │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:mushroom-select-card
+    entity: input_select.cumulus_strategie_optimisation
+    name: Mode d'optimisation
+    icon: mdi:tune
+    icon_color: green
+    layout: horizontal
+    secondary_info: |
+      {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
+      {% if strategy == 'Économie maximale' %}
+        Minimise les coûts électriques
+      {% elif strategy == 'Confort absolu' %}
+        Eau chaude toujours disponible
+      {% elif strategy == 'Préserver batterie' %}
+        Limite l'usure de la batterie solaire
+      {% else %}
+        Compromis intelligent
+      {% endif %}
+    card_mod:
+      style: |
+        ha-card {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ SECTION DÉTAILS (pliable)                                               │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: custom:fold-entity-row
+    head:
+      type: custom:mushroom-template-card
+      primary: Détails techniques
+      secondary: Cliquez pour voir plus
+      icon: mdi:chevron-down
+      icon_color: grey
+      card_mod:
+        style: |
+          ha-card {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+          }
+    entities:
+      # Graphique température
+      - type: custom:mini-graph-card
+        entities:
+          - entity: sensor.cumulus_temperature_estimee
+            name: Température
+            color: '#ff6b6b'
+        hours_to_show: 48
+        points_per_hour: 2
+        line_width: 3
+        height: 120
+        show:
+          name: true
+          icon: false
+          state: true
+          graph: line
+          fill: true
+          points: false
+          labels: true
+          labels_secondary: false
+          legend: false
+        card_mod:
+          style: |
+            ha-card {
+              background: rgba(255,255,255,0.05);
+              border: 1px solid rgba(255,255,255,0.1);
+              margin-top: 8px;
+            }
+
+      # Statistiques
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_consommation_jour
+        name: Consommé aujourd'hui
+        icon: mdi:lightning-bolt
+
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_derniere_chauffe
+        name: Dernière chauffe
+        icon: mdi:history
+
+      - type: custom:mushroom-entity-card
+        entity: sensor.cumulus_score_sante
+        name: Santé système
+        icon: mdi:heart-pulse
+        icon_color: |
+          {% set score = states('sensor.cumulus_score_sante') | int(0) %}
+          {% if score >= 80 %}
+            green
+          {% elif score >= 60 %}
+            orange
+          {% else %}
+            red
+          {% endif %}
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ ALERTES CONTEXTUELLES (si nécessaire)                                   │
+  # └─────────────────────────────────────────────────────────────────────────┘
+  - type: conditional
+    conditions:
+      - entity: sensor.cumulus_alerte_active
+        state: 'on'
+    card:
+      type: custom:mushroom-template-card
+      primary: |
+        {{ states('sensor.cumulus_alerte_titre') }}
+      secondary: |
+        {{ states('sensor.cumulus_alerte_message') }}
+      icon: mdi:alert-circle
+      icon_color: red
+      card_mod:
+        style: |
+          ha-card {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+            color: white;
+            animation: pulse-alert 2s infinite;
+          }
+          @keyframes pulse-alert {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+          }

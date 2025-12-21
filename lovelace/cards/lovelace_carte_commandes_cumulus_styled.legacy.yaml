@@ -1,0 +1,1127 @@
+###############################################################################
+# CARTE LOVELACE COMMANDES CUMULUS — Design Mushroom avec style coloré
+# Version: 2025-10-16c — Carte avec animations et dégradés
+###############################################################################
+
+type: custom:vertical-stack-in-card
+card_mod:
+  style: |
+    ha-card {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+cards:
+  # ==================== EN-TÊTE PRINCIPAL ==================== #
+  - type: custom:mushroom-title-card
+    title: 🎛️ Commandes Cumulus
+    subtitle: Contrôle et gestion du chauffe-eau
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          border-radius: 20px !important;
+          padding: 20px !important;
+          box-shadow: 0 8px 16px rgba(0,0,0,0.2) !important;
+        }
+        .header {
+          color: white !important;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+        }
+        .title {
+          font-size: 28px !important;
+          font-weight: bold !important;
+        }
+
+  # ==================== STATUT GLOBAL EN TEMPS RÉEL ==================== #
+  - type: custom:mushroom-entity-card
+    entity: binary_sensor.cumulus_chauffe_reelle
+    name: État Cumulus
+    icon: mdi:water-boiler
+    icon_color: |
+      {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+        red
+      {% else %}
+        blue
+      {% endif %}
+    tap_action:
+      action: more-info
+    secondary_info: |
+      {{ states('sensor.cumulus_temperature_physique_c') }}°C | {{ states('sensor.cumulus_eau_chaude_disponible_40c_litres') }}L | {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}{{ states('sensor.cumulus_consommation_reelle_w') }}W{% else %}{{ states('sensor.cumulus_heures_depuis_derniere_chauffe') }}h{% endif %}
+    card_mod:
+      style: |
+        ha-card {
+          {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+          {% else %}
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+          {% endif %}
+          border-radius: 15px !important;
+          padding: 20px !important;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+        }
+        .container {
+          color: white !important;
+        }
+        .primary {
+          font-size: 24px !important;
+          font-weight: bold !important;
+          color: white !important;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
+        }
+        .secondary {
+          color: rgba(255,255,255,0.9) !important;
+          font-size: 14px !important;
+        }
+
+  # ==================== CONTRÔLE DIRECT SWITCH CUMULUS ==================== #
+  - type: custom:mushroom-entity-card
+    entity: switch.shellypro1_ece334ee1b64
+    name: ⚡ CONTACTEUR CUMULUS
+    icon: mdi:flash
+    tap_action:
+      action: toggle
+      confirmation:
+        text: Voulez-vous vraiment modifier l'état du contacteur cumulus ?
+    layout: horizontal
+    card_mod:
+      style: |
+        ha-card {
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+          {% else %}
+            background: linear-gradient(135deg, #232526 0%, #414345 100%) !important;
+          {% endif %}
+          border-radius: 15px !important;
+          padding: 20px !important;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+          transition: all 0.3s ease !important;
+        }
+        .container {
+          color: white !important;
+        }
+        .primary {
+          font-size: 20px !important;
+          font-weight: bold !important;
+          color: white !important;
+        }
+        .secondary {
+          color: rgba(255,255,255,0.9) !important;
+        }
+        mushroom-shape-icon {
+          {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
+            animation: pulse 1.5s infinite !important;
+          {% endif %}
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+  # ==================== MODES DE FONCTIONNEMENT ==================== #
+  - type: custom:mushroom-title-card
+    title: 🎮 MODES DE FONCTIONNEMENT
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+          border-radius: 15px !important;
+          padding: 15px !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        }
+        .header {
+          color: white !important;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.2) !important;
+        }
+        .title {
+          font-size: 20px !important;
+          font-weight: bold !important;
+        }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Override Manuel
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_override
+        name: OVERRIDE
+        icon: mdi:hand-pointing-up
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Activer le forçage manuel ? Cela démarrera le cumulus immédiatement.
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('input_boolean.cumulus_override', 'on') %}
+                background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%) !important;
+                animation: pulse-card 1s infinite !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            mushroom-shape-icon {
+              {% if is_state('input_boolean.cumulus_override', 'on') %}
+                animation: bounce 1s infinite !important;
+              {% endif %}
+            }
+            @keyframes pulse-card {
+              0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+              50% { box-shadow: 0 8px 16px rgba(255,107,107,0.4); }
+            }
+            @keyframes bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-10px); }
+            }
+
+      # Interdit Départ
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_interdit_depart
+        name: INTERDIT
+        icon: mdi:hand-back-right-off
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('input_boolean.cumulus_interdit_depart', 'on') %}
+                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Mode Vacances
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_mode_vacances
+        name: VACANCES
+        icon: mdi:beach
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('input_boolean.cumulus_mode_vacances', 'on') %}
+                background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Autoriser HC
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_autoriser_hc
+        name: HEURES CREUSES
+        icon: mdi:clock-time-eight
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('input_boolean.cumulus_autoriser_hc', 'on') %}
+                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Verrou Jour
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_verrou_jour
+        name: VERROU JOUR
+        icon: mdi:lock-check
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Modifier le verrou journalier ?
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('input_boolean.cumulus_verrou_jour', 'on') %}
+                background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Température Atteinte
+      - type: custom:mushroom-entity-card
+        entity: input_boolean.cumulus_temp_atteinte_aujourdhui
+        name: TEMP. MAX
+        icon: mdi:thermometer-check
+        tap_action:
+          action: toggle
+          confirmation:
+            text: Modifier l'état de température atteinte ?
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('input_boolean.cumulus_temp_atteinte_aujourdhui', 'on') %}
+                background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  # ==================== INDICATEURS D'ÉTAT ==================== #
+  - type: custom:mushroom-title-card
+    title: 📊 INDICATEURS D'ÉTAT
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+          border-radius: 15px !important;
+          padding: 15px !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        }
+        .header {
+          color: #333 !important;
+        }
+        .title {
+          font-size: 20px !important;
+          font-weight: bold !important;
+        }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Fenêtre PV
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_fenetre_pv
+        name: FENÊTRE PV
+        icon: mdi:sun-clock
+        secondary_info: |
+          {{ states('input_datetime.cumulus_plage_pv_debut')[0:5] }} - {{ states('input_datetime.cumulus_plage_pv_fin')[0:5] }}
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+                background: linear-gradient(135deg, #f6d365 0%, #fda085 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 13px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            .secondary {
+              color: rgba(255,255,255,0.9) !important;
+              font-size: 11px !important;
+            }
+            mushroom-shape-icon {
+              {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+                animation: rotate 3s infinite linear !important;
+              {% endif %}
+            }
+            @keyframes rotate {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+
+      # En Heures Creuses
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_en_hc
+        name: HEURES CREUSES
+        icon: mdi:clock-time-eight-outline
+        secondary_info: |
+          {{ states('input_datetime.cumulus_heures_creuses_debut')[0:5] }} - {{ states('input_datetime.cumulus_heures_creuses_fin')[0:5] }}
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('binary_sensor.cumulus_en_hc', 'on') %}
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 13px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            .secondary {
+              color: rgba(255,255,255,0.9) !important;
+              font-size: 11px !important;
+            }
+
+      # Deadband
+      - type: custom:mushroom-entity-card
+        entity: timer.cumulus_deadband_ui
+        name: DEADBAND
+        icon: mdi:timer-sand
+        secondary_info: |
+          {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+            ⏳ Actif
+          {% else %}
+            ✅ Inactif
+          {% endif %}
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 13px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            .secondary {
+              color: rgba(255,255,255,0.9) !important;
+              font-size: 11px !important;
+            }
+            mushroom-shape-icon {
+              {% if is_state('timer.cumulus_deadband_ui', 'active') %}
+                animation: flip 1s infinite !important;
+              {% endif %}
+            }
+            @keyframes flip {
+              0%, 100% { transform: rotateY(0); }
+              50% { transform: rotateY(180deg); }
+            }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Appareils Prioritaires
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_appareil_prioritaire_actif
+        name: APPAREILS
+        icon: mdi:home-lightning-bolt-outline
+        secondary_info: |
+          {% set ll = is_state('binary_sensor.cumulus_lave_linge_actif', 'on') %}
+          {% set lv = is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') %}
+          {% if ll and lv %}🔵 LL + LV{% elif ll %}🔵 Lave-linge{% elif lv %}🔵 Lave-vaiss.{% else %}✅ Aucun{% endif %}
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+                background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 13px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            .secondary {
+              color: rgba(255,255,255,0.9) !important;
+              font-size: 11px !important;
+            }
+            mushroom-shape-icon {
+              {% if is_state('binary_sensor.cumulus_appareil_prioritaire_actif', 'on') %}
+                animation: shake 0.5s infinite !important;
+              {% endif %}
+            }
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-5px); }
+              75% { transform: translateX(5px); }
+            }
+
+      # Besoin Urgent
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_besoin_chauffe_urgente
+        name: BESOIN URGENT
+        icon: mdi:alert-circle
+        secondary_info: |
+          {{ states('sensor.cumulus_heures_depuis_derniere_chauffe') | float | round(0) }}h / {{ states('input_number.cumulus_espacement_max_h') | float | round(0) }}h
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+                background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 13px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            .secondary {
+              color: rgba(255,255,255,0.9) !important;
+              font-size: 11px !important;
+            }
+            mushroom-shape-icon {
+              {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+                animation: pulse 1s infinite !important;
+              {% endif %}
+            }
+            @keyframes pulse {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.7; transform: scale(1.1); }
+            }
+
+      # Capacité Suffisante
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.cumulus_capacite_suffisante
+        name: CAPACITÉ
+        icon: mdi:water-check
+        secondary_info: |
+          {{ states('sensor.cumulus_eau_chaude_disponible_40c_litres') | float | round(0) }}L / {{ states('sensor.cumulus_besoin_journalier_litres') | float | round(0) }}L
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('binary_sensor.cumulus_capacite_suffisante', 'on') %}
+                background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 15px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 13px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+            .secondary {
+              color: rgba(255,255,255,0.9) !important;
+              font-size: 11px !important;
+            }
+            mushroom-shape-icon {
+              {% if is_state('binary_sensor.cumulus_capacite_suffisante', 'off') %}
+                animation: pulse 1s infinite !important;
+              {% endif %}
+            }
+
+  # ==================== CONTRÔLE DES AUTOMATIONS ==================== #
+  - type: custom:mushroom-title-card
+    title: 🤖 GESTION DES AUTOMATIONS
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+          border-radius: 15px !important;
+          padding: 15px !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        }
+        .header {
+          color: white !important;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.2) !important;
+        }
+        .title {
+          font-size: 20px !important;
+          font-weight: bold !important;
+        }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # ON PV
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_on_pv_automatique
+        name: ON PV
+        icon: mdi:solar-power
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_on_pv_automatique', 'on') %}
+                background: linear-gradient(135deg, #f6d365 0%, #fda085 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Limiteur Import
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_limiteur_import
+        name: LIMITEUR
+        icon: mdi:flash-alert
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_limiteur_import', 'on') %}
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Sécurité SOC
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_securite_soc_bas
+        name: SOC BAS
+        icon: mdi:battery-alert
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_securite_soc_bas', 'on') %}
+                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Fin Chauffe Universelle
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_fin_chauffe_universelle
+        name: FIN UNIV.
+        icon: mdi:check-circle
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_fin_chauffe_universelle', 'on') %}
+                background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Arrêt Appareil
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_arret_si_appareil_demarre
+        name: ARRÊT APP.
+        icon: mdi:stop-circle
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_arret_si_appareil_demarre', 'on') %}
+                background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Redémarrage
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_redemarrage_si_appareil_arrete
+        name: REDÉMARR.
+        icon: mdi:restart
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_redemarrage_si_appareil_arrete', 'on') %}
+                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # ON HC
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_on_debut_hc_intelligent
+        name: ON HC
+        icon: mdi:clock-start
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_on_debut_hc_intelligent', 'on') %}
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # OFF HC
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_off_fin_hc
+        name: OFF HC
+        icon: mdi:clock-end
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_off_fin_hc', 'on') %}
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Reset Daily
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_reset_daily_et_override
+        name: RESET
+        icon: mdi:calendar-refresh
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_reset_daily_et_override', 'on') %}
+                background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Détection Externe
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_detection_chauffe_externe
+        name: DÉT. EXT.
+        icon: mdi:radar
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_detection_chauffe_externe', 'on') %}
+                background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Alerte Urgent
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_alerte_besoin_urgent
+        name: ALERTE
+        icon: mdi:bell-alert
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_alerte_besoin_urgent', 'on') %}
+                background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Log Refus
+      - type: custom:mushroom-entity-card
+        entity: automation.cumulus_log_refus_demarrage
+        name: LOG REFUS
+        icon: mdi:file-document
+        tap_action:
+          action: toggle
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              {% if is_state('automation.cumulus_log_refus_demarrage', 'on') %}
+                background: linear-gradient(135deg, #f6d365 0%, #fda085 100%) !important;
+              {% else %}
+                background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%) !important;
+                opacity: 0.6 !important;
+              {% endif %}
+              border-radius: 12px !important;
+              padding: 12px !important;
+              box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  # ==================== ACTIONS RAPIDES ==================== #
+  - type: custom:mushroom-title-card
+    title: ⚡ ACTIONS RAPIDES
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%) !important;
+          border-radius: 15px !important;
+          padding: 15px !important;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        }
+        .header {
+          color: white !important;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.2) !important;
+        }
+        .title {
+          font-size: 20px !important;
+          font-weight: bold !important;
+        }
+
+  - type: grid
+    square: false
+    columns: 3
+    cards:
+      # Forcer Démarrage
+      - type: custom:mushroom-template-card
+        primary: FORCER ON
+        icon: mdi:power
+        tap_action:
+          action: call-service
+          service: input_boolean.turn_on
+          service_data:
+            entity_id: input_boolean.cumulus_override
+          confirmation:
+            text: Forcer le démarrage immédiat du cumulus ?
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+              border-radius: 12px !important;
+              padding: 20px !important;
+              box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 16px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Réinitialiser Verrous
+      - type: custom:mushroom-template-card
+        primary: RESET VERROUS
+        icon: mdi:lock-open
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.cumulus_reset_verrous
+          confirmation:
+            text: Réinitialiser tous les verrous ?
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+              border-radius: 12px !important;
+              padding: 20px !important;
+              box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 16px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+      # Forcer Arrêt
+      - type: custom:mushroom-template-card
+        primary: FORCER OFF
+        icon: mdi:power-off
+        tap_action:
+          action: call-service
+          service: switch.turn_off
+          service_data:
+            entity_id: switch.shellypro1_ece334ee1b64
+          confirmation:
+            text: Forcer l'arrêt immédiat du cumulus ?
+        layout: vertical
+        card_mod:
+          style: |
+            ha-card {
+              background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+              border-radius: 12px !important;
+              padding: 20px !important;
+              box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+            }
+            .container {
+              color: white !important;
+            }
+            .primary {
+              font-size: 16px !important;
+              font-weight: bold !important;
+              color: white !important;
+            }
+
+  # ==================== FOOTER INFO ==================== #
+  - type: markdown
+    content: |
+      <div style="text-align: center; color: var(--secondary-text-color); font-size: 11px; padding: 10px;">
+      🎛️ Carte Commandes Cumulus v2025-10-16c | Style Mushroom avec animations
+      </div>
