@@ -347,32 +347,78 @@ template:
   # │ CONDITIONS ET DÉTECTEURS                                                │
   # └─────────────────────────────────────────────────────────────────────────┘
   - binary_sensor:
-      # Cohérence système OK
+      # Chauffe réelle détectée (puissance Shelly)
+      - name: "Cumulus - Chauffe réelle"
+        unique_id: cumulus_chauffe_reelle
+        availability: >
+          {{ states('sensor.shellypro1_ece334ee1b64_power') not in ['unavailable','unknown','none'] }}
+        state: >
+          {% set threshold = 400 %}
+          {% set power = states('sensor.shellypro1_ece334ee1b64_power') | float(0) %}
+          {{ power >= threshold }}
+        icon: mdi:flash
+        attributes:
+          cumulus_power_w: "{{ states('sensor.shellypro1_ece334ee1b64_power') | float(0) }}"
+          threshold_w: 400
+
+      # Incohérence : commande OFF mais puissance détectée (device_class: problem)
+      - name: "Cumulus - Incohérence"
+        unique_id: cumulus_incoherence
+        device_class: problem
+        availability: >
+          {% set cmd = states('switch.shellypro1_ece334ee1b64') %}
+          {% set pwr = states('sensor.shellypro1_ece334ee1b64_power') %}
+          {{ cmd in ['on','off'] and pwr not in ['unavailable','unknown','none'] }}
+        state: >
+          {% set cmd = states('switch.shellypro1_ece334ee1b64') %}
+          {% set power = states('sensor.shellypro1_ece334ee1b64_power') | float(0) %}
+          {% set threshold = 400 %}
+          {{ cmd == 'off' and power >= threshold }}
+        delay_on:
+          minutes: 2
+        delay_off:
+          minutes: 1
+        icon: >
+          {% if is_state('binary_sensor.cumulus_incoherence', 'on') %}
+            mdi:alert-circle
+          {% else %}
+            mdi:check-circle
+          {% endif %}
+        attributes:
+          command_state: "{{ states('switch.shellypro1_ece334ee1b64') }}"
+          heating_detected: "{{ states('binary_sensor.cumulus_chauffe_reelle') }}"
+          cumulus_power_w: "{{ states('sensor.shellypro1_ece334ee1b64_power') | float(0) }}"
+          threshold_w: 400
+          import_power: "{{ states('sensor.cumulus_import_reseau_w') | float(0) }}"
+          pv_power: "{{ states('sensor.cumulus_pv_power_w') | float(0) }}"
+          expected_if_on: "Puissance cumulus >= 400W"
+          reason: >
+            {% set cmd = states('switch.shellypro1_ece334ee1b64') %}
+            {% set pwr = states('sensor.shellypro1_ece334ee1b64_power') %}
+            {% if cmd not in ['on', 'off'] %}
+              command_state_unknown
+            {% elif pwr in ['unavailable', 'unknown', 'none'] %}
+              power_sensor_unavailable
+            {% else %}
+              cmd_off_but_power_high
+            {% endif %}
+
+      # Cohérence OK (inverse de l'incohérence, sans device_class problem)
       - name: "Cumulus - Cohérence OK"
         unique_id: cumulus_coherence_ok
+        availability: >
+          {{ states('binary_sensor.cumulus_incoherence') not in ['unavailable', 'unknown'] }}
         state: >
-          {% set cumulus_on = is_state('switch.shellypro1_ece334ee1b64', 'on') %}
-          {% set import = states('sensor.cumulus_import_reseau_w') | float(0) %}
-          {% set pv = states('sensor.cumulus_pv_power_w') | float(0) %}
-
-          {# Si cumulus ON, import devrait augmenter d'environ 3000W #}
-          {% if cumulus_on %}
-            {{ import > 2000 or pv > 2500 }}
-          {% else %}
-            true
-          {% endif %}
-        device_class: problem
-        icon: >
-          {% if is_state('binary_sensor.cumulus_coherence_ok', 'on') %}
-            mdi:check-circle
-          {% else %}
-            mdi:alert-circle
-          {% endif %}
+          {{ is_state('binary_sensor.cumulus_incoherence', 'off') }}
+        icon: mdi:check-circle
         attributes:
           cumulus_state: "{{ states('switch.shellypro1_ece334ee1b64') }}"
           import_power: "{{ states('sensor.cumulus_import_reseau_w') }}W"
           pv_power: "{{ states('sensor.cumulus_pv_power_w') }}W"
-          expected_if_on: ">2000W import ou >2500W PV"
+          expected_if_on: "Puissance cumulus >= 400W"
+          incoherence_reason: "{{ state_attr('binary_sensor.cumulus_incoherence', 'reason') }}"
+          heating_detected: "{{ state_attr('binary_sensor.cumulus_incoherence', 'heating_detected') }}"
+          cumulus_power_w: "{{ state_attr('binary_sensor.cumulus_incoherence', 'cumulus_power_w') }}"
 
       # Conditions PV remplies
       - name: "Cumulus - Conditions PV OK"
