@@ -97,3 +97,9 @@ solcast.json.corrupt
 custom_components/anker_solix/solixapi/authcache/
 blueprints/script/
 blueprints/template/
+# Artefacts / exports / logs
+custom_components/anker_solix/examples/
+*.ndjson
+*.xlsx
+packages/cumulus/automations_pv.broken
+tart
