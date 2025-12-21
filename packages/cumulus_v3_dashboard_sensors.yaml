@@ -184,7 +184,7 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         icon: >
-          {% set soc = states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) %}
+          {% set soc = states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) %}
           {% if soc >= 90 %}
             mdi:battery-high
           {% elif soc >= 50 %}
@@ -195,7 +195,7 @@ template:
             mdi:battery-alert
           {% endif %}
         state: >
-          {{ states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) | round(0) }}
+          {{ states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) | round(0) }}
 
       #=========================================================================
       # APPAREIL PRIORITAIRE ACTIF
