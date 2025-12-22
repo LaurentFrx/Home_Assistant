@@ -7,7 +7,9 @@ automation:
   - id: cumulus_sync_vacances_compat
     alias: "Cumulus - Sync vacances (compat)"
     description: "Synchronise cumulus_mode_vacances <-> cumulus_vacances"
-    mode: single
+    mode: queued
+    max: 10
+    max_exceeded: silent
     trigger:
       - platform: state
         entity_id:
@@ -31,22 +33,18 @@ automation:
               {% endif %}
             {% endfor %}
             {{ ns.list }}
-      - choose:
-          - conditions: "{{ desired_state == 'on' and (targets | length > 0) }}"
-            sequence:
-              - service: input_boolean.turn_on
-                target:
-                  entity_id: "{{ targets }}"
-          - conditions: "{{ desired_state == 'off' and (targets | length > 0) }}"
-            sequence:
-              - service: input_boolean.turn_off
-                target:
-                  entity_id: "{{ targets }}"
+      - condition: template
+        value_template: "{{ targets | length > 0 }}"
+      - service: "input_boolean.turn_{{ desired_state }}"
+        target:
+          entity_id: "{{ targets }}"
 
   - id: cumulus_sync_interdit_compat
     alias: "Cumulus - Sync interdit (compat)"
     description: "Synchronise cumulus_interdit_depart <-> cumulus_interdit"
-    mode: single
+    mode: queued
+    max: 10
+    max_exceeded: silent
     trigger:
       - platform: state
         entity_id:
@@ -70,22 +68,18 @@ automation:
               {% endif %}
             {% endfor %}
             {{ ns.list }}
-      - choose:
-          - conditions: "{{ desired_state == 'on' and (targets | length > 0) }}"
-            sequence:
-              - service: input_boolean.turn_on
-                target:
-                  entity_id: "{{ targets }}"
-          - conditions: "{{ desired_state == 'off' and (targets | length > 0) }}"
-            sequence:
-              - service: input_boolean.turn_off
-                target:
-                  entity_id: "{{ targets }}"
+      - condition: template
+        value_template: "{{ targets | length > 0 }}"
+      - service: "input_boolean.turn_{{ desired_state }}"
+        target:
+          entity_id: "{{ targets }}"
 
   - id: cumulus_sync_verrou_jour_compat
     alias: "Cumulus - Sync verrou jour (compat)"
     description: "Synchronise cumulus_verrou_jour <-> cumulus_verrou_chauffe_quotidienne"
-    mode: single
+    mode: queued
+    max: 10
+    max_exceeded: silent
     trigger:
       - platform: state
         entity_id:
@@ -109,14 +103,8 @@ automation:
               {% endif %}
             {% endfor %}
             {{ ns.list }}
-      - choose:
-          - conditions: "{{ desired_state == 'on' and (targets | length > 0) }}"
-            sequence:
-              - service: input_boolean.turn_on
-                target:
-                  entity_id: "{{ targets }}"
-          - conditions: "{{ desired_state == 'off' and (targets | length > 0) }}"
-            sequence:
-              - service: input_boolean.turn_off
-                target:
-                  entity_id: "{{ targets }}"
+      - condition: template
+        value_template: "{{ targets | length > 0 }}"
+      - service: "input_boolean.turn_{{ desired_state }}"
+        target:
+          entity_id: "{{ targets }}"
