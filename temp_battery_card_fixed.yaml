@@ -29,9 +29,9 @@ cards:
       pie: |
         [[[
           // Données
-          const idSolar='sensor.energie_autoconsommee_2';
+          const idSolar='sensor.energie_autoconsommee';
           const idEDF='sensor.import_edf_quotidien';
-          const idSurplus='sensor.export_daily_2';
+          const idSurplus='sensor.export_daily';
           const v=id=>Number(states[id]?.state)||0;
           const solar=v(idSolar), edf=v(idEDF), surp=v(idSurplus);
           const sum = solar+edf+surp;
