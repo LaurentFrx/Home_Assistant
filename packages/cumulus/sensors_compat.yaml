@@ -1,0 +1,454 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - COMPAT / ALIAS                                     ║
+# ║ Entites de compatibilite pour automations & dashboards                   ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+template:
+  - sensor:
+      # SOC (alias)
+      - name: "Cumulus - SOC Solarbank %"
+        unique_id: cumulus_soc_solarbank_pct
+        state: >
+          {% set soc = states('sensor.cumulus_soc_batterie') %}
+          {{ soc | float(0) if soc not in ['unknown', 'unavailable', 'none'] else 0 }}
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        icon: mdi:battery
+
+      # Seuil PV dynamique (alias)
+      - name: "Cumulus - Seuil PV dynamique W"
+        unique_id: cumulus_seuil_pv_dynamique_w
+        state: >
+          {% set calc = states('sensor.cumulus_seuil_pv_dynamique_calcule') %}
+          {% if calc not in ['unknown', 'unavailable', 'none', ''] %}
+            {{ calc | float(0) | round(0) }}
+          {% else %}
+            {{ states('input_number.cumulus_seuil_pv_dynamique_w') | float(0) | round(0) }}
+          {% endif %}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:flash-auto
+
+      # Seuil import limiteur (alias)
+      - name: "Cumulus - Seuil import limiteur W"
+        unique_id: cumulus_seuil_import_limiteur_w
+        state: >
+          {% set import_max = states('input_number.cumulus_import_max_w') | float(0) %}
+          {% set marge = states('input_number.cumulus_marge_import_w') | float(0) %}
+          {% set talon = states('input_number.cumulus_talon_maison_w') | float(0) %}
+          {% if import_max > 0 %}
+            {{ import_max | round(0) }}
+          {% else %}
+            {{ (marge + talon) | round(0) }}
+          {% endif %}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:flash-alert
+
+      # Seuil fin chauffe (import)
+      - name: "Cumulus - Seuil fin chauffe W"
+        unique_id: cumulus_seuil_fin_chauffe_w
+        state: >
+          {% set talon = states('input_number.cumulus_talon_maison_w') | float(0) %}
+          {% set marge = states('input_number.cumulus_marge_fin_import_w') | float(0) %}
+          {{ (talon + marge) | round(0) }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:flash-triangle-outline
+
+      # Consommation reelle (estim.)
+      - name: "Cumulus - Consommation reelle W"
+        unique_id: cumulus_consommation_reelle_w
+        state: >
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% if sw_id in ['', 'unknown', 'unavailable'] or not is_state(sw_id, 'on') %}
+            0
+          {% else %}
+            {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+            {% set pv_total_w = states('sensor.cumulus_pv_power_w') | float(0) %}
+            {% set talon = states('input_number.cumulus_talon_maison_w') | float(300) %}
+            {% set conso = (import_w + pv_total_w) - talon %}
+            {% set puissance_max = states('input_number.cumulus_puissance_w') | float(3000) %}
+            {{ [[0, conso] | max, puissance_max] | min | round(0) }}
+          {% endif %}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:flash
+        attributes:
+          import_w: "{{ states('sensor.cumulus_import_reseau_w') }}"
+          pv_total_w: "{{ states('sensor.cumulus_pv_power_w') }}"
+          talon_w: "{{ states('input_number.cumulus_talon_maison_w') }}"
+          formule: "Conso = (Import + PV_total) - Talon"
+
+      # PV effectif (alias)
+      - name: "Cumulus - PV effectif W"
+        unique_id: cumulus_pv_effectif_w
+        state: >
+          {% set pv = states('sensor.cumulus_pv_power_w') | float(0) %}
+          {% set import_w = states('sensor.cumulus_import_reseau_w') | float(0) %}
+          {% set eff = pv - (import_w if import_w > 0 else 0) %}
+          {{ [0, eff] | max | round(0) }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-power-variant
+
+      # Litres estim. (alias)
+      - name: "Cumulus - Litres disponibles estimes"
+        unique_id: cumulus_litres_disponibles_estimes
+        state: "{{ states('sensor.cumulus_litres_disponibles') | float(0) | round(0) }}"
+        unit_of_measurement: "L"
+        icon: mdi:water
+
+      # Eau chaude 40C (alias)
+      - name: "Cumulus - Eau chaude dispo 40C"
+        unique_id: cumulus_eau_chaude_disponible_40c_litres
+        state: "{{ states('sensor.cumulus_litres_disponibles') | float(0) | round(0) }}"
+        unit_of_measurement: "L"
+        icon: mdi:water
+
+      # Temperature physique (fallback estimation)
+      - name: "Cumulus - Temperature physique"
+        unique_id: cumulus_temperature_physique_c
+        state: "{{ states('sensor.cumulus_temperature_estimee') | float(0) | round(1) }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:thermometer
+        attributes:
+          source: "estimation"
+
+      # Temperature ballon (alias)
+      - name: "Cumulus - Temperature ballon"
+        unique_id: cumulus_temperature_ballon_c
+        state: "{{ states('sensor.cumulus_temperature_estimee') | float(0) | round(1) }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:thermometer
+
+      # Repartition sources (alias)
+      - name: "Cumulus - Repartition sources"
+        unique_id: cumulus_repartition_sources
+        state: >
+          {% set pv = states('sensor.cumulus_pourcentage_pv') | float(0) %}
+          {% set hc = states('sensor.cumulus_pourcentage_hc') | float(0) %}
+          {% set force = 100 - pv - hc %}
+          {{ pv | round(0) }}% PV / {{ hc | round(0) }}% HC / {{ force | round(0) }}% Force
+        icon: mdi:chart-donut
+        attributes:
+          autonomie_pv_pct: "{{ states('sensor.cumulus_pourcentage_pv') | float(0) | round(0) }}"
+          autonomie_hc_pct: "{{ states('sensor.cumulus_pourcentage_hc') | float(0) | round(0) }}"
+          autonomie_force_pct: "{{ states('sensor.cumulus_pourcentage_force') | float(0) | round(0) }}"
+
+      # Solcast (alias dashboard)
+      - name: "Cumulus - Solcast aujourd'hui"
+        unique_id: cumulus_solcast_forecast_today
+        unit_of_measurement: "kWh"
+        device_class: energy
+        icon: mdi:solar-power
+        state: >
+          {% set ent = states('input_text.cumulus_entity_solcast_today') %}
+          {% set fallback = 'sensor.solcast_pv_forecast_previsions_pour_aujourd_hui' %}
+          {% set sensor_id = ent if ent not in ['', 'unknown', 'unavailable'] else fallback %}
+          {{ states(sensor_id) | float(0) }}
+
+      - name: "Cumulus - Solcast demain"
+        unique_id: cumulus_solcast_forecast_tomorrow
+        unit_of_measurement: "kWh"
+        device_class: energy
+        icon: mdi:solar-power-variant
+        state: >
+          {% set ent = states('input_text.cumulus_entity_solcast_tomorrow') %}
+          {% set fallback = 'sensor.solcast_pv_forecast_previsions_pour_demain' %}
+          {% set sensor_id = ent if ent not in ['', 'unknown', 'unavailable'] else fallback %}
+          {{ states(sensor_id) | float(0) }}
+
+      # SB dispo (approx)
+      - name: "Cumulus - SB dispo W"
+        unique_id: cumulus_sb_dispo_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-charging-100
+        state: >
+          {% set soc = states('sensor.cumulus_soc_solarbank_pct') | float(0) %}
+          {% set max_w = states('input_number.cumulus_solarbank_max_w') | float(0) %}
+          {{ (max_w * (soc / 100)) | round(0) }}
+
+      # Temps restant fenetre PV (legacy)
+      - name: "Cumulus - Temps restant fenetre PV h"
+        unique_id: cumulus_temps_restant_fenetre_pv_h
+        unit_of_measurement: "h"
+        device_class: duration
+        icon: mdi:clock-outline
+        state: >
+          {% if is_state('binary_sensor.cumulus_fenetre_pv', 'on') %}
+            {% set fin = states('input_datetime.cumulus_heure_fin_pv') %}
+            {% if fin in ['unknown', 'unavailable', 'none'] %}
+              {% set fin = states('input_datetime.cumulus_plage_pv_fin') %}
+            {% endif %}
+            {% if fin in ['unknown', 'unavailable', 'none'] %}
+              0
+            {% else %}
+              {% set fin_ts = today_at(fin).timestamp() %}
+              {% set diff_h = ((fin_ts - now().timestamp()) / 3600) %}
+              {{ [0, diff_h] | max | round(1) }}
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+
+      # Sante systeme (alias)
+      - name: "Cumulus - Sante systeme"
+        unique_id: cumulus_sante_systeme
+        unit_of_measurement: "%"
+        icon: mdi:heart-pulse
+        state: >
+          {{ states('sensor.cumulus_score_sante') | float(0) | round(0) }}
+        attributes:
+          niveau_sante: >
+            {% set score = states('sensor.cumulus_score_sante') | float(0) %}
+            {% if score >= 90 %}Excellent
+            {% elif score >= 70 %}OK
+            {% elif score >= 50 %}Degrade
+            {% else %}Critique{% endif %}
+          evaluation_entites: >
+            {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_entites_ok', 'on') else 'KO (0pt)' }}
+          evaluation_coherence: >
+            {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_coherence_ok', 'on') else 'KO (0pt)' }}
+          evaluation_espacement: >
+            {% set hours = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
+            {% set max_h = states('input_number.cumulus_espacement_max_h') | float(0) %}
+            {{ 'OK (25pts)' if max_h == 0 or hours <= max_h else 'KO (0pt)' }}
+          evaluation_fonctionnel: >
+            {{ 'OK (25pts)' if is_state('binary_sensor.cumulus_chauffe_reelle', 'off') else 'OK (25pts)' }}
+
+  - binary_sensor:
+      # Heures creuses (alias)
+      - name: "Cumulus - En HC"
+        unique_id: cumulus_en_hc
+        state: "{{ is_state('binary_sensor.cumulus_heures_creuses', 'on') }}"
+        icon: mdi:moon-waning-crescent
+
+      # Deadband actif (alias)
+      - name: "Cumulus - Deadband actif"
+        unique_id: cumulus_deadband_actif
+        state: >
+          {{ is_state('timer.cumulus_deadband_ui', 'active') or is_state('input_boolean.cumulus_verrou_deadband', 'on') }}
+        icon: mdi:timer-sand
+
+      # Soleil suffisant (APS)
+      - name: "Cumulus - Soleil suffisant"
+        unique_id: cumulus_soleil_suffisant
+        icon: mdi:weather-sunny
+        state: >
+          {% set aps = states('sensor.cumulus_production_aps_w') | float(0) %}
+          {% set seuil = states('input_number.cumulus_seuil_pv_statique_w') | float(0) %}
+          {% if seuil == 0 %}
+            {% set seuil = states('input_number.cumulus_seuil_pv_on_w') | float(0) %}
+          {% endif %}
+          {{ aps >= seuil }}
+        attributes:
+          aps_w: "{{ states('sensor.cumulus_production_aps_w') }}"
+          seuil_w: "{{ states('input_number.cumulus_seuil_pv_statique_w') }}"
+
+      # Appareils prioritaires
+      - name: "Cumulus - Lave-linge actif"
+        unique_id: cumulus_lave_linge_actif
+        icon: mdi:washing-machine
+        device_class: running
+        state: >
+          {% set entity_id = states('input_text.cumulus_entity_lave_linge_power') %}
+          {% set seuil = states('input_number.cumulus_seuil_appareil_actif_w') | float(20) %}
+          {% if entity_id in ['', 'unknown', 'unavailable'] %}
+            false
+          {% else %}
+            {{ states(entity_id) | float(0) > seuil }}
+          {% endif %}
+
+      - name: "Cumulus - Lave-vaisselle actif"
+        unique_id: cumulus_lave_vaisselle_actif
+        icon: mdi:dishwasher
+        device_class: running
+        state: >
+          {% set entity_id = states('input_text.cumulus_entity_lave_vaisselle_power') %}
+          {% set seuil = states('input_number.cumulus_seuil_appareil_actif_w') | float(20) %}
+          {% if entity_id in ['', 'unknown', 'unavailable'] %}
+            false
+          {% else %}
+            {{ states(entity_id) | float(0) > seuil }}
+          {% endif %}
+
+      - name: "Cumulus - Appareil prioritaire actif"
+        unique_id: cumulus_appareil_prioritaire_actif
+        icon: mdi:home-lightning-bolt
+        state: >
+          {{ is_state('binary_sensor.cumulus_lave_linge_actif', 'on')
+             or is_state('binary_sensor.cumulus_lave_vaisselle_actif', 'on') }}
+        attributes:
+          lave_linge: "{{ states('binary_sensor.cumulus_lave_linge_actif') }}"
+          lave_vaisselle: "{{ states('binary_sensor.cumulus_lave_vaisselle_actif') }}"
+
+      # Meteo favorable
+      - name: "Cumulus - Meteo favorable aujourd'hui"
+        unique_id: cumulus_meteo_favorable_aujourdhui
+        icon: mdi:weather-sunny
+        state: >
+          {% if is_state('input_boolean.cumulus_solcast_override', 'on') %}
+            true
+          {% else %}
+            {% set prev = states('sensor.solcast_pv_forecast_previsions_pour_aujourd_hui') | float(0) %}
+            {% set seuil = states('input_number.cumulus_seuil_prevision_favorable_kwh') | float(0) %}
+            {% if seuil == 0 %}
+              {% set seuil = states('input_number.cumulus_seuil_solcast_bon_kwh') | float(0) %}
+            {% endif %}
+            {{ prev >= seuil }}
+          {% endif %}
+
+      - name: "Cumulus - Meteo favorable demain"
+        unique_id: cumulus_meteo_favorable_demain
+        icon: mdi:weather-sunny
+        state: >
+          {% if is_state('input_boolean.cumulus_solcast_override', 'on') %}
+            true
+          {% else %}
+            {% set prev = states('sensor.solcast_pv_forecast_previsions_pour_demain') | float(0) %}
+            {% set seuil = states('input_number.cumulus_seuil_prevision_favorable_kwh') | float(0) %}
+            {% if seuil == 0 %}
+              {% set seuil = states('input_number.cumulus_seuil_solcast_bon_kwh') | float(0) %}
+            {% endif %}
+            {{ prev >= seuil }}
+          {% endif %}
+        attributes:
+          prevision_demain_kwh: "{{ states('sensor.solcast_pv_forecast_previsions_pour_demain') }}"
+          seuil_kwh: "{{ states('input_number.cumulus_seuil_prevision_favorable_kwh') }}"
+
+      # Besoin urgent
+      - name: "Cumulus - Besoin chauffe urgente"
+        unique_id: cumulus_besoin_chauffe_urgente
+        icon: mdi:fire-alert
+        state: >
+          {% set derniere = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+          {% if derniere is not none and derniere > 0 %}
+            {% set heures = ((as_timestamp(now()) - derniere) / 3600) | round(1) %}
+            {% set seuil = states('input_number.cumulus_espacement_max_h') | float(50) %}
+            {{ heures >= seuil }}
+          {% else %}
+            false
+          {% endif %}
+        attributes:
+          heures_depuis_chauffe: >
+            {% set derniere = state_attr('input_datetime.cumulus_derniere_chauffe_complete', 'timestamp') %}
+            {% if derniere is not none and derniere > 0 %}
+              {{ ((as_timestamp(now()) - derniere) / 3600) | round(1) }}
+            {% else %}
+              -1
+            {% endif %}
+          seuil_h: "{{ states('input_number.cumulus_espacement_max_h') | float(50) }}"
+
+      - name: "Cumulus - Autoriser HC intelligente"
+        unique_id: cumulus_autoriser_chauffe_hc_intelligente
+        icon: mdi:checkbox-marked-circle
+        state: >
+          {{ is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on')
+             or is_state('binary_sensor.cumulus_meteo_favorable_demain', 'off') }}
+        attributes:
+          raison: >
+            {% if is_state('binary_sensor.cumulus_besoin_chauffe_urgente', 'on') %}
+              Besoin urgent
+            {% elif is_state('binary_sensor.cumulus_meteo_favorable_demain', 'off') %}
+              Meteo defavorable demain
+            {% else %}
+              Aucune raison
+            {% endif %}
+
+      # Entites critiques OK
+      - name: "Cumulus - Entites OK"
+        unique_id: cumulus_entites_ok
+        icon: mdi:check-network
+        state: >
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% set sw_ok = sw_id not in ['', 'unknown', 'unavailable'] and states(sw_id) in ['on', 'off'] %}
+          {% set critiques = [
+            'sensor.cumulus_import_reseau_w',
+            'sensor.cumulus_pv_power_w',
+            'sensor.cumulus_soc_solarbank_pct'
+          ] %}
+          {% set invalides = namespace(count=0) %}
+          {% for entite in critiques %}
+            {% if states(entite) in ['unavailable', 'unknown', ''] %}
+              {% set invalides.count = invalides.count + 1 %}
+            {% endif %}
+          {% endfor %}
+          {{ invalides.count == 0 and sw_ok }}
+        attributes:
+          entites_critiques_valides: >
+            {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+            {% set critiques = [
+              ('Import reseau', 'sensor.cumulus_import_reseau_w'),
+              ('PV total', 'sensor.cumulus_pv_power_w'),
+              ('SOC', 'sensor.cumulus_soc_solarbank_pct')
+            ] %}
+            {% set resultats = [] %}
+            {% for nom, entite in critiques %}
+              {% set etat = states(entite) %}
+              {% if etat not in ['unavailable', 'unknown', ''] %}
+                {% set resultats = resultats + [nom ~ ': OK (' ~ etat ~ ')'] %}
+              {% else %}
+                {% set resultats = resultats + [nom ~ ': KO (' ~ etat ~ ')'] %}
+              {% endif %}
+            {% endfor %}
+            {% if sw_id not in ['', 'unknown', 'unavailable'] and states(sw_id) in ['on', 'off'] %}
+              {% set resultats = resultats + ['Contacteur: OK (' ~ states(sw_id) ~ ')'] %}
+            {% else %}
+              {% set resultats = resultats + ['Contacteur: KO (' ~ sw_id ~ ')'] %}
+            {% endif %}
+            {{ resultats | join(', ') }}
+
+      # Chauffe reelle
+      - name: "Cumulus - Chauffe reelle"
+        unique_id: cumulus_chauffe_reelle
+        device_class: running
+        icon: mdi:water-boiler-alert
+        state: >
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') | string %}
+          {% if sw_id in ['unknown', 'unavailable', ''] %}
+            false
+          {% else %}
+            {% set sw_on = is_state(sw_id, 'on') %}
+            {% set conso = states('sensor.cumulus_consommation_reelle_w') | float(0) %}
+            {% set puissance_nominale = states('input_number.cumulus_puissance_w') | float(3000) %}
+            {% set seuil = puissance_nominale * 0.85 %}
+            {{ sw_on and (conso > seuil) }}
+          {% endif %}
+        attributes:
+          consommation_w: "{{ states('sensor.cumulus_consommation_reelle_w') }}"
+          seuil_detection_w: "{{ (states('input_number.cumulus_puissance_w') | float(3000) * 0.85) | round(0) }}"
+          contacteur_state: >
+            {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+            {{ states(sw_id) if sw_id not in ['', 'unknown', 'unavailable'] else 'unknown' }}
+
+      # Fin par import
+      - name: "Cumulus - Fini par import"
+        unique_id: cumulus_fini_par_import
+        state: >
+          {% set sw_id = states('input_text.cumulus_entity_contacteur') %}
+          {% set sw = is_state(sw_id, 'on') %}
+          {% set imp = states('sensor.cumulus_import_reseau_w') | float(0) %}
+          {% set seuil = states('sensor.cumulus_seuil_fin_chauffe_w') | float(0) %}
+          {{ sw and (imp <= seuil) }}
+
+      # Capacite suffisante (dashboard)
+      - name: "Cumulus - Capacite suffisante"
+        unique_id: cumulus_capacite_suffisante
+        icon: mdi:water-check
+        state: >
+          {% set litres = states('sensor.cumulus_litres_disponibles') | float(0) %}
+          {% set personnes = states('input_number.cumulus_nb_personnes') | float(1) %}
+          {{ litres >= (personnes * 50) }}

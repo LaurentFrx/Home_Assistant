@@ -12,6 +12,7 @@ homeassistant:
     cumulus_sensors_base: !include packages/cumulus/sensors_base.yaml
     cumulus_sensors_calcul: !include packages/cumulus/sensors_calcul.yaml
     cumulus_sensors_monitoring: !include packages/cumulus/sensors_monitoring.yaml
+    cumulus_sensors_compat: !include packages/cumulus/sensors_compat.yaml
     cumulus_automations_pv: !include packages/cumulus/automations_pv.yaml
     cumulus_automations_hc_safety: !include packages/cumulus/automations_hc_safety.yaml
     carte_batterie: !include packages/carte_batterie.yaml
