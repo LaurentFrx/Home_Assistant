@@ -69,11 +69,11 @@ template:
           {% endif %}
 
           {# Ajustement selon stratégie #}
-          {% if strategy == 'Économie maximale' %}
+          {% if strategy in ['Économie maximale', 'Economie maximale'] %}
             {% set factor = factor * 1.3 %}
-          {% elif strategy == 'Confort absolu' %}
+          {% elif strategy in ['Confort absolu'] %}
             {% set factor = factor * 0.7 %}
-          {% elif strategy == 'Préserver batterie' %}
+          {% elif strategy in ['Préserver batterie', 'Preserver batterie'] %}
             {% set factor = factor * 1.5 %}
           {% endif %}
 
@@ -91,9 +91,9 @@ template:
             {% else %}1.5{% endif %}
           strategy_factor: >
             {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
-            {% if strategy == 'Économie maximale' %}1.3
-            {% elif strategy == 'Confort absolu' %}0.7
-            {% elif strategy == 'Préserver batterie' %}1.5
+            {% if strategy in ['Économie maximale', 'Economie maximale'] %}1.3
+            {% elif strategy in ['Confort absolu'] %}0.7
+            {% elif strategy in ['Préserver batterie', 'Preserver batterie'] %}1.5
             {% else %}1.0{% endif %}
 
   # ┌─────────────────────────────────────────────────────────────────────────┐
@@ -196,19 +196,19 @@ template:
           {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
           {% set hour = now().hour %}
 
-          {% if strategy == 'Économie maximale' %}
+          {% if strategy in ['Économie maximale', 'Economie maximale'] %}
             {% if solar_48h > 15 %}
               Attendre demain 12h (soleil)
             {% else %}
               Cette nuit 2h (tarif minimal)
             {% endif %}
-          {% elif strategy == 'Confort absolu' %}
+          {% elif strategy in ['Confort absolu'] %}
             {% if temp < 50 %}
               Maintenant (confort prioritaire)
             {% else %}
               Prochaine opportunité
             {% endif %}
-          {% elif strategy == 'Préserver batterie' %}
+          {% elif strategy in ['Préserver batterie', 'Preserver batterie'] %}
             {% if hour >= 11 and hour <= 15 %}
               Maintenant (APS direct)
             {% else %}
@@ -249,7 +249,7 @@ template:
       - name: "Cumulus - Score santé"
         unique_id: cumulus_score_sante
         state: >
-          {% set score = 100 %}
+          {% set score = namespace(value=100) %}
 
           {# Vérification sensors disponibles #}
           {% set sensors = [
@@ -260,32 +260,32 @@ template:
           ] %}
           {% for sensor in sensors %}
             {% if states(sensor) in ['unavailable', 'unknown', 'none'] %}
-              {% set score = score - 10 %}
+              {% set score.value = score.value - 10 %}
             {% endif %}
           {% endfor %}
 
           {# Vérification cohérence #}
           {% if is_state('binary_sensor.cumulus_coherence_ok', 'off') %}
-            {% set score = score - 20 %}
+            {% set score.value = score.value - 20 %}
           {% endif %}
 
           {# Vérification dernière chauffe #}
           {% set hours_since = states('sensor.cumulus_heures_depuis_derniere_chauffe') | float(0) %}
           {% if hours_since > 72 %}
-            {% set score = score - 15 %}
+            {% set score.value = score.value - 15 %}
           {% elif hours_since > 48 %}
-            {% set score = score - 5 %}
+            {% set score.value = score.value - 5 %}
           {% endif %}
 
           {# Vérification température #}
           {% set temp = states('sensor.cumulus_temperature_estimee') | float(45) %}
           {% if temp < 35 %}
-            {% set score = score - 25 %}
+            {% set score.value = score.value - 25 %}
           {% elif temp < 40 %}
-            {% set score = score - 10 %}
+            {% set score.value = score.value - 10 %}
           {% endif %}
 
-          {% set clamp = [0, score, 100] | sort %}
+          {% set clamp = [0, score.value, 100] | sort %}
           {{ clamp[1] }}
         unit_of_measurement: "%"
         icon: >
@@ -361,7 +361,6 @@ template:
           {% else %}
             true
           {% endif %}
-        device_class: problem
         icon: >
           {% if is_state('binary_sensor.cumulus_coherence_ok', 'on') %}
             mdi:check-circle

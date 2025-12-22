@@ -107,9 +107,9 @@ template:
         unique_id: cumulus_mode_actif
         state: >
           {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
-            {% set in_hc = is_state('binary_sensor.heures_creuses', 'on') %}
+            {% set in_hc = is_state('binary_sensor.cumulus_heures_creuses', 'on') %}
             {% set pv_active = states('sensor.cumulus_production_aps_w') | float(0) > 50 %}
-            {% set force = is_state('input_boolean.cumulus_force_manuel', 'on') %}
+            {% set force = is_state('input_boolean.cumulus_force_manuel', 'on') or is_state('input_boolean.cumulus_override', 'on') %}
             {% if force %}
               FORCE
             {% elif pv_active and not in_hc %}
@@ -220,7 +220,10 @@ template:
       - name: "Cumulus - Dernière chauffe timestamp"
         unique_id: cumulus_derniere_chauffe_timestamp
         state: >
-          {% if states.switch.shellypro1_ece334ee1b64.last_changed %}
+          {% set dt = states('input_datetime.cumulus_derniere_chauffe_complete') %}
+          {% if dt not in ['unknown', 'unavailable', 'none', ''] %}
+            {{ dt }}
+          {% elif states.switch.shellypro1_ece334ee1b64.last_changed %}
             {% if is_state('switch.shellypro1_ece334ee1b64', 'off') %}
               {{ states.switch.shellypro1_ece334ee1b64.last_changed.isoformat() }}
             {% else %}
@@ -270,7 +273,12 @@ template:
         state: >
           {% if is_state('switch.shellypro1_ece334ee1b64', 'on') %}
             {% set temp_current = states('sensor.cumulus_temperature_estimee') | float(45) %}
-            {% set temp_target = 60 %}
+            {% set mode = states('sensor.cumulus_mode_actif') %}
+            {% if mode == 'HC' %}
+              {% set temp_target = states('input_number.cumulus_temperature_cible_hc') | float(52) %}
+            {% else %}
+              {% set temp_target = states('input_number.cumulus_temperature_cible_pv') | float(58) %}
+            {% endif %}
             {% set delta = temp_target - temp_current %}
             {% set minutes = (delta * 4) | round(0) %}  {# ~4min par degré avec 3000W #}
             {% set clamp = [0, minutes, 150] | sort %}
@@ -337,9 +345,23 @@ template:
       - name: "Cumulus - Heures creuses"
         unique_id: cumulus_heures_creuses
         state: >
-          {# Adapter selon votre contrat - Exemple heures creuses classiques #}
-          {% set hour = now().hour %}
-          {{ hour >= 23 or hour < 7 }}
+          {% set now_time = now().time() %}
+          {% set start_raw = states('input_datetime.cumulus_heures_creuses_debut') %}
+          {% set end_raw = states('input_datetime.cumulus_heures_creuses_fin') %}
+
+          {% if start_raw not in ['unknown', 'unavailable', 'none', ''] and end_raw not in ['unknown', 'unavailable', 'none', ''] %}
+            {% set start = today_at(start_raw).time() %}
+            {% set end = today_at(end_raw).time() %}
+            {% if start <= end %}
+              {{ start <= now_time <= end }}
+            {% else %}
+              {{ now_time >= start or now_time <= end }}
+            {% endif %}
+          {% else %}
+            {# Fallback: HC classiques 23h-7h #}
+            {% set hour = now().hour %}
+            {{ hour >= 23 or hour < 7 }}
+          {% endif %}
         device_class: power
         icon: >
           {% if is_state('binary_sensor.cumulus_heures_creuses', 'on') %}

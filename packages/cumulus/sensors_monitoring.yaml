@@ -107,9 +107,9 @@ template:
           {% set strategy = states('input_select.cumulus_strategie_optimisation') %}
 
           {# Ajustement selon stratégie #}
-          {% if strategy == 'Économie maximale' %}
+          {% if strategy in ['Économie maximale', 'Economie maximale'] %}
             {% set factor = 1.2 %}
-          {% elif strategy == 'Préserver batterie' %}
+          {% elif strategy in ['Préserver batterie', 'Preserver batterie'] %}
             {% set factor = 0.8 %}
           {% else %}
             {% set factor = 1.0 %}
@@ -453,3 +453,36 @@ template:
                 "score_sante": states('sensor.cumulus_score_sante') ~ '%'
               } | tojson
             }}
+
+      # Diagnostics centralises (etat + raisons)
+      - name: "Cumulus - Diagnostics"
+        unique_id: cumulus_diagnostics
+        state: >
+          {% if is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            Chauffe
+          {% elif is_state('binary_sensor.cumulus_alerte_active', 'on') %}
+            Alerte
+          {% else %}
+            OK
+          {% endif %}
+        icon: >
+          {% if is_state('binary_sensor.cumulus_alerte_active', 'on') %}
+            mdi:alert-circle
+          {% elif is_state('binary_sensor.cumulus_chauffe_reelle', 'on') %}
+            mdi:water-boiler
+          {% else %}
+            mdi:check-circle
+          {% endif %}
+        attributes:
+          mode_actif: "{{ states('sensor.cumulus_mode_actif') }}"
+          chauffe_reelle: "{{ states('binary_sensor.cumulus_chauffe_reelle') }}"
+          raison_arret: "{{ states('input_text.cumulus_raison_arret') }}"
+          raison_deadband: "{{ states('input_text.cumulus_raison_deadband') }}"
+          conditions_pv_ok: "{{ states('binary_sensor.cumulus_conditions_pv_ok') }}"
+          conditions_hc_ok: "{{ states('binary_sensor.cumulus_conditions_hc_ok') }}"
+          entites_ok: "{{ states('binary_sensor.cumulus_entites_ok') }}"
+          import_w: "{{ states('sensor.cumulus_import_reseau_w') }}"
+          pv_w: "{{ states('sensor.cumulus_pv_power_w') }}"
+          soc_pct: "{{ states('sensor.cumulus_soc_solarbank_pct') }}"
+          seuil_pv_dyn_w: "{{ states('sensor.cumulus_seuil_pv_dynamique_w') }}"
+          derniere_chauffe_complete: "{{ states('input_datetime.cumulus_derniere_chauffe_complete') }}"
