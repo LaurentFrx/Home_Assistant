@@ -270,6 +270,51 @@ template:
           {% set year_set = (as_local(lc)).year if lc else now().year %}
           {{ base + (bl if now().year == year_set else 0) }}
 
+      # ------------------------ Sources "safe" utility_meter -----------------
+      - name: system_sanguinet_economies_eur_safe
+        unique_id: system_sanguinet_economies_eur_safe
+        unit_of_measurement: "€"
+        state_class: total_increasing
+        state: >
+          {% set s = states('sensor.system_sanguinet_economies_eur') %}
+          {{ s | float(this.state | float(0)) }}
+
+      - name: grid_import_kwh_safe
+        unique_id: grid_import_kwh_safe
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total
+        state: >
+          {% set s = states('sensor.grid_import_kwh') %}
+          {{ s | float(this.state | float(0)) }}
+
+      - name: grid_export_kwh_safe
+        unique_id: grid_export_kwh_safe
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total
+        state: >
+          {% set s = states('sensor.grid_export_kwh') %}
+          {{ s | float(this.state | float(0)) }}
+
+      - name: import_edf_safe
+        unique_id: import_edf_safe
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total
+        state: >
+          {% set s = states('sensor.import_edf') %}
+          {{ s | float(this.state | float(0)) }}
+
+      - name: export_edf_safe
+        unique_id: export_edf_safe
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total
+        state: >
+          {% set s = states('sensor.export_edf') %}
+          {{ s | float(this.state | float(0)) }}
+
       # ------------------------ Aliases Camembert (jour) ---------------------
       - name: energie_autoconsommee
         unique_id: pie_energie_autoconsommee_day
@@ -471,11 +516,11 @@ utility_meter:
   # Import / Export (jour)
   grid_import_day_kwh:
     name: grid_import_day_kwh
-    source: sensor.grid_import_kwh
+    source: sensor.grid_import_kwh_safe
     cycle: daily
   grid_export_day_kwh:
     name: grid_export_day_kwh
-    source: sensor.grid_export_kwh
+    source: sensor.grid_export_kwh_safe
     cycle: daily
 
   # --- NOUVEAU : total PV journalier (kWh) ---

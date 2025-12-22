@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###############################################################################
 # Script de synchronisation Git SIMPLIFIÉ pour Home Assistant
 # Version allégée sans vérification complexe

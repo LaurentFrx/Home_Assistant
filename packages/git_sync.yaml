@@ -18,7 +18,8 @@
 ###############################################################################
 shell_command:
   # Commande principale de synchronisation Git (version simplifiée)
-  git_sync: "/config/scripts/git_sync_simple.sh"
+  # Exécution via bash pour éviter la dépendance au bit +x
+  git_sync: "bash /config/scripts/git_sync_simple.sh"
 
   # Commande complète avec vérification (à utiliser manuellement si besoin)
   git_sync_advanced: "/config/scripts/git_sync.sh"
