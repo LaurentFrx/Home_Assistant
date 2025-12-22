@@ -226,14 +226,8 @@ template:
           {% set dt = states('input_datetime.cumulus_derniere_chauffe_complete') %}
           {% if dt not in ['unknown', 'unavailable', 'none', ''] %}
             {{ dt }}
-          {% elif states.switch.shellypro1_ece334ee1b64.last_changed %}
-            {% if is_state('switch.shellypro1_ece334ee1b64', 'off') %}
-              {{ states.switch.shellypro1_ece334ee1b64.last_changed.isoformat() }}
-            {% else %}
-              {{ (now() - timedelta(hours=24)).isoformat() }}
-            {% endif %}
           {% else %}
-            {{ (now() - timedelta(hours=48)).isoformat() }}
+            1970-01-01 00:00:00
           {% endif %}
         icon: mdi:history
 
