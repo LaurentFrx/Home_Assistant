@@ -275,21 +275,21 @@ template:
         unique_id: pie_energie_autoconsommee_day
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         state: "{{ states('sensor.energy_saved_day_kwh')|float(0) }}"
 
       - name: import_edf_quotidien
         unique_id: pie_import_edf_day
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         state: "{{ states('sensor.grid_import_day_kwh')|float(0) }}"
 
       - name: export_daily
         unique_id: pie_export_day
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         state: "{{ states('sensor.grid_export_day_kwh')|float(0) }}"
 
       # ------------------------ Conso & parts (jour) -------------------------
@@ -297,7 +297,7 @@ template:
         unique_id: consumption_day_kwh
         unit_of_measurement: "kWh"
         device_class: energy
-        state_class: measurement
+        state_class: total
         state: >
           {{ states('sensor.energy_saved_day_kwh')|float(0)
              + states('sensor.grid_import_day_kwh')|float(0) }}
