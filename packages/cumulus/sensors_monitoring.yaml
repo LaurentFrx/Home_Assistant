@@ -59,11 +59,13 @@ template:
         unique_id: cumulus_pourcentage_pv
         state: >
           {# Analyse basée sur l'historique JSON #}
-          {% set history = states('input_text.cumulus_historique_chauffes') %}
-          {% if history and history != 'unknown' %}
+          {% set history_raw = states('input_text.cumulus_historique_chauffes') %}
+          {% set history_trim = history_raw | trim %}
+          {% if history_trim not in ['unknown', 'unavailable', 'none', ''] and history_trim.startswith('[') and history_trim.endswith(']') %}
             {# Parser le JSON et compter les modes #}
-            {% set total = history | from_json | length %}
-            {% set pv_count = history | from_json | selectattr('mode', 'eq', 'PV') | list | length %}
+            {% set history = history_trim | from_json %}
+            {% set total = history | length %}
+            {% set pv_count = history | selectattr('mode', 'eq', 'PV') | list | length %}
             {{ ((pv_count / total * 100) if total > 0 else 0) | round(0) }}
           {% else %}
             50  {# Estimation par défaut #}
@@ -75,10 +77,12 @@ template:
       - name: "Cumulus - Pourcentage HC"
         unique_id: cumulus_pourcentage_hc
         state: >
-          {% set history = states('input_text.cumulus_historique_chauffes') %}
-          {% if history and history != 'unknown' %}
-            {% set total = history | from_json | length %}
-            {% set hc_count = history | from_json | selectattr('mode', 'eq', 'HC') | list | length %}
+          {% set history_raw = states('input_text.cumulus_historique_chauffes') %}
+          {% set history_trim = history_raw | trim %}
+          {% if history_trim not in ['unknown', 'unavailable', 'none', ''] and history_trim.startswith('[') and history_trim.endswith(']') %}
+            {% set history = history_trim | from_json %}
+            {% set total = history | length %}
+            {% set hc_count = history | selectattr('mode', 'eq', 'HC') | list | length %}
             {{ ((hc_count / total * 100) if total > 0 else 0) | round(0) }}
           {% else %}
             40  {# Estimation par défaut #}

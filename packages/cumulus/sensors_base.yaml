@@ -143,15 +143,16 @@ template:
       - name: "Cumulus - Température estimée"
         unique_id: cumulus_temperature_estimee
         state: >
-          {# Récupération dernière chauffe et durée #}
-          {% set last_heat_time = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
-          {% set now_time = now() %}
+          {# Récupération dernière chauffe et durée (timestamps) #}
+          {% set last_ts = as_timestamp(states('sensor.cumulus_derniere_chauffe_timestamp'), default=0) %}
+          {% set now_ts = as_timestamp(now()) %}
+          {% set delta_s = now_ts - last_ts %}
 
           {# Si pas de dernière chauffe, on démarre à 45°C #}
-          {% if not last_heat_time %}
+          {% if last_ts == 0 or delta_s < 0 %}
             45
           {% else %}
-            {% set hours_since = ((now_time - last_heat_time).total_seconds() / 3600) | round(2) %}
+            {% set hours_since = (delta_s / 3600) | round(2) %}
             {% set gradient = states('input_number.cumulus_gradient_refroidissement') | float(0.8) %}
 
             {# Température de départ après chauffe complète #}
@@ -179,9 +180,11 @@ template:
           model_type: "{{ states('input_select.cumulus_mode_calcul_temperature') }}"
           gradient_used: "{{ states('input_number.cumulus_gradient_refroidissement') }}"
           hours_since_heat: >
-            {% set last = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
-            {% if last %}
-              {{ ((now() - last).total_seconds() / 3600) | round(1) }}
+            {% set last_ts = as_timestamp(states('sensor.cumulus_derniere_chauffe_timestamp'), default=0) %}
+            {% set now_ts = as_timestamp(now()) %}
+            {% set delta_s = now_ts - last_ts %}
+            {% if last_ts > 0 and delta_s >= 0 %}
+              {{ (delta_s / 3600) | round(1) }}
             {% else %}
               999
             {% endif %}
@@ -238,15 +241,20 @@ template:
       - name: "Cumulus - Dernière chauffe"
         unique_id: cumulus_derniere_chauffe
         state: >
-          {% set last = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
-          {% if last %}
-            {% set delta = now() - last %}
-            {% if delta.days > 0 %}
-              Il y a {{ delta.days }} jour{{ 's' if delta.days > 1 }}
-            {% elif delta.seconds > 3600 %}
-              Il y a {{ (delta.seconds / 3600) | round(0) }} heure{{ 's' if (delta.seconds / 3600) > 1 }}
+          {% set last_ts = as_timestamp(states('sensor.cumulus_derniere_chauffe_timestamp'), default=0) %}
+          {% set now_ts = as_timestamp(now()) %}
+          {% if last_ts > 0 %}
+            {% set delta_s = now_ts - last_ts %}
+            {% set delta_s = [0, delta_s] | max %}
+            {% if delta_s >= 86400 %}
+              {% set days = (delta_s / 86400) | int %}
+              Il y a {{ days }} jour{{ 's' if days > 1 }}
+            {% elif delta_s >= 3600 %}
+              {% set hours = (delta_s / 3600) | round(0) | int %}
+              Il y a {{ hours }} heure{{ 's' if hours > 1 }}
             {% else %}
-              Il y a {{ (delta.seconds / 60) | round(0) }} minute{{ 's' if (delta.seconds / 60) > 1 }}
+              {% set minutes = (delta_s / 60) | round(0) | int %}
+              Il y a {{ minutes }} minute{{ 's' if minutes > 1 }}
             {% endif %}
           {% else %}
             Jamais
@@ -257,9 +265,11 @@ template:
       - name: "Cumulus - Heures depuis dernière chauffe"
         unique_id: cumulus_heures_depuis_derniere_chauffe
         state: >
-          {% set last = states('sensor.cumulus_derniere_chauffe_timestamp') | as_datetime %}
-          {% if last %}
-            {{ ((now() - last).total_seconds() / 3600) | round(1) }}
+          {% set last_ts = as_timestamp(states('sensor.cumulus_derniere_chauffe_timestamp'), default=0) %}
+          {% set now_ts = as_timestamp(now()) %}
+          {% set delta_s = now_ts - last_ts %}
+          {% if last_ts > 0 and delta_s >= 0 %}
+            {{ (delta_s / 3600) | round(1) }}
           {% else %}
             999
           {% endif %}

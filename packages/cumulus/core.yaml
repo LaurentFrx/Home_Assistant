@@ -66,13 +66,13 @@ input_text:
   cumulus_historique_chauffes:
     name: "Cumulus - Historique chauffes"
     initial: "[]"
-    max: 5000
+    max: 255
     icon: mdi:history
 
   cumulus_config_backup:
     name: "Cumulus - Config backup"
     initial: "{}"
-    max: 5000
+    max: 255
     icon: mdi:content-save
 
   cumulus_derniere_notification:
