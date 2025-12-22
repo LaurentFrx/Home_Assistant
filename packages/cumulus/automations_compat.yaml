@@ -1,0 +1,122 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - AUTOMATIONS COMPAT                                 ║
+# ║ Synchronisation des toggles legacy                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+automation:
+  - id: cumulus_sync_vacances_compat
+    alias: "Cumulus - Sync vacances (compat)"
+    description: "Synchronise cumulus_mode_vacances <-> cumulus_vacances"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id:
+          - input_boolean.cumulus_mode_vacances
+          - input_boolean.cumulus_vacances
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state is not none and trigger.to_state.state in ['on', 'off'] }}
+    action:
+      - variables:
+          desired_state: "{{ trigger.to_state.state }}"
+          group_entities:
+            - input_boolean.cumulus_mode_vacances
+            - input_boolean.cumulus_vacances
+          targets: >
+            {% set ns = namespace(list=[]) %}
+            {% for ent in group_entities %}
+              {% if states(ent) != desired_state %}
+                {% set ns.list = ns.list + [ent] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.list }}
+      - choose:
+          - conditions: "{{ desired_state == 'on' and (targets | length > 0) }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: "{{ targets }}"
+          - conditions: "{{ desired_state == 'off' and (targets | length > 0) }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ targets }}"
+
+  - id: cumulus_sync_interdit_compat
+    alias: "Cumulus - Sync interdit (compat)"
+    description: "Synchronise cumulus_interdit_depart <-> cumulus_interdit"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id:
+          - input_boolean.cumulus_interdit_depart
+          - input_boolean.cumulus_interdit
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state is not none and trigger.to_state.state in ['on', 'off'] }}
+    action:
+      - variables:
+          desired_state: "{{ trigger.to_state.state }}"
+          group_entities:
+            - input_boolean.cumulus_interdit_depart
+            - input_boolean.cumulus_interdit
+          targets: >
+            {% set ns = namespace(list=[]) %}
+            {% for ent in group_entities %}
+              {% if states(ent) != desired_state %}
+                {% set ns.list = ns.list + [ent] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.list }}
+      - choose:
+          - conditions: "{{ desired_state == 'on' and (targets | length > 0) }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: "{{ targets }}"
+          - conditions: "{{ desired_state == 'off' and (targets | length > 0) }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ targets }}"
+
+  - id: cumulus_sync_verrou_jour_compat
+    alias: "Cumulus - Sync verrou jour (compat)"
+    description: "Synchronise cumulus_verrou_jour <-> cumulus_verrou_chauffe_quotidienne"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id:
+          - input_boolean.cumulus_verrou_jour
+          - input_boolean.cumulus_verrou_chauffe_quotidienne
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state is not none and trigger.to_state.state in ['on', 'off'] }}
+    action:
+      - variables:
+          desired_state: "{{ trigger.to_state.state }}"
+          group_entities:
+            - input_boolean.cumulus_verrou_jour
+            - input_boolean.cumulus_verrou_chauffe_quotidienne
+          targets: >
+            {% set ns = namespace(list=[]) %}
+            {% for ent in group_entities %}
+              {% if states(ent) != desired_state %}
+                {% set ns.list = ns.list + [ent] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.list }}
+      - choose:
+          - conditions: "{{ desired_state == 'on' and (targets | length > 0) }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: "{{ targets }}"
+          - conditions: "{{ desired_state == 'off' and (targets | length > 0) }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ targets }}"
