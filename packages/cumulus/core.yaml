@@ -1,2 +1,645 @@
-# Insérer ici le contenu de core.yaml
-# (Copié depuis le fichier créé précédemment)
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║ CUMULUS INTELLIGENT - CORE                                               ║
+# ║ Helpers et configuration (compat + V4)                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+# NOTE: Les input_select restent dans packages/cumulus_input_select.yaml.
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ ENTITES SOURCE (ids configurables)                                      │
+# └─────────────────────────────────────────────────────────────────────────┘
+input_text:
+  cumulus_entity_import_w:
+    name: "Cumulus - Entité import réseau"
+    icon: mdi:transmission-tower-import
+    initial: sensor.smart_meter_grid_import
+    max: 255
+
+  cumulus_entity_contacteur:
+    name: "Cumulus - Entité contacteur"
+    icon: mdi:water-boiler
+    initial: switch.shellypro1_ece334ee1b64
+    max: 255
+
+  cumulus_entity_soc_solarbank:
+    name: "Cumulus - Entité SOC Solarbank"
+    icon: mdi:battery
+    initial: sensor.system_sanguinet_etat_de_charge_du_sb
+    max: 255
+
+  cumulus_entity_lave_linge_power:
+    name: "Cumulus - Entité puissance lave-linge"
+    icon: mdi:washing-machine
+    initial: sensor.lave_linge_power
+    max: 255
+
+  cumulus_entity_lave_vaisselle_power:
+    name: "Cumulus - Entité puissance lave-vaisselle"
+    icon: mdi:dishwasher
+    initial: sensor.lave_vaisselle_power
+    max: 255
+
+  cumulus_entity_solcast_today:
+    name: "Cumulus - Entité Solcast aujourd'hui"
+    icon: mdi:solar-power
+    initial: sensor.solcast_pv_forecast_previsions_pour_aujourd_hui
+    max: 255
+
+  cumulus_entity_solcast_tomorrow:
+    name: "Cumulus - Entité Solcast demain"
+    icon: mdi:solar-power-variant
+    initial: sensor.solcast_pv_forecast_previsions_pour_demain
+    max: 255
+
+  # Raison/diagnostic
+  cumulus_raison_arret:
+    name: "Cumulus - Raison arrêt"
+    initial: "Initialisation"
+    max: 255
+    icon: mdi:text-box
+
+  cumulus_raison_deadband:
+    name: "Cumulus - Raison deadband"
+    initial: "Aucun"
+    max: 255
+    icon: mdi:text-box-outline
+
+  cumulus_historique_chauffes:
+    name: "Cumulus - Historique chauffes"
+    initial: "[]"
+    max: 5000
+    icon: mdi:history
+
+  cumulus_config_backup:
+    name: "Cumulus - Config backup"
+    initial: "{}"
+    max: 5000
+    icon: mdi:content-save
+
+  cumulus_derniere_notification:
+    name: "Cumulus - Derniere notification"
+    initial: ""
+    max: 255
+    icon: mdi:message-text
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ SEUILS / PUISSANCES                                                     │
+# └─────────────────────────────────────────────────────────────────────────┘
+input_number:
+  cumulus_seuil_pv_statique_w:
+    name: "Cumulus - Seuil PV statique"
+    min: 0
+    max: 5000
+    step: 10
+    initial: 100
+    unit_of_measurement: "W"
+    icon: mdi:solar-power
+
+  # Legacy/compat (seuil PV base)
+  cumulus_seuil_pv_on_w:
+    name: "Cumulus - Seuil PV ON"
+    min: 0
+    max: 5000
+    step: 10
+    initial: 100
+    unit_of_measurement: "W"
+    icon: mdi:white-balance-sunny
+
+  # Legacy/compat (slider dynamique)
+  cumulus_seuil_pv_dynamique_w:
+    name: "Cumulus - Seuil PV dynamique (slider)"
+    min: 0
+    max: 5000
+    step: 10
+    initial: 100
+    unit_of_measurement: "W"
+    icon: mdi:solar-power-variant
+
+  cumulus_import_max_w:
+    name: "Cumulus - Import max reseau"
+    min: 0
+    max: 3000
+    step: 50
+    initial: 500
+    unit_of_measurement: "W"
+    icon: mdi:transmission-tower-import
+
+  # Legacy/compat (seuil import pour demarrage)
+  cumulus_import_demarrage_max_w:
+    name: "Cumulus - Import demarrage max"
+    min: 0
+    max: 3000
+    step: 50
+    initial: 500
+    unit_of_measurement: "W"
+    icon: mdi:flash
+
+  cumulus_marge_import_w:
+    name: "Cumulus - Marge import"
+    min: 0
+    max: 3000
+    step: 10
+    initial: 1100
+    unit_of_measurement: "W"
+    icon: mdi:flash-alert
+
+  cumulus_marge_fin_import_w:
+    name: "Cumulus - Marge fin import"
+    min: 0
+    max: 1000
+    step: 10
+    initial: 150
+    unit_of_measurement: "W"
+    icon: mdi:flash-triangle-outline
+
+  cumulus_talon_maison_w:
+    name: "Cumulus - Talon maison"
+    min: 0
+    max: 1000
+    step: 10
+    initial: 400
+    unit_of_measurement: "W"
+    icon: mdi:home-lightning-bolt
+
+  # Legacy/compat
+  cumulus_talon_w:
+    name: "Cumulus - Talon (legacy)"
+    min: 0
+    max: 1000
+    step: 10
+    initial: 400
+    unit_of_measurement: "W"
+    icon: mdi:home-lightning-bolt-outline
+
+  cumulus_solarbank_max_w:
+    name: "Cumulus - Puissance max Solarbank"
+    min: 0
+    max: 2000
+    step: 10
+    initial: 1200
+    unit_of_measurement: "W"
+    icon: mdi:battery-charging
+
+  cumulus_aps_max_w:
+    name: "Cumulus - Puissance max APS"
+    min: 0
+    max: 2000
+    step: 10
+    initial: 960
+    unit_of_measurement: "W"
+    icon: mdi:solar-panel
+
+  cumulus_alpha_aps:
+    name: "Cumulus - Coefficient APS"
+    min: 0.0
+    max: 2.0
+    step: 0.01
+    initial: 1.0
+    icon: mdi:alpha-a
+
+  cumulus_puissance_w:
+    name: "Cumulus - Puissance chauffe"
+    min: 0
+    max: 6000
+    step: 100
+    initial: 3000
+    unit_of_measurement: "W"
+    icon: mdi:flash
+
+  cumulus_seuil_appareil_actif_w:
+    name: "Cumulus - Seuil appareil actif"
+    min: 0
+    max: 2000
+    step: 10
+    initial: 20
+    unit_of_measurement: "W"
+    icon: mdi:power-plug
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ TEMPERATURES / CAPACITE                                                 │
+# └─────────────────────────────────────────────────────────────────────────┘
+  cumulus_temperature_cible_pv:
+    name: "Cumulus - Temperature cible PV"
+    min: 45
+    max: 65
+    step: 1
+    initial: 58
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-high
+
+  cumulus_temperature_cible_hc:
+    name: "Cumulus - Temperature cible HC"
+    min: 40
+    max: 60
+    step: 1
+    initial: 52
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-low
+
+  # Legacy/compat
+  cumulus_temperature_cible_c:
+    name: "Cumulus - Temperature cible (legacy)"
+    min: 40
+    max: 65
+    step: 1
+    initial: 55
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+
+  cumulus_temperature_minimale:
+    name: "Cumulus - Temperature minimale"
+    min: 35
+    max: 50
+    step: 1
+    initial: 42
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-alert
+
+  cumulus_gradient_refroidissement:
+    name: "Cumulus - Gradient refroidissement"
+    min: 0.1
+    max: 2.0
+    step: 0.1
+    initial: 0.8
+    unit_of_measurement: "°C/h"
+    icon: mdi:trending-down
+
+  cumulus_capacite_litres:
+    name: "Cumulus - Capacite ballon"
+    min: 50
+    max: 400
+    step: 10
+    initial: 200
+    unit_of_measurement: "L"
+    icon: mdi:water
+
+  cumulus_nb_personnes:
+    name: "Cumulus - Nb personnes"
+    min: 1
+    max: 8
+    step: 1
+    initial: 3
+    icon: mdi:account-group
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ SOC / BATTERIE                                                          │
+# └─────────────────────────────────────────────────────────────────────────┘
+  cumulus_soc_min:
+    name: "Cumulus - SOC minimum"
+    min: 0
+    max: 100
+    step: 1
+    initial: 10
+    unit_of_measurement: "%"
+    icon: mdi:battery-low
+
+  # Legacy/compat
+  cumulus_soc_min_pct:
+    name: "Cumulus - SOC mini (pct)"
+    min: 0
+    max: 100
+    step: 1
+    initial: 10
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  # Legacy/compat
+  cumulus_soc_mini_pct:
+    name: "Cumulus - SOC mini (legacy)"
+    min: 0
+    max: 100
+    step: 1
+    initial: 10
+    unit_of_measurement: "%"
+    icon: mdi:battery-50
+
+  cumulus_soc_start_pct:
+    name: "Cumulus - SOC demarrage"
+    min: 0
+    max: 100
+    step: 1
+    initial: 25
+    unit_of_measurement: "%"
+    icon: mdi:battery-70
+
+  cumulus_soc_stop_pct:
+    name: "Cumulus - SOC stop"
+    min: 0
+    max: 100
+    step: 1
+    initial: 15
+    unit_of_measurement: "%"
+    icon: mdi:battery-alert-variant-outline
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ PREVISIONS SOLAIRE                                                      │
+# └─────────────────────────────────────────────────────────────────────────┘
+  cumulus_seuil_prevision_favorable_kwh:
+    name: "Cumulus - Seuil prevision favorable"
+    min: 0
+    max: 50
+    step: 0.5
+    initial: 8
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-sunny
+
+  cumulus_seuil_solcast_bon_kwh:
+    name: "Cumulus - Seuil Solcast bon"
+    min: 0
+    max: 50
+    step: 0.5
+    initial: 8
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-sunny
+
+  cumulus_solcast_seuil_kwh:
+    name: "Cumulus - Seuil Solcast (legacy)"
+    min: 0
+    max: 50
+    step: 0.5
+    initial: 8
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-sunny
+
+  cumulus_prevision_mini_kwh:
+    name: "Cumulus - Prevision mini"
+    min: 0
+    max: 50
+    step: 0.5
+    initial: 5
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-partly-cloudy
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ TEMPORISATIONS                                                          │
+# └─────────────────────────────────────────────────────────────────────────┘
+  cumulus_delai_on_secondes:
+    name: "Cumulus - Delai demarrage"
+    min: 0
+    max: 300
+    step: 1
+    initial: 30
+    unit_of_measurement: "s"
+    icon: mdi:timer-play
+
+  cumulus_delai_off_secondes:
+    name: "Cumulus - Delai arret"
+    min: 0
+    max: 300
+    step: 1
+    initial: 60
+    unit_of_measurement: "s"
+    icon: mdi:timer-stop
+
+  # Legacy/compat
+  cumulus_on_delay_s:
+    name: "Cumulus - Delai ON (legacy)"
+    min: 0
+    max: 300
+    step: 1
+    initial: 10
+    unit_of_measurement: "s"
+    icon: mdi:timer-play
+
+  cumulus_deadband_s:
+    name: "Cumulus - Deadband (s)"
+    min: 0
+    max: 600
+    step: 5
+    initial: 100
+    unit_of_measurement: "s"
+    icon: mdi:progress-clock
+
+  cumulus_mini_deadband_no_delay_s:
+    name: "Cumulus - Mini deadband no delay"
+    min: 0
+    max: 60
+    step: 1
+    initial: 5
+    unit_of_measurement: "s"
+    icon: mdi:timer-outline
+
+  cumulus_deadband_min:
+    name: "Cumulus - Deadband (min)"
+    min: 0
+    max: 30
+    step: 1
+    initial: 5
+    unit_of_measurement: "min"
+    icon: mdi:progress-clock
+
+  cumulus_espacement_minimal_heures:
+    name: "Cumulus - Espacement minimal"
+    min: 0
+    max: 72
+    step: 1
+    initial: 24
+    unit_of_measurement: "h"
+    icon: mdi:hours-24
+
+  cumulus_espacement_max_h:
+    name: "Cumulus - Espacement max"
+    min: 0
+    max: 200
+    step: 1
+    initial: 50
+    unit_of_measurement: "h"
+    icon: mdi:timer-alert
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ MODES / VERROUS                                                         │
+# └─────────────────────────────────────────────────────────────────────────┘
+input_boolean:
+  cumulus_interdit_depart:
+    name: "Cumulus - Interdit depart"
+    initial: false
+    icon: mdi:hand-back-right-off
+
+  # Legacy/compat
+  cumulus_interdit:
+    name: "Cumulus - Interdit (legacy)"
+    initial: false
+    icon: mdi:hand-back-right-off
+
+  cumulus_mode_vacances:
+    name: "Cumulus - Mode vacances"
+    initial: false
+    icon: mdi:beach
+
+  # Legacy/compat
+  cumulus_vacances:
+    name: "Cumulus - Vacances (legacy)"
+    initial: false
+    icon: mdi:beach
+
+  cumulus_override:
+    name: "Cumulus - Override manuel"
+    initial: false
+    icon: mdi:hand-pointing-up
+
+  cumulus_verrou_jour:
+    name: "Cumulus - Verrou jour"
+    initial: false
+    icon: mdi:calendar-remove
+
+  cumulus_verrou_chauffe_quotidienne:
+    name: "Cumulus - Verrou chauffe quotidienne"
+    initial: false
+    icon: mdi:lock-check
+
+  cumulus_verrou_deadband:
+    name: "Cumulus - Verrou deadband"
+    initial: false
+    icon: mdi:lock-clock
+
+  cumulus_temp_atteinte_aujourdhui:
+    name: "Cumulus - Temperature atteinte"
+    initial: false
+    icon: mdi:thermometer-check
+
+  # Legacy/compat
+  temp_atteinte_aujourdhui:
+    name: "Temp atteinte aujourd'hui (legacy)"
+    initial: false
+    icon: mdi:thermometer-check
+
+  cumulus_chauffe_hc_exceptionnelle:
+    name: "Cumulus - HC exceptionnelle"
+    initial: false
+    icon: mdi:moon-waning-crescent
+
+  cumulus_force_manuel:
+    name: "Cumulus - Force manuel"
+    initial: false
+    icon: mdi:fire
+
+  cumulus_autoriser_hc:
+    name: "Cumulus - Autoriser HC"
+    initial: true
+    icon: mdi:checkbox-marked-circle
+
+  cumulus_solcast_override:
+    name: "Cumulus - Solcast override"
+    initial: false
+    icon: mdi:weather-sunny-alert
+
+  cumulus_mode_predictif:
+    name: "Cumulus - Mode predictif"
+    initial: true
+    icon: mdi:crystal-ball
+
+  cumulus_notifications_actives:
+    name: "Cumulus - Notifications actives"
+    initial: true
+    icon: mdi:bell
+
+  cumulus_mode_debug:
+    name: "Cumulus - Mode debug"
+    initial: false
+    icon: mdi:bug
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ FENETRES HORAIRES                                                       │
+# └─────────────────────────────────────────────────────────────────────────┘
+input_datetime:
+  cumulus_heure_debut_pv:
+    name: "Cumulus - Debut fenetre PV"
+    has_date: false
+    has_time: true
+    initial: "09:00:00"
+    icon: mdi:weather-sunset-up
+
+  cumulus_heure_fin_pv:
+    name: "Cumulus - Fin fenetre PV"
+    has_date: false
+    has_time: true
+    initial: "17:00:00"
+    icon: mdi:weather-sunset-down
+
+  # Legacy/compat
+  cumulus_plage_pv_debut:
+    name: "Cumulus - Plage PV debut (legacy)"
+    has_date: false
+    has_time: true
+    initial: "09:00:00"
+    icon: mdi:weather-sunset-up
+
+  # Legacy/compat
+  cumulus_plage_pv_fin:
+    name: "Cumulus - Plage PV fin (legacy)"
+    has_date: false
+    has_time: true
+    initial: "17:00:00"
+    icon: mdi:weather-sunset-down
+
+  cumulus_heures_creuses_debut:
+    name: "Cumulus - Heures creuses debut"
+    has_date: false
+    has_time: true
+    initial: "23:00:00"
+    icon: mdi:moon-waning-crescent
+
+  cumulus_heures_creuses_fin:
+    name: "Cumulus - Heures creuses fin"
+    has_date: false
+    has_time: true
+    initial: "07:00:00"
+    icon: mdi:moon-waning-crescent
+
+  cumulus_derniere_chauffe_complete:
+    name: "Cumulus - Derniere chauffe complete"
+    has_date: true
+    has_time: true
+    icon: mdi:history
+
+  cumulus_debut_chauffe_actuelle:
+    name: "Cumulus - Debut chauffe actuelle"
+    has_date: true
+    has_time: true
+    icon: mdi:timer-play
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ COMPTEURS                                                               │
+# └─────────────────────────────────────────────────────────────────────────┘
+counter:
+  cumulus_chauffes_jour:
+    name: "Cumulus - Chauffes du jour"
+    initial: 0
+    step: 1
+    icon: mdi:counter
+
+  cumulus_chauffes_mois:
+    name: "Cumulus - Chauffes du mois"
+    initial: 0
+    step: 1
+    icon: mdi:calendar-month
+
+  cumulus_erreurs_jour:
+    name: "Cumulus - Erreurs du jour"
+    initial: 0
+    step: 1
+    icon: mdi:alert-circle
+
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ TIMERS                                                                  │
+# └─────────────────────────────────────────────────────────────────────────┘
+timer:
+  cumulus_timer_deadband:
+    name: "Cumulus - Timer deadband"
+    duration: "00:05:00"
+    icon: mdi:timer-sand
+
+  cumulus_timer_chauffe:
+    name: "Cumulus - Timer chauffe"
+    duration: "02:30:00"
+    icon: mdi:timer
+
+  cumulus_timer_boost:
+    name: "Cumulus - Timer boost"
+    duration: "01:00:00"
+    icon: mdi:timer-alert
+
+  # Legacy/compat
+  cumulus_deadband_ui:
+    name: "Cumulus - Deadband UI"
+    duration: "00:05:00"
+    icon: mdi:timer-sand
