@@ -1,0 +1,296 @@
+###############################################################################
+# CUMULUS V4 SHADOW (SAFE) - Aucune action sur le switch réel
+# Source réseau : priorité à un capteur signé (sensor.grid_power_w, import>0/export<0),
+# sinon fallback sur capteurs séparés (sensor.smart_meter_grid_import / sensor.smart_meter_grid_export ou sensor.grid_export_w).
+# Ce package ne pilote rien, il calcule seulement des indicateurs V4.
+###############################################################################
+
+input_boolean:
+  cumulus_v4_shadow_enabled:
+    name: "Cumulus V4 - Shadow mode actif"
+    initial: true
+  cumulus_v4_use_solcast:
+    name: "Cumulus V4 - Utiliser Solcast"
+    initial: false
+
+input_number:
+  cumulus_v4_power_cumulus_w:
+    name: "Cumulus V4 - Puissance cumulus W"
+    min: 1000
+    max: 4000
+    step: 100
+    initial: 3000
+    unit_of_measurement: "W"
+  cumulus_v4_window_s:
+    name: "Cumulus V4 - Fenêtre de calcul (s)"
+    min: 60
+    max: 3600
+    step: 60
+    initial: 600
+    unit_of_measurement: "s"
+  cumulus_v4_min_on_s:
+    name: "Cumulus V4 - Temps mini ON (s)"
+    min: 0
+    max: 1800
+    step: 30
+    initial: 120
+    unit_of_measurement: "s"
+  cumulus_v4_min_off_s:
+    name: "Cumulus V4 - Temps mini OFF (s)"
+    min: 0
+    max: 1800
+    step: 30
+    initial: 120
+    unit_of_measurement: "s"
+  cumulus_v4_surplus_margin_w:
+    name: "Cumulus V4 - Marge surplus (W)"
+    min: 0
+    max: 1000
+    step: 50
+    initial: 100
+    unit_of_measurement: "W"
+  cumulus_v4_soc_min_pct:
+    name: "Cumulus V4 - SOC Solarbank min (%)"
+    min: 0
+    max: 100
+    step: 1
+    initial: 20
+    unit_of_measurement: "%"
+  cumulus_v4_solcast_remaining_kwh_min:
+    name: "Cumulus V4 - Seuil Solcast restant (kWh)"
+    min: 0
+    max: 20
+    step: 0.1
+    initial: 2.0
+    unit_of_measurement: "kWh"
+
+input_text:
+  cumulus_v4_solcast_remaining_sensor:
+    name: "Cumulus V4 - Capteur Solcast remaining"
+    initial: ""
+    max: 255
+
+template:
+  - sensor:
+      # Import réseau signé si dispo, sinon clampé positif
+      - name: "cumulus_v4_grid_import_w"
+        state: >
+          {% set signed = states('sensor.grid_power_w') %}
+          {% if signed not in ['unknown','unavailable','none', none] %}
+            {% set val = signed | float(0) %}
+            {{ [val, 0] | max }}
+          {% else %}
+            {% set v = states('sensor.smart_meter_grid_import') %}
+            {{ 0 if v in ['unknown','unavailable','none', none] else v | float(0) }}
+          {% endif %}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+          {{ states('sensor.grid_power_w') not in ['unknown','unavailable','none', none]
+             or states('sensor.smart_meter_grid_import') not in ['unknown','unavailable','none', none] }}
+
+      # Export réseau
+      - name: "cumulus_v4_grid_export_w"
+        state: >
+          {% set signed = states('sensor.grid_power_w') %}
+          {% if signed not in ['unknown','unavailable','none', none] %}
+            {% set val = signed | float(0) %}
+            {{ (0 - val) if val < 0 else 0 }}
+          {% elif states('sensor.smart_meter_grid_export') not in ['unknown','unavailable','none', none] %}
+            {{ states('sensor.smart_meter_grid_export') | float(0) }}
+          {% elif states('sensor.grid_export_w') not in ['unknown','unavailable','none', none] %}
+            {{ states('sensor.grid_export_w') | float(0) }}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+          {{ not (
+            states('sensor.grid_power_w') in ['unknown','unavailable','none', none]
+            and states('sensor.smart_meter_grid_export') in ['unknown','unavailable','none', none]
+            and states('sensor.grid_export_w') in ['unknown','unavailable','none', none]
+          ) }}
+
+      # Surplus réel mesuré (export)
+      - name: "cumulus_v4_surplus_w"
+        state: >
+          {% set exp = states('sensor.cumulus_v4_grid_export_w') | float(0) %}
+          {{ exp if exp > 0 else 0 }}
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: "{{ states('sensor.cumulus_v4_grid_export_w') not in ['unknown','unavailable','none', none] }}"
+
+      # Ratio d'allumage théorique
+      - name: "cumulus_v4_ratio"
+        state: >
+          {% set surplus = states('sensor.cumulus_v4_surplus_w') | float(0) %}
+          {% set margin = states('input_number.cumulus_v4_surplus_margin_w') | float(0) %}
+          {% set p = states('input_number.cumulus_v4_power_cumulus_w') | float(3000) %}
+          {% set raw = (surplus - margin) / p %}
+          {% set clamp = [0, raw, 1] | sort %}
+          {{ clamp[1] | round(3) }}
+        icon: mdi:chart-line
+        availability: >
+          {{ states('sensor.cumulus_v4_surplus_w') not in ['unknown','unavailable','none', none] }}
+
+      # Temps ON recommandé dans la fenêtre
+      - name: "cumulus_v4_on_time_s"
+        state: >
+          {% set ratio = states('sensor.cumulus_v4_ratio') | float(0) %}
+          {% set window = states('input_number.cumulus_v4_window_s') | float(600) %}
+          {% set min_on = states('input_number.cumulus_v4_min_on_s') | float(120) %}
+          {% set min_off = states('input_number.cumulus_v4_min_off_s') | float(120) %}
+          {% if window < (min_on + min_off) %}
+            0
+          {% elif ratio <= 0 %}
+            0
+          {% else %}
+            {% set raw = ratio * window %}
+            {% if raw < min_on %}
+              0
+            {% else %}
+              {% set max_on = window - min_off %}
+              {% set clamped = [min_on, raw, max_on] | sort %}
+              {{ clamped[1] | round(0) }}
+            {% endif %}
+          {% endif %}
+        unit_of_measurement: "s"
+        icon: mdi:timer
+        availability: >
+          {{ states('sensor.cumulus_v4_ratio') not in ['unknown','unavailable','none', none] }}
+
+      # Raison textuelle du statut shadow
+      - name: "cumulus_v4_reason"
+        state: >
+          {% set enabled = is_state('input_boolean.cumulus_v4_shadow_enabled','on') %}
+          {% set pv_ok = is_state('binary_sensor.cumulus_v4_pv_window_ok','on') %}
+          {% set need = is_state('binary_sensor.cumulus_v4_needs_heat','on') %}
+          {% set run = is_state('binary_sensor.cumulus_v4_would_run_pv','on') %}
+          {% set solcast_on = is_state('input_boolean.cumulus_v4_use_solcast','on') %}
+          {% set solcast_entity = states('input_text.cumulus_v4_solcast_remaining_sensor') %}
+          {% set solcast_val = states(solcast_entity) if solcast_entity not in ['','unknown','unavailable', none] else 'unknown' %}
+          {% set solcast_missing = solcast_on and (solcast_entity in ['','unknown','unavailable', none] or solcast_val in ['unknown','unavailable','none', none]) %}
+          {% set on_time = states('sensor.cumulus_v4_on_time_s') | int(0) %}
+          {% set ratio = states('sensor.cumulus_v4_ratio') | float(0) %}
+          {% set surplus = states('sensor.cumulus_v4_surplus_w') | float(0) %}
+          {% set margin = states('input_number.cumulus_v4_surplus_margin_w') | float(0) %}
+          {% if not enabled %}shadow disabled
+          {% elif solcast_missing %}solcast unavailable
+          {% elif not pv_ok %}pv window closed
+          {% elif not need %}no heat need
+          {% elif on_time <= 0 and window < (min_on + min_off) %}window < min_on+min_off
+          {% elif on_time <= 0 and ratio > 0 and surplus > margin %}below min_on
+          {% elif on_time <= 0 %}no surplus
+          {% elif not run %}no surplus
+          {% else %}ok
+          {% endif %}
+        icon: mdi:comment-text
+        availability: >
+          {{ states('input_boolean.cumulus_v4_shadow_enabled') not in ['unknown','unavailable','none', none] }}
+
+  - binary_sensor:
+      # Fenêtre PV shadow (horaire + option Solcast)
+      - name: "cumulus_v4_pv_window_ok"
+        device_class: running
+        state: >
+          {% set now_t = now().time() %}
+          {% set start = today_at('10:00').time() %}
+          {% set end = today_at('16:30').time() %}
+          {% set solcast_on = is_state('input_boolean.cumulus_v4_use_solcast','on') %}
+          {% set solcast_sensor = states('input_text.cumulus_v4_solcast_remaining_sensor') %}
+          {% set solcast_val = states(solcast_sensor) if solcast_sensor not in ['','unknown','unavailable', none] else 'unknown' %}
+          {% set solcast_ok = false %}
+          {% if solcast_on and solcast_val not in ['unknown','unavailable','none', none] %}
+            {% set remaining = solcast_val | float(0) %}
+            {% set threshold = states('input_number.cumulus_v4_solcast_remaining_kwh_min') | float(0) %}
+            {% set solcast_ok = remaining >= threshold %}
+          {% endif %}
+          {% set time_ok = start <= now_t <= end %}
+          {{ time_ok and (not solcast_on or solcast_ok) }}
+        availability: "true"
+        icon: >
+          {% if is_state('binary_sensor.cumulus_v4_pv_window_ok','on') %}
+            mdi:weather-sunny
+          {% else %}
+            mdi:weather-night
+          {% endif %}
+
+      # Besoin de chauffe (shadow)
+      - name: "cumulus_v4_needs_heat"
+        device_class: heat
+        state: >
+          {% set temp_real = states('sensor.thermo_cumulus_temperature') %}
+          {% set temp_est = states('sensor.cumulus_temperature_estimee') %}
+          {% set temp = none %}
+          {% if temp_real not in ['unknown','unavailable','none', none] %}
+            {% set temp = temp_real | float(0) %}
+          {% elif temp_est not in ['unknown','unavailable','none', none] %}
+            {% set temp = temp_est | float(0) %}
+          {% else %}
+            {% set temp = 999 %}
+          {% endif %}
+          {% if states('input_number.cumulus_temperature_cible_pv') not in ['unknown','unavailable','none', none] %}
+            {% set target = states('input_number.cumulus_temperature_cible_pv') | float(50) %}
+          {% else %}
+            {% set target = 50 %}
+          {% endif %}
+          {{ temp < target }}
+        availability: >
+          {{ not (
+            states('sensor.thermo_cumulus_temperature') in ['unknown','unavailable','none', none]
+            and states('sensor.cumulus_temperature_estimee') in ['unknown','unavailable','none', none]
+          ) }}
+        icon: >
+          {% if is_state('binary_sensor.cumulus_v4_needs_heat','on') %}
+            mdi:fire
+          {% else %}
+            mdi:thermometer-check
+          {% endif %}
+
+      # Décision shadow "je lancerais en PV"
+      - name: "cumulus_v4_would_run_pv"
+        device_class: running
+        state: >
+          {% set enabled = is_state('input_boolean.cumulus_v4_shadow_enabled','on') %}
+          {% set pv_ok = is_state('binary_sensor.cumulus_v4_pv_window_ok','on') %}
+          {% set need = is_state('binary_sensor.cumulus_v4_needs_heat','on') %}
+          {% set on_time = states('sensor.cumulus_v4_on_time_s') | int(0) %}
+          {{ enabled and pv_ok and need and on_time > 0 }}
+        availability: >
+          {{ states('sensor.cumulus_v4_ratio') not in ['unknown','unavailable','none', none] }}
+        icon: >
+          {% if is_state('binary_sensor.cumulus_v4_would_run_pv','on') %}
+            mdi:play-circle
+          {% else %}
+            mdi:pause-circle
+          {% endif %}
+
+automation:
+  - alias: "Cumulus V4 Shadow - Log snapshot"
+    id: cumulus_v4_shadow_log_snapshot
+    mode: single
+    trigger:
+      - platform: time_pattern
+        minutes: "/10"
+    condition:
+      - condition: state
+        entity_id: input_boolean.cumulus_v4_shadow_enabled
+        state: "on"
+    action:
+      - service: logbook.log
+        data:
+          name: "Cumulus V4 Shadow"
+          message: >
+            import={{ states('sensor.cumulus_v4_grid_import_w') }}W |
+            export={{ states('sensor.cumulus_v4_grid_export_w') }}W |
+            surplus={{ states('sensor.cumulus_v4_surplus_w') }}W |
+            ratio={{ states('sensor.cumulus_v4_ratio') }} |
+            on_time={{ states('sensor.cumulus_v4_on_time_s') }}s |
+            pv_window={{ states('binary_sensor.cumulus_v4_pv_window_ok') }} |
+            needs_heat={{ states('binary_sensor.cumulus_v4_needs_heat') }} |
+            would_run_pv={{ states('binary_sensor.cumulus_v4_would_run_pv') }} |
+            reason={{ states('sensor.cumulus_v4_reason') }}

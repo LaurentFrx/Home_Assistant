@@ -403,6 +403,52 @@ automation:
                 target:
                   entity_id: switch.shellypro1_ece334ee1b64
 
+  # -------------------------------------------------------------------------
+  # LOG REFUS DEMARRAGE PV (DIAGNOSTIC)
+  # -------------------------------------------------------------------------
+  - id: cumulus_log_refus_demarrage_pv_v3
+    alias: "Cumulus - Log refus demarrage PV"
+    description: "Log et notification quand les conditions PV sont OK mais que le cumulus reste arrete a cause d un verrou ou d un mode."
+    mode: single
+    initial_state: "off"
+
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cumulus_conditions_pv_ok
+        to: "on"
+        for: "00:15:00"
+
+    condition:
+      - condition: state
+        entity_id: switch.shellypro1_ece334ee1b64
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.cumulus_mode_vacances
+        state: "off"
+
+    action:
+      - variables:
+          raison: >
+            {% set r = states('input_text.cumulus_raison_arret') %}
+            {% if r in ['unknown', 'unavailable', ''] %}
+              Non renseignee
+            {% else %}
+              {{ r }}
+            {% endif %}
+          temp_estimee: "{{ states('sensor.cumulus_temperature_estimee') }}"
+          soc_batterie: "{{ states('sensor.cumulus_soc_batterie') }}"
+          pv_power: "{{ states('sensor.cumulus_pv_power_w') }}"
+      - service: persistent_notification.create
+        data:
+          title: "Cumulus - Refus demarrage PV"
+          message: >
+            Conditions PV OK depuis au moins 15 minutes mais le cumulus reste OFF.
+            Raison: {{ raison }}.
+            Temp estimee: {{ temp_estimee }} degC
+            SOC batterie: {{ soc_batterie }} %
+            Puissance PV: {{ pv_power }} W
+          notification_id: cumulus_log_refus_demarrage_pv
+
   # ┌─────────────────────────────────────────────────────────────────────────┐
   # │ RESET DEADBAND                                                          │
   # └─────────────────────────────────────────────────────────────────────────┘

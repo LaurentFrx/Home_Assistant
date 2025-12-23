@@ -276,8 +276,14 @@ template:
         unit_of_measurement: "€"
         state_class: total_increasing
         state: >
-          {% set s = states('sensor.system_sanguinet_economies_eur') %}
-          {{ s | float(this.state | float(0)) }}
+          {% set v = states('sensor.system_sanguinet_economies_eur') | float(none) %}
+          {% if v is not none %}
+            {{ v }}
+          {% elif this is not none %}
+            {{ this.state | float(0) }}
+          {% else %}
+            0
+          {% endif %}
 
       - name: grid_import_kwh_safe
         unique_id: grid_import_kwh_safe
@@ -285,8 +291,14 @@ template:
         device_class: energy
         state_class: total
         state: >
-          {% set s = states('sensor.grid_import_kwh') %}
-          {{ s | float(this.state | float(0)) }}
+          {% set v = states('sensor.grid_import_kwh') | float(none) %}
+          {% if v is not none %}
+            {{ v }}
+          {% elif this is not none %}
+            {{ this.state | float(0) }}
+          {% else %}
+            0
+          {% endif %}
 
       - name: grid_export_kwh_safe
         unique_id: grid_export_kwh_safe
@@ -294,8 +306,14 @@ template:
         device_class: energy
         state_class: total
         state: >
-          {% set s = states('sensor.grid_export_kwh') %}
-          {{ s | float(this.state | float(0)) }}
+          {% set v = states('sensor.grid_export_kwh') | float(none) %}
+          {% if v is not none %}
+            {{ v }}
+          {% elif this is not none %}
+            {{ this.state | float(0) }}
+          {% else %}
+            0
+          {% endif %}
 
       - name: import_edf_safe
         unique_id: import_edf_safe
@@ -303,8 +321,14 @@ template:
         device_class: energy
         state_class: total
         state: >
-          {% set s = states('sensor.import_edf') %}
-          {{ s | float(this.state | float(0)) }}
+          {% set v = states('sensor.import_edf') | float(none) %}
+          {% if v is not none %}
+            {{ v }}
+          {% elif this is not none %}
+            {{ this.state | float(0) }}
+          {% else %}
+            0
+          {% endif %}
 
       - name: export_edf_safe
         unique_id: export_edf_safe
@@ -312,8 +336,14 @@ template:
         device_class: energy
         state_class: total
         state: >
-          {% set s = states('sensor.export_edf') %}
-          {{ s | float(this.state | float(0)) }}
+          {% set v = states('sensor.export_edf') | float(none) %}
+          {% if v is not none %}
+            {{ v }}
+          {% elif this is not none %}
+            {{ this.state | float(0) }}
+          {% else %}
+            0
+          {% endif %}
 
       # ------------------------ Aliases Camembert (jour) ---------------------
       - name: energie_autoconsommee

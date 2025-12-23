@@ -61,13 +61,13 @@ template:
       - name: "Cumulus - SOC Batterie"
         unique_id: cumulus_soc_batterie
         state: >
-          {% set soc = states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) %}
+          {% set soc = states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) %}
           {{ soc if soc >= 0 and soc <= 100 else 0 }}
         unit_of_measurement: "%"
         device_class: battery
         state_class: measurement
         icon: >
-          {% set soc = states('sensor.system_sanguinet_etat_de_charge_du_sb') | float(0) %}
+          {% set soc = states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) %}
           {% if soc >= 80 %}
             mdi:battery-high
           {% elif soc >= 50 %}
@@ -369,6 +369,18 @@ template:
         device_class: power
         icon: >
           {% if is_state('binary_sensor.cumulus_heures_creuses', 'on') %}
+            mdi:moon-waning-crescent
+          {% else %}
+            mdi:white-balance-sunny
+          {% endif %}
+
+      # Alias générique pour les heures creuses (HC = on)
+      - name: "Heures creuses"
+        unique_id: heures_creuses_alias
+        state: "{{ is_state('binary_sensor.cumulus_heures_creuses', 'on') }}"
+        device_class: power
+        icon: >
+          {% if is_state('binary_sensor.heures_creuses', 'on') %}
             mdi:moon-waning-crescent
           {% else %}
             mdi:white-balance-sunny
