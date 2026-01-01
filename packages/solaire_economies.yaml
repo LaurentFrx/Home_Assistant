@@ -249,12 +249,8 @@ template:
         unit_of_measurement: "€"
         state_class: total
         state: >
-          {% set base = states('sensor.savings_eur')|float(0) %}
-          {% set bl   = states('input_number.economie_baseline_eur')|float(0) %}
-          {% set obj  = states.input_number.economie_baseline_eur %}
-          {% set lc   = obj.last_changed if obj is not none else none %}
-          {% set year_set = (as_local(lc)).year if lc else now().year %}
-          {{ base + (bl if now().year == year_set else 0) }}
+          {{ states('sensor.savings_eur')|float(0)
+             + states('input_number.economie_baseline_eur')|float(0) }}
 
       # kWh total avec baseline seulement pendant l'année de mise à jour
       - name: energy_saved_total_kwh_with_baseline
@@ -263,12 +259,8 @@ template:
         device_class: energy
         state_class: total
         state: >
-          {% set base = states('sensor.energy_saved_kwh')|float(0) %}
-          {% set bl   = states('input_number.kwh_baseline')|float(0) %}
-          {% set obj  = states.input_number.kwh_baseline %}
-          {% set lc   = obj.last_changed if obj is not none else none %}
-          {% set year_set = (as_local(lc)).year if lc else now().year %}
-          {{ base + (bl if now().year == year_set else 0) }}
+          {{ states('sensor.energy_saved_kwh')|float(0)
+             + states('input_number.kwh_baseline')|float(0) }}
 
       # ------------------------ Aliases Camembert (jour) ---------------------
       - name: energie_autoconsommee
