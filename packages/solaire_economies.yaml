@@ -32,6 +32,7 @@ template:
         state_class: measurement
         state: >
           {% set cands = [
+            'sensor.system_sanguinet_etat_de_charge_du_sb',
             'sensor.solarbank_3_e2700_pro_etat_de_charge',
             'sensor.solarbank_3_e2700_pro_state_of_charge'
           ] %}
@@ -50,10 +51,11 @@ template:
         device_class: power
         state_class: measurement
         state: >
-          {% set p = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
-          {{ [p, 0]|max }}
+          {% set p1 = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
+          {% set p2 = states('sensor.sb3_2_puissance_de_charge')|float(0) %}
+          {{ [p1, 0]|max + [p2, 0]|max }}
 
-      # Décharge batterie (W) — robuste
+      # Décharge batterie (W) — robuste, SB1+SB2
       - name: batt_discharge_w
         unique_id: batt_discharge_w
         unit_of_measurement: "W"
@@ -61,10 +63,13 @@ template:
         state_class: measurement
         availability: >
           {{ states('sensor.solarbank_3_e2700_pro_puissance_de_charge') not in
+          ['unknown','unavailable','none','']
+          or states('sensor.sb3_2_puissance_de_charge') not in
           ['unknown','unavailable','none',''] }}
         state: >
-          {% set p = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
-          {% set v = [ -p, 0 ]|max %}
+          {% set p1 = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
+          {% set p2 = states('sensor.sb3_2_puissance_de_charge')|float(0) %}
+          {% set v = [ -p1, 0 ]|max + [ -p2, 0 ]|max %}
           {{ 0 if v < 0.0005 else v }}
 
       # ------------------------ Puissance PV SB (garde-fou) ------------------
@@ -73,15 +78,21 @@ template:
         unit_of_measurement: "W"
         device_class: power
         state_class: measurement
-        # Utilise PV1+PV2 si dispos, sinon le capteur global "puissance_solaire"
+        # Priorité : sensor site agrégé, fallback PV1+PV2 SB1
         state: >
-          {% set pv1 = states('sensor.solarbank_3_e2700_pro_solaire_pv1')|float(0) %}
-          {% set pv2 = states('sensor.solarbank_3_e2700_pro_solaire_pv2')|float(0) %}
-          {% set pv  = pv1 + pv2 %}
-          {% if pv == 0 %}
-            {{ states('sensor.solarbank_3_e2700_pro_puissance_solaire')|float(0) }}
+          {% set bad = ['unknown','unavailable','none',''] %}
+          {% set site = states('sensor.system_sanguinet_energie_solaire_sb') %}
+          {% if site not in bad and site|float(0) > 0 %}
+            {{ site|float(0) }}
           {% else %}
-            {{ pv }}
+            {% set pv1 = states('sensor.solarbank_3_e2700_pro_solaire_pv1')|float(0) %}
+            {% set pv2 = states('sensor.solarbank_3_e2700_pro_solaire_pv2')|float(0) %}
+            {% set pv  = pv1 + pv2 %}
+            {% if pv == 0 %}
+              {{ states('sensor.solarbank_3_e2700_pro_puissance_solaire')|float(0) }}
+            {% else %}
+              {{ pv }}
+            {% endif %}
           {% endif %}
 
       # ------------------------ Sortie AC SolarBank ---------------------------

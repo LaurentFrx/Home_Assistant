@@ -1,21 +1,31 @@
 template:
   - sensor:
-      # SoC propre/robuste (utilise ton capteur officiel SolarBank)
+      # SoC propre/robuste (capteur site Sanguinet agrégé, fallback SB1)
       - name: "Batterie • SoC"
         unique_id: batterie_soc_clean
         device_class: battery
         unit_of_measurement: "%"
-        state: "{{ states('sensor.solarbank_3_e2700_pro_etat_de_charge')|int(0) }}"
+        state: >
+          {% set site = states('sensor.system_sanguinet_etat_de_charge_du_sb') %}
+          {% if site not in ['unknown','unavailable',''] %}
+            {{ site|int(0) }}
+          {% else %}
+            {{ states('sensor.solarbank_3_e2700_pro_etat_de_charge')|int(0) }}
+          {% endif %}
         availability: >
-          {{ states('sensor.solarbank_3_e2700_pro_etat_de_charge') not in ['unknown','unavailable',''] }}
+          {{ states('sensor.system_sanguinet_etat_de_charge_du_sb') not in ['unknown','unavailable','']
+          or states('sensor.solarbank_3_e2700_pro_etat_de_charge') not in ['unknown','unavailable',''] }}
 
-      # Puissance nette batterie (W) - POSITIF = CHARGE | NEGATIF = DECHARGE
+      # Puissance nette batterie (W) - POSITIF = CHARGE | NEGATIF = DECHARGE — SB1+SB2
       - name: "Batterie • P net"
         unique_id: batterie_power_net
         device_class: power
         unit_of_measurement: "W"
         state_class: measurement
-        state: "{{ states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0)|round(0) }}"
+        state: >
+          {% set p1 = states('sensor.solarbank_3_e2700_pro_puissance_de_charge')|float(0) %}
+          {% set p2 = states('sensor.sb3_2_puissance_de_charge')|float(0) %}
+          {{ (p1 + p2)|round(0) }}
         attributes:
           direction: >
             {% set p = this.state|float(0) %}
