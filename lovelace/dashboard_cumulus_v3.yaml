@@ -203,7 +203,7 @@ views:
 
           # Batterie
           - type: custom:button-card
-            entity: sensor.solarbank_3_e2700_pro_etat_de_charge
+            entity: sensor.system_sanguinet_etat_de_charge_du_sb
             name: Batterie
             show_state: true
             state_display: |

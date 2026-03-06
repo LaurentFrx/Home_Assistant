@@ -57,17 +57,19 @@ template:
               Idle
             {% endif %}
 
-      # État de charge Solarbank
+      # État de charge Solarbank (site Sanguinet agrégé, fallback SB1)
       - name: "Cumulus - SOC Batterie"
         unique_id: cumulus_soc_batterie
         state: >
-          {% set soc = states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) %}
-          {{ soc if soc >= 0 and soc <= 100 else 0 }}
+          {% set site = states('sensor.system_sanguinet_etat_de_charge_du_sb') %}
+          {% set soc = site|float(-1) if site not in ['unknown','unavailable',''] else states('sensor.solarbank_3_e2700_pro_etat_de_charge')|float(-1) %}
+          {{ soc if 0 <= soc <= 100 else 0 }}
         unit_of_measurement: "%"
         device_class: battery
         state_class: measurement
         icon: >
-          {% set soc = states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) %}
+          {% set site = states('sensor.system_sanguinet_etat_de_charge_du_sb') %}
+          {% set soc = site|float(-1) if site not in ['unknown','unavailable',''] else states('sensor.solarbank_3_e2700_pro_etat_de_charge')|float(-1) %}
           {% if soc >= 80 %}
             mdi:battery-high
           {% elif soc >= 50 %}

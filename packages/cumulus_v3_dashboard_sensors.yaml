@@ -184,7 +184,8 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         icon: >
-          {% set soc = states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) %}
+          {% set site = states('sensor.system_sanguinet_etat_de_charge_du_sb') %}
+          {% set soc = site|float(-1) if site not in ['unknown','unavailable',''] else states('sensor.solarbank_3_e2700_pro_etat_de_charge')|float(-1) %}
           {% if soc >= 90 %}
             mdi:battery-high
           {% elif soc >= 50 %}
@@ -195,7 +196,8 @@ template:
             mdi:battery-alert
           {% endif %}
         state: >
-          {{ states('sensor.solarbank_3_e2700_pro_etat_de_charge') | float(0) | round(0) }}
+          {% set site = states('sensor.system_sanguinet_etat_de_charge_du_sb') %}
+          {{ site|float(0)|round(0) if site not in ['unknown','unavailable',''] else states('sensor.solarbank_3_e2700_pro_etat_de_charge')|float(0)|round(0) }}
 
       #=========================================================================
       # APPAREIL PRIORITAIRE ACTIF
